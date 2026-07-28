@@ -11,7 +11,7 @@ Defaults follow the reference in ``docs/marathon_mode.md``:
     * Token budget      = compression_ratio * N * 65536
 
 ``compression_ratio`` defaults to 0.5 — the global Marathon budget is
-half the sum of N Solo per-problem budgets. Smaller values squeeze
+half the sum of N Marathon per-problem reference budgets (600 s each). Smaller values squeeze
 harder; 1.0 means no compression (fair share per problem).
 
 The Solo path (``scripts/run_harness.py`` / ``pipeline/runner.py``) is
@@ -34,7 +34,7 @@ from pipeline.marathon_score import score_marathon  # noqa: E402
 
 REF_PER_PROBLEM_SECONDS = 600
 REF_PER_PROBLEM_TOKENS = 65536
-# Marathon's global budget is `compression_ratio * N * solo_per_problem`.
+# Marathon's global budget is `compression_ratio * N * REF_PER_PROBLEM_SECONDS` (600 s).
 # Smaller = tighter compression = more triage pressure on the solver.
 # Default 0.5 makes triage load-bearing: the solver cannot finish all N
 # at single-problem budget and must choose what to attempt.

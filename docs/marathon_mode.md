@@ -50,7 +50,7 @@ the per-problem reference cost. The reference value is **`0.5`**.
 
 Why default to 0.5: triage must be load-bearing. At
 `compression_ratio = 1.0` a sequential solver could plausibly attempt
-every problem at Solo-equivalent budget and the track collapses back
+every problem at the Marathon per-problem reference budget (600 s) and the track collapses back
 into "Solo run N times in series"; at 0.5 the solver must pick.
 
 ## Solver Contract
