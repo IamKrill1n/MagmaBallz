@@ -127,7 +127,7 @@ verdicts — they never collapse to `incorrect`.
 | Concern                   | Defense                                                                                                  |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
 | Payload smuggling         | Single-file solver contract — `solver.py` and nothing else.                                              |
-| Network exfil / unmetered LLM | All LLM calls go through the proxy; the proxy holds the upstream API key and meters tokens.           |
+| Network exfil / uncontrolled LLM | All LLM calls go through the proxy; the proxy holds the upstream API key and enforces the per-call output cap. |
 | Per-call output cap       | The proxy passes `llm.max_output_tokens` to the upstream API; runaway generations are bounded per call.   |
 | Banned axioms / declarations | Lean's `#judge_report` introspects the certificate's transitive dependency closure; mismatches → `incomplete_proof`. |
 | Sandbox boundary          | Production runs the solver in a Docker sandbox (`mode: docker` in `pipeline/config.json`; image built by `scripts/setup.sh`).                             |
@@ -137,10 +137,10 @@ verdicts — they never collapse to `incorrect`.
 
 - **Wall-clock**: proxy SIGTERMs the solver process group at the
   per-problem deadline; SIGKILL after grace.
-- **LLM tokens**: counted by the proxy from upstream `usage`. A call
-  that would exceed the remaining budget is refused (`{"error": "..."}`)
-  rather than silently truncated. Solvers can read the running total
-  from each `llm` response.
+- **LLM tokens**: bounded per call — the proxy passes
+  `llm.max_output_tokens` (65 536) to the upstream API on every call.
+  There is no problem-wide token meter in Solo; the number of LLM calls
+  is limited only by the wall-clock budget.
 - **Code size**: enforced at `judge` request boundary — oversize `code`
   returns `malformed`.
 

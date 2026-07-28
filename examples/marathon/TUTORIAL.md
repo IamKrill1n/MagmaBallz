@@ -32,7 +32,7 @@ Marathon LLM calls go through a per-run local HTTP proxy at `127.0.0.1:<port>` â
 
 The default budgets are a flat per-problem allowance (300 s / 32 768
 tokens â€” see `PER_PROBLEM_*` in `scripts/run_marathon.py`, deliberately
-far below Solo's 3600 s / 65 536 so the solver must triage) multiplied
+far below Solo's 3600 s wall-clock so the solver must triage) multiplied
 by the manifest length `N`:
 
 ```
