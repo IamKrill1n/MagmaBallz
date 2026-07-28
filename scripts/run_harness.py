@@ -622,18 +622,22 @@ def run_pipeline_prompt_cases() -> list[dict[str, Any]]:
         ROOT / "examples" / "solo" / "TUTORIAL.md",
         ROOT / "examples" / "marathon" / "TUTORIAL.md",
     ]
-    forbidden_substrings = [
+    # Numeric needles carry digit-boundary guards so legitimate larger
+    # numbers that merely contain the stale value as a substring (e.g.
+    # the Marathon 5-problem default pool 163840 = 5 × 32768) don't trip
+    # the check.
+    forbidden_patterns = [
         "Max LLM calls",
         "Max judge calls",
-        "16,384",
-        "16384",
+        r"(?<![0-9])16,384(?![0-9])",
+        r"(?<![0-9])16384(?![0-9])",
     ]
     doc_drift: list[str] = []
     for doc in doc_files:
         text = doc.read_text(encoding="utf-8")
-        for needle in forbidden_substrings:
-            if needle in text:
-                doc_drift.append(f"{doc.name}: contains '{needle}'")
+        for needle in forbidden_patterns:
+            if re.search(needle, text):
+                doc_drift.append(f"{doc.name}: matches '{needle}'")
     _record(
         "pipeline_docs_no_stale_budget_language",
         not doc_drift,

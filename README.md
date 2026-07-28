@@ -51,7 +51,7 @@ problems and budgets are shaped — one solver source can support both.
 ### → Marathon track
 
 - **N problems per solver subprocess** (reference: N=100). One process, one shared global budget.
-- **Compressed global budget**: `N × 5 minutes` wall-clock + `N × 32 768` tokens (vs Solo's 3600 s / 65 536 per problem; see [`docs/marathon_mode.md`](docs/marathon_mode.md)) — the solver cannot give every problem a Solo-depth attempt and must triage.
+- **Compressed global budget**: `N × 5 minutes` wall-clock + `N × 32 768` tokens (see [`docs/marathon_mode.md`](docs/marathon_mode.md)) — far below Solo's per-problem budget, so the solver cannot give every problem a Solo-depth attempt and must triage.
 - Communication: file-based (read manifest JSONL, append answers JSONL).
 - **Best for**: triage strategies, cross-problem caching, prompt reuse.
 - **Quick Start**: [Marathon Quick Start](#marathon-quick-start) below.

@@ -27,10 +27,9 @@ budget_tokens  = N × 32768
 The per-problem values are defined as `PER_PROBLEM_SECONDS` /
 `PER_PROBLEM_TOKENS` in
 [`scripts/run_marathon.py`](../scripts/run_marathon.py). They are
-deliberately far below Solo's per-problem budget (3600 s / 65 536
-tokens, `pipeline/config.json`): a Marathon solver gets one twelfth of
-the Solo wall-clock and half the tokens per problem on average, so it
-cannot afford a Solo-depth attempt on every problem and must triage.
+deliberately far below Solo's per-problem budget (3600 s wall-clock,
+`pipeline/config.json`), so a Marathon solver cannot afford a
+Solo-depth attempt on every problem and must triage.
 
 | Knob               | Value                                  | Notes                                                              |
 | ------------------ | -------------------------------------- | ------------------------------------------------------------------ |
