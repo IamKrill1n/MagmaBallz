@@ -25,7 +25,7 @@ Stage 2 has two tracks. Both share the same judge, the same five-status verdict 
 | Track | Workload per process | Budget | I/O |
 |-------|----------------------|--------|-----|
 | **Solo** | One problem per solver subprocess | Fixed per-problem | stdin (problem JSON) / stdout (answer JSON) |
-| **Marathon** | N problems per solver subprocess (reference N=100) | Single global budget = `compression_ratio × N × Marathon per-problem reference (600 s)` (default `compression_ratio = 0.5`) | manifest JSONL in / append-only JSONL out |
+| **Marathon** | N problems per solver subprocess (reference N=100) | Single global budget = `N × 5 minutes` wall-clock, `N × 32768` tokens | manifest JSONL in / append-only JSONL out |
 
 One solver source can support both. Full specs: `docs/solo_mode.md` and `docs/marathon_mode.md` in the repository.
 
@@ -57,14 +57,14 @@ Reference values in `pipeline/config.json`. Numbers may still be tuned during St
 
 **Marathon (per run, N problems):**
 
-The global budget is derived from Marathon's per-problem reference (600 s):
+The global budget is a flat per-problem allowance × N:
 
 | Resource | Formula | Default at N=100 |
 |----------|---------|------------------|
-| Wall-clock | `compression_ratio × N × 600 s` | 30 000 s (≈8.3 h) at `0.5` |
-| Tokens | `compression_ratio × N × 65536` | ~3.3 M at `0.5` |
+| Wall-clock | `N × 300 s` (5 minutes per problem) | 30 000 s (≈8.3 h) |
+| Tokens | `N × 32768` | ~3.3 M |
 
-`compression_ratio` defaults to `0.5` — the solver cannot finish all N at single-problem cost and must triage. Setting it to `1.0` removes compression; smaller values squeeze harder.
+The per-problem allowance is deliberately far below Solo's (300 s vs 3600 s wall-clock) — the solver cannot give every problem a Solo-depth attempt and must triage.
 
 The solver manages its own pacing within the budget. Deterministic strategies cost no tokens. Exceeding the wall-clock or token budget terminates the solver.
 

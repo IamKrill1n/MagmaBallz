@@ -51,7 +51,7 @@ problems and budgets are shaped — one solver source can support both.
 ### → Marathon track
 
 - **N problems per solver subprocess** (reference: N=100). One process, one shared global budget.
-- **Compressed global budget**: `compression_ratio × N × Marathon per-problem reference` (600 s + 65 536 tokens per problem; deliberately tighter than Solo's wall-clock, see [`docs/marathon_mode.md`](docs/marathon_mode.md)). Default `compression_ratio = 0.5` — solver cannot finish all N at the per-problem reference cost and must triage.
+- **Compressed global budget**: `N × 5 minutes` wall-clock + `N × 32 768` tokens (vs Solo's 3600 s / 65 536 per problem; see [`docs/marathon_mode.md`](docs/marathon_mode.md)) — the solver cannot give every problem a Solo-depth attempt and must triage.
 - Communication: file-based (read manifest JSONL, append answers JSONL).
 - **Best for**: triage strategies, cross-problem caching, prompt reuse.
 - **Quick Start**: [Marathon Quick Start](#marathon-quick-start) below.
@@ -154,20 +154,16 @@ python3 scripts/run_marathon.py \
 export OPENROUTER_API_KEY=sk-...
 python3 scripts/run_marathon.py \
   --solver examples/marathon/demos/triage \
-  --manifest examples/problems/marathon/normal_100.jsonl \
-  --compression-ratio 0.5
-# 100 problems × 600 s × 0.5 ≈ 30 000 s wall-clock. Swap in
-# examples/problems/normal.jsonl (1000 problems, ~83 h at the same
-# compression) when you're ready for the full reference set.
+  --manifest examples/problems/marathon/normal_100.jsonl
+# 100 problems × 300 s = 30 000 s wall-clock. Swap in
+# examples/problems/normal.jsonl (1000 problems, ~83 h) when you're
+# ready for the full reference set.
 ```
 
-The runner derives `budget_seconds` and `budget_tokens` from
-`compression_ratio × N × Marathon-per-problem-reference` (600 s and
-65 536 tokens; see [`docs/marathon_mode.md`](docs/marathon_mode.md)).
-Override either budget directly with `--budget-seconds` /
-`--budget-tokens`, or change just the multiplier with
-`--compression-ratio` (default `0.5`; smaller squeezes harder, `1.0` =
-no compression).
+The runner derives `budget_seconds` and `budget_tokens` from a flat
+per-problem allowance: `N × 300 s` and `N × 32 768` tokens (see
+[`docs/marathon_mode.md`](docs/marathon_mode.md)). Override either
+budget directly with `--budget-seconds` / `--budget-tokens`.
 
 Regression harness (separate from `run_harness.py`):
 
@@ -664,7 +660,7 @@ modules and the Mathlib olean cache. Available imports:
 
 ## Configuration
 
-> Below: **Solo** reference budgets and LLM parameters. Marathon derives its global budgets from these via `compression_ratio` — see [`docs/marathon_mode.md`](docs/marathon_mode.md).
+> Below: **Solo** reference budgets and LLM parameters. Marathon uses its own flat per-problem allowance (`N × 300 s` / `N × 32 768` tokens) — see [`docs/marathon_mode.md`](docs/marathon_mode.md).
 
 > The numbers in `pipeline/config.json` (wall-clock timeout, Lean timeout, code-size caps, sandbox limits, LLM parameters) are a **reference configuration** for Stage 2. They will be tuned based on community feedback as the competition progresses — expect the wall-clock budget and sandbox limits in particular to settle once we see how contestant solvers actually behave. The single-file solver contract and the public five-status verdict semantics are stable; the numerical knobs are not.
 
@@ -832,7 +828,7 @@ Exits `0` when the sandbox image boots, blocks network, and blocks writes to the
 ├── README.md                        # This file (entry point + Pick Your Track)
 ├── docs/                            # Track specs (read these before submitting)
 │   ├── solo_mode.md                 #   Solo track: I/O contract, budgets, scoring
-│   └── marathon_mode.md             #   Marathon track: same, plus compression_ratio
+│   └── marathon_mode.md             #   Marathon track: same, plus global budget
 │
 ├── judge/                           # Deterministic Lean verifier (shared by both tracks)
 │   ├── verify.py                    #   Core verification logic
