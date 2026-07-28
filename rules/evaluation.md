@@ -136,7 +136,7 @@ The official GitHub repository for Stage 2:
 This repository includes:
 
 - the evaluation pipeline (proxy, runner, judge)
-- demo solvers organized by track under `examples/{solo,marathon}/demos/` (Solo: `baseline/`, `oss_twophase/`, `oss_opnorm/`; Marathon: `baseline/`, `triage_oss/`, `fewshot_oss/`)
+- demo solvers organized by track under `examples/{solo,marathon}/demos/` (Solo: `baseline/`, `twophase/`, `opnorm/`; Marathon: `baseline/`, `triage/`, `fewshot/`)
 - a step-by-step tutorial per track (`examples/solo/TUTORIAL.md`, `examples/marathon/TUTORIAL.md`)
 - local testing support via `scripts/run_harness.py` (Solo) and `scripts/run_marathon_harness.py` (Marathon)
 
