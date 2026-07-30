@@ -435,9 +435,9 @@ regressions in the harness.
 > **Universe note**: `Goal` is pinned to concrete `Type` (= `Type 0`)
 > in both branches because `abbrev Goal : Prop := ∀ (G : Type _) …`
 > leaves a stuck universe meta that Lean can't resolve at `abbrev`
-> elaboration. Submitters work with small types (`Fin n`, concrete
-> magmas) which all live in `Type 0`, so this isn't a practical
-> restriction.
+> elaboration. Submitters work with concrete carriers — `Fin n`, `Nat`,
+> submission-defined inductive types — which all live in `Type 0`, so
+> this isn't a practical restriction (finite and infinite alike).
 >
 > **Backward compatibility**: old-style `theorem submission :
 > <explicit goal> := …` submissions still verify if they use the new

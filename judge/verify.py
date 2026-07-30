@@ -273,9 +273,10 @@ def _write_problem_module(
     # ``abbrev`` elaboration (no term to unify against, unlike the old
     # ``theorem submission : <goal> := <proof>`` shape), producing
     # ``Failed to infer universe levels in binder type Magma.{?u} G``.
-    # Submitters work with small types (``Fin n``, concrete magmas) which
-    # all live in ``Type 0``, so restricting ``Goal`` to ``Type 0`` is not
-    # a practical loss.
+    # Submitters work with concrete carriers (``Fin n``, ``Nat``,
+    # submission-defined inductives — finite and infinite alike) which
+    # all live in ``Type 0``, so restricting ``Goal`` to ``Type 0`` is
+    # not a practical loss.
     if verdict == "true":
         goal = "∀ (G : Type) [Magma G], EquationLHS G → EquationRHS G"
     else:
