@@ -83,7 +83,7 @@ or
 ```
 
 - **True certificate**: a Lean 4 proof that the hypothesis equation implies the goal equation.
-- **False certificate**: a Lean 4 proof that there exists a finite magma satisfying the hypothesis but not the goal.
+- **False certificate**: a Lean 4 proof that there exists a magma satisfying the hypothesis but not the goal. The carrier may be finite (e.g. an explicit operation table on `Fin n`) or infinite (e.g. `Nat` or a submission-defined inductive type) — the judge's goal is `∃ (G : Type) (_ : Magma G), EquationLHS G ∧ ¬ EquationRHS G`, with no finiteness constraint.
 
 Both are verified by the deterministic Lean judge. The judge returns exactly one of the following statuses:
 

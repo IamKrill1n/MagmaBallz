@@ -33,7 +33,7 @@ Example: `E_4: x = x * y` implies `E_3: x = x * x`.
 Stage 2 raises the bar from Stage 1. Instead of only predicting true/false, participants must **prove** their answers:
 
 - If the implication is **true**: a Lean 4 proof that the hypothesis implies the goal.
-- If the implication is **false**: a Lean 4 proof certificate (a finite magma witness where the hypothesis holds but the goal fails).
+- If the implication is **false**: a Lean 4 proof certificate (a magma witness — finite or infinite — where the hypothesis holds but the goal fails).
 
 Both directions require machine-verifiable certificates. A deterministic Lean judge accepts or rejects each answer — no partial credit, no probabilistic scoring.
 

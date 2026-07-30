@@ -1,0 +1,4 @@
+{
+  "verdict": "false",
+  "code": "import JudgeProblem\n\ndef submission : Goal :=\n  ⟨Nat, ⟨fun x _ => x⟩, fun x _ => Eq.refl x, fun h => Nat.noConfusion (h 0 1)⟩\n"
+}

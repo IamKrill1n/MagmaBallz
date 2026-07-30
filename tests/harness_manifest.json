@@ -15,6 +15,20 @@
       "expected_error_code": "ACCEPTED"
     },
     {
+      "name": "accepted_false_infinite_nat",
+      "problem_path": "tests/fixtures/problems/p_false_witness.json",
+      "answer_path": "tests/fixtures/answers/accepted_false_infinite_nat.answer.json",
+      "expected_status": "accepted",
+      "expected_error_code": "ACCEPTED"
+    },
+    {
+      "name": "accepted_false_infinite_tree",
+      "problem_path": "tests/fixtures/problems/p_false_witness.json",
+      "answer_path": "tests/fixtures/answers/accepted_false_infinite_tree.answer.json",
+      "expected_status": "accepted",
+      "expected_error_code": "ACCEPTED"
+    },
+    {
       "name": "unparsed_invalid_json",
       "problem_path": "tests/fixtures/problems/p_true_basic.json",
       "answer_path": "tests/fixtures/answers/unparsed_invalid_json.answer.txt",
@@ -195,8 +209,7 @@
       "answer_path": "tests/challenger/answers/set_option_dbg_trace_sorryAx.answer.json",
       "expected_status": "incomplete_proof",
       "expected_error_code": "BANNED_PLACEHOLDER"
-    }
-    ,
+    },
     {
       "name": "r2_dev_stderr_sorry",
       "problem_path": "tests/fixtures/problems/p_true_basic.json",
