@@ -76,10 +76,40 @@ for one problem. The scheduler advances it with generic effort slices without
 knowing the search's internal tuning parameters.
 _Avoid_: One-shot strategy call, scheduler-owned search state
 
+**Countermodel portfolio**:
+The deterministic countermodel strategy that coordinates complementary
+finite-magma searches and their bounded shared search knowledge.
+_Avoid_: Random table search, scheduler-managed search stages
+
+**Premise-model**:
+A finite magma that satisfies a problem's premise, whether or not it falsifies
+the goal. It is a countermodel only when it also falsifies the goal.
+_Avoid_: Countermodel, witness
+
 **Effort slice**:
 A reproducible allowance of abstract work credits granted to a strategy session,
 paired with a hard deadline used only to prevent overruns.
 _Avoid_: Strategy-specific depth limit, primary wall-clock budget
+
+**Search lane**:
+The proof or countermodel class across which the scheduler balances cumulative
+credit entitlement before choosing an individual strategy session.
+_Avoid_: Verdict prediction, strategy stage
+
+**Scheduler turn**:
+One deterministic grant of a fixed effort slice to one active strategy session,
+followed by synchronous processing of any candidate it yields.
+_Avoid_: Time slice, strategy round
+
+**Budget profile**:
+A versioned per-case timing policy containing the total timeout, minimum
+judge-start window, shutdown margin, and credits granted per scheduler turn.
+_Avoid_: Adaptive time allocation, strategy budget
+
+**Work cutoff**:
+The budget-profile instant after which a case run begins no new strategy,
+candidate-admission, or judge work so the judge window and shutdown margin remain.
+_Avoid_: Strategy timeout, proof deadline
 
 **Deterministic strategy**:
 A search whose ordered candidate stream is fixed by the canonical problem,
