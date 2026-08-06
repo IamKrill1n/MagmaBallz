@@ -47,6 +47,12 @@ The solver can combine:
 - **LLM calls** (via the organizer-provided proxy)
 - **Judge calls** (submit candidate proofs for Lean verification, receive accept/reject feedback)
 
+## Human-Interpretable Artifacts
+
+A 500 KB solver is not literally human-readable the way a Stage 1 prompt was, so for Stage 2 we read the goal of a "compact, human-readable artifact" as a **human-interpretable** one: the high-level strategy should be understandable and reproducible by a third party, even if the implementation involves extensive computation or generated data.
+
+The use of non-human-readable data sets in a submission is therefore permitted, as long as the [submission note](evaluation.md#submission-note) gives a human-readable description of the methodology used to produce them, sufficient to allow a third party to reproduce a comparable data set via some computation. Compiled binary executables that lack source code or documentation are not admissible under this criterion.
+
 ## Tracks
 
 Stage 2 has two tracks. Both share the same judge, the same five-status verdict mapping, and the same single-file `solver.py` contract (≤ 500 KB). They differ only in I/O shape and budgeting:

@@ -18,6 +18,12 @@ The solver is a free-form Python program. No required function signatures — th
 
 If the solver uses LLM calls in **Solo**, it declares its prompt template as a top-level `PROMPT = "..."` string literal; the proxy extracts it via static AST parsing (the module is never imported or executed on the host), fills `{placeholder}` variables, and queries the LLM. In **Marathon**, the solver makes LLM calls itself via the helper `from marathon_llm import call_llm` (or any OpenAI-SDK call) against a local HTTP proxy; no template extraction.
 
+## Submission Note
+
+A solver that includes compressed data or binary blobs must disclose them in a submission note (plain text or Markdown, submitted alongside `solver.py`): what they contain, and the methodology used to generate them. Participants can add links to any open-source code used to generate or process them. Solvers without such payloads do not need a note.
+
+The note is not machine-checked and does not affect judge verdicts — see [Human-Interpretable Artifacts](overview.md#human-interpretable-artifacts).
+
 ## Tracks
 
 Stage 2 has two tracks. Both share the same judge, the same five-status verdict mapping, and the same single-file `solver.py` contract (≤ 500 KB). They differ only in I/O shape and budgeting:
