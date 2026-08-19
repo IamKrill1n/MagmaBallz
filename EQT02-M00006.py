@@ -41,6 +41,21 @@ Deterministic analysis:
 Previous judge attempts:
 {history.attempts}
 
+Persistent blackboard (bridges proved/refuted so far, tools already tried):
+{solver.blackboard}
+
+Steering: instead of a full answer you may fire ONE solver tool or propose ONE
+bridge lemma. The solver executes deterministically and reports back next round.
+Additional accepted JSON shapes:
+  {"kind": "tool_call", "tool": "saturate"}            -- deep lemma-saturation proof attempt
+  {"kind": "tool_call", "tool": "ladder"}              -- classic bridge-lemma ladder
+  {"kind": "tool_call", "tool": "backtrack"}           -- countermodel table search, sizes 4-6
+  {"kind": "tool_call", "tool": "dual"}                -- full countermodel stack on the mirrored problem
+  {"kind": "midpoint", "lemma": "a * b = b * a"}       -- bridge: solver proves H=>lemma, then H+lemma=>Goal
+Bridge lemmas are untrusted hints: the solver mechanically proves them from the
+hypothesis before use, and refuted or unproved bridges are reported on the
+blackboard. Never repeat a bridge or tool the blackboard marks as failed.
+
 Accepted JSON shapes:
 1. TRUE rewrite chain, checked and rendered by the solver:
    {"verdict":"true","proof_kind":"rewrite_chain","chain":["<goal lhs>","<middle>","<goal rhs>"]}
@@ -3300,23 +3315,99 @@ def fallback_true_certificate() -> str:
     return reflexive_true_certificate()
 
 
+def _json_repair(text: str) -> str:
+    """Fix the JSON slop verbose models actually emit (measured on the Gemma
+    pilot): smart quotes, Python literals, trailing commas. Conservative on
+    purpose — anything deeper belongs to the salvage tier, not here."""
+    fixed = (text.replace("\u201c", '"').replace("\u201d", '"')
+             .replace("\u2018", "'").replace("\u2019", "'"))
+    fixed = re.sub(r"\bTrue\b", "true", fixed)
+    fixed = re.sub(r"\bFalse\b", "false", fixed)
+    fixed = re.sub(r"\bNone\b", "null", fixed)
+    fixed = re.sub(r",\s*([}\]])", r"\1", fixed)
+    return fixed
+
+
+def _balanced_json_blocks(text: str) -> list[str]:
+    """All outermost balanced {...} blocks, string-aware, longest first.
+    Handles prose-wrapped and multi-object replies that the old single
+    greedy regex could not."""
+    blocks: list[str] = []
+    depth = 0
+    start = -1
+    in_str = False
+    esc = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"' and depth > 0:
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start >= 0:
+                blocks.append(text[start:i + 1])
+    return sorted(blocks, key=len, reverse=True)
+
+
 def extract_json_object(text: str) -> dict[str, Any] | None:
     text = re.sub(r"<think>[\s\S]*?</think>", "", text or "").strip()
     text = re.sub(r"^```(?:json)?\s*\n?", "", text)
     text = re.sub(r"\n?```\s*$", "", text)
-    try:
-        obj = json.loads(text)
-        return obj if isinstance(obj, dict) else None
-    except json.JSONDecodeError:
-        pass
-    match = re.search(r"\{[\s\S]*\}", text)
-    if not match:
-        return None
-    try:
-        obj = json.loads(match.group())
-    except json.JSONDecodeError:
-        return None
-    return obj if isinstance(obj, dict) else None
+    candidates = [text, _json_repair(text)]
+    for block in _balanced_json_blocks(text):
+        candidates.append(block)
+        candidates.append(_json_repair(block))
+    greedy = re.search(r"\{[\s\S]*\}", text)
+    if greedy:
+        candidates.append(greedy.group())
+        candidates.append(_json_repair(greedy.group()))
+    for cand in candidates:
+        try:
+            obj = json.loads(cand)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            return obj
+    return None
+
+
+def salvage_bridge_equations(text: str, limit: int = 3) -> list[str]:
+    """Last-ditch salvage from free-form prose: mine equation-shaped lines.
+    Safe by construction — every result is treated as an UNTRUSTED midpoint
+    bridge and mechanically re-proved from the hypothesis before use, so a
+    wrong salvage costs seconds, never correctness."""
+    found: list[str] = []
+    for raw in re.split(r"[\n`]", text or ""):
+        line = raw.strip().strip(".,;:!?")
+        if line.count("=") != 1 or "==" in line:
+            continue
+        line = line.replace("\u25c7", "*").replace("\u2218", "*")
+        lhs, rhs = (side.strip() for side in line.split("="))
+        if not lhs or not rhs or lhs == rhs or "*" not in line:
+            continue
+        if not re.fullmatch(r"[a-z0-9 ()*]+", lhs) or not re.fullmatch(r"[a-z0-9 ()*]+", rhs):
+            continue
+        cand = f"{lhs} = {rhs}"
+        try:
+            eq = parse_equation(cand)
+        except Exception:  # noqa: BLE001 — salvage tier swallows parse noise
+            continue
+        if eq["lhs"] == eq["rhs"] or cand in found:
+            continue
+        found.append(cand)
+        if len(found) >= limit:
+            break
+    return found
 
 
 def sanitize_lean_code(code: str, *, verdict: str) -> bool:
@@ -3745,6 +3836,129 @@ def solo_llm_rounds() -> int:
     except ValueError:
         return LLM_MAX_ROUNDS
 
+
+
+# --- LLM steering (reja-class, rebuilt): tool registry, bridge midpoints, ---
+# --- blackboard. Every action is executed and verified deterministically; ---
+# --- the model can spend budget, never corrupt a verdict.                 ---
+
+
+def custom_bridge_route(
+    eq1: dict[str, Any],
+    eq2: dict[str, Any],
+    bridge_text: str,
+    *,
+    time_budget: float = 10.0,
+) -> tuple[str, str] | None:
+    """Prove an untrusted bridge lemma from the hypothesis via the saturation
+    core, then re-attack the goal with the proved bridge as a standing rule.
+    Returns None if either leg fails; the bridge is never trusted unproved."""
+    try:
+        bridge_eq = parse_equation(bridge_text)
+    except ValueError:
+        return None
+    if bridge_eq["lhs"] == bridge_eq["rhs"]:
+        return None
+    deadline = time.monotonic() + time_budget
+    proved = _cp_saturation_attempt(
+        eq1, bridge_eq,
+        lemma_budget=CP_SATURATION_LEMMA_BUDGET // 2,
+        rounds=5,
+        deadline=min(deadline, time.monotonic() + time_budget / 2),
+        beam=False,
+    )
+    if proved is None:
+        return None
+    _tag, bridge_proof, bridge_cited = proved
+    prefix = "B0"
+    renamed = _prefix_lemma_names(bridge_cited, prefix)
+    bridge_lemma = {
+        "variables": bridge_eq["variables"],
+        "lhs": bridge_eq["lhs"],
+        "rhs": bridge_eq["rhs"],
+        "name": f"{prefix}bridge",
+        "proof": re.sub(r"\blem(\d+)\b", prefix + r"lem\1", bridge_proof),
+        "cites": tuple(lemma["name"] for lemma in renamed) or ("h",),
+    }
+    step = proof_between_terms_guided(
+        eq1, eq2["variables"], eq2["lhs"], eq2["rhs"], lemmas=(bridge_lemma,),
+    )
+    if step is None:
+        return None
+    proof, _route = step
+    code = guided_true_certificate_with_lemmas(
+        eq2["variables"], renamed + [bridge_lemma], proof)
+    return "true:steer_bridge", code
+
+
+def steer_dispatch(
+    problem: dict[str, Any],
+    eq1: dict[str, Any],
+    eq2: dict[str, Any],
+    obj: dict[str, Any],
+    blackboard: dict[str, list[str]],
+) -> tuple[dict[str, Any] | None, str]:
+    """Execute one steering action. Returns (candidate, feedback)."""
+    kind = str(obj.get("kind", ""))
+    if kind == "midpoint":
+        lemma_text = str(obj.get("lemma", ""))[:300]
+        if not lemma_text or lemma_text in blackboard["refuted"] or lemma_text in blackboard["proved"]:
+            return None, f"bridge_skipped_or_repeated:{lemma_text[:60]}"
+        result = custom_bridge_route(eq1, eq2, lemma_text)
+        if result is not None:
+            blackboard["proved"].append(lemma_text)
+            route, code = result
+            return {"answer": make_true_answer(problem, code), "route": "llm:" + route}, "ok"
+        blackboard["refuted"].append(lemma_text)
+        return None, f"bridge_failed:{lemma_text[:60]}"
+    if kind == "tool_call":
+        tool = str(obj.get("tool", ""))
+        if tool in blackboard["tools_tried"]:
+            return None, f"tool_repeated:{tool}"
+        blackboard["tools_tried"].append(tool)
+        if tool == "saturate":
+            r = cp_saturation_route(eq1, eq2, lemma_budget=CP_SATURATION_LEMMA_BUDGET,
+                                    time_budget=40.0)
+            if r:
+                return {"answer": make_true_answer(problem, r[1]), "route": "llm:steer:" + r[0]}, "ok"
+            return None, "tool_saturate_exhausted"
+        if tool == "ladder":
+            r = standard_ladder_route(eq1, eq2, lemma_budget=CP_SATURATION_LEMMA_BUDGET)
+            if r:
+                return {"answer": make_true_answer(problem, r[1]), "route": "llm:steer:" + r[0]}, "ok"
+            return None, "tool_ladder_exhausted"
+        if tool == "backtrack":
+            found = backtracking_countermodel(eq1, eq2)
+            if found:
+                n, table = found
+                return {"answer": make_false_answer(problem, n, table),
+                        "route": "llm:steer:false:backtrack"}, "ok"
+            return None, "tool_backtrack_exhausted"
+        if tool == "dual":
+            found = find_counterexample(dual_equation(eq1), dual_equation(eq2),
+                                        time_budget=20.0, allow_dual=False)
+            if found:
+                n, table, route = found
+                return {"answer": make_false_answer(problem, n, transpose_table(table)),
+                        "route": "llm:steer:false:dual"}, "ok"
+            return None, "tool_dual_exhausted"
+        return None, f"tool_unknown:{tool[:30]}"
+    return None, "not_a_steer_action"
+
+
+def render_blackboard(blackboard: dict[str, list[str]], journal: list[str]) -> str:
+    parts = []
+    if blackboard["proved"]:
+        parts.append("bridges PROVED: " + "; ".join(blackboard["proved"][-4:]))
+    if blackboard["refuted"]:
+        parts.append("bridges FAILED (do not repeat): " + "; ".join(blackboard["refuted"][-6:]))
+    if blackboard["tools_tried"]:
+        parts.append("tools already tried (do not repeat): " + ", ".join(blackboard["tools_tried"]))
+    if journal:
+        parts.append("judge outcomes so far: " + "; ".join(journal[-4:]))
+    return "\n".join(parts) if parts else "(empty)"
+
+
 def run_solo() -> int:
     payload = load_json_line(sys.stdin)
     if not payload:
@@ -3795,6 +4009,8 @@ def run_solo() -> int:
             file=sys.stderr,
         )
 
+    blackboard: dict[str, list[str]] = {"proved": [], "refuted": [], "tools_tried": []}
+    journal: list[str] = []
     for round_idx in range(solo_llm_rounds()):
         llm_response = send_proxy_call(
             {
@@ -3802,6 +4018,7 @@ def run_solo() -> int:
                 "context": {
                     "round": str(round_idx),
                     "analysis": analysis,
+                    "blackboard": render_blackboard(blackboard, journal),
                 },
             }
         )
@@ -3817,7 +4034,46 @@ def run_solo() -> int:
                 file=sys.stderr,
             )
             break
-        candidate, reject_reason = candidate_from_llm_text_with_reason(problem, str(llm_response.get("response", "")))
+        # Crash wall: the LLM tier consumes model-invented data; any exception
+        # here must cost only this round, never the solver process (a KeyError
+        # in chain handling killed a live run once — never again).
+        candidate = None
+        reject_reason = "steer_crash"
+        try:
+            response_text = str(llm_response.get("response", ""))
+            steer_obj = extract_json_object(response_text)
+            if isinstance(steer_obj, dict) and steer_obj.get("kind") in ("tool_call", "midpoint"):
+                try:
+                    e1s = parse_equation(str(problem["equation1"]))
+                    e2s = parse_equation(str(problem["equation2"]))
+                    candidate, reject_reason = steer_dispatch(problem, e1s, e2s, steer_obj, blackboard)
+                except (KeyError, ValueError):
+                    candidate, reject_reason = None, "steer_problem_parse_failed"
+            else:
+                candidate, reject_reason = candidate_from_llm_text_with_reason(problem, response_text)
+                if candidate is None and reject_reason == "no_json_object":
+                    # Salvage tier: the reply had no usable JSON at all, but a
+                    # verbose model often states a true intermediate law in
+                    # prose. Mine equation-shaped lines and try each as an
+                    # untrusted midpoint bridge (mechanically re-proved).
+                    for bridge_text in salvage_bridge_equations(response_text):
+                        try:
+                            e1s = parse_equation(str(problem["equation1"]))
+                            e2s = parse_equation(str(problem["equation2"]))
+                            salvaged, salvage_reason = steer_dispatch(
+                                problem, e1s, e2s,
+                                {"kind": "midpoint", "lemma": bridge_text},
+                                blackboard)
+                        except (KeyError, ValueError):
+                            break
+                        if salvaged is not None:
+                            candidate, reject_reason = salvaged, salvage_reason
+                            candidate["route"] += "+salvaged"
+                            break
+        except Exception as exc:  # noqa: BLE001 — wall, not a handler
+            print(json.dumps({"route": "llm:crash_wall", "round": round_idx,
+                              "error": repr(exc)[:200]}), file=sys.stderr)
+            candidate, reject_reason = None, "steer_crash"
         if candidate is None:
             print(json.dumps({"route": "llm:reject", "round": round_idx, "reason": reject_reason}), file=sys.stderr)
             if reject_reason.startswith("guided_chain_hop_unproved:"):
@@ -3843,6 +4099,13 @@ def run_solo() -> int:
                     f"intermediate terms from the goal's LHS to its RHS, using only the goal's variables; "
                     f"each consecutive pair should follow from the hypothesis in a few rewrites."
                 )
+            if reject_reason.startswith(("bridge_failed:", "tool_", "bridge_skipped")):
+                analysis = (
+                    f"{solver_analysis(problem)}\n"
+                    f"Steering feedback: last action result = {reject_reason}. "
+                    f"Consult the blackboard; choose a different bridge or tool, or return "
+                    f"a guided_chain / counterexample_table directly."
+                )
             continue
         answer = dict(candidate["answer"])
         key = (str(answer.get("verdict")), str(answer.get("code")))
@@ -3862,6 +4125,7 @@ def run_solo() -> int:
                 ),
                 file=sys.stderr,
             )
+            journal.append(f"{candidate['route']}→{judge_response.get('status')}")
             if judge_response.get("status") == "accepted":
                 return 0
     if guided_lemma_budget(problem) > 0 and not is_reflexive_problem(problem):

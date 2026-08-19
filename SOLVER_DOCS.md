@@ -369,11 +369,41 @@ The LLM is given:
 - History of previous attempts
 - Exact JSON response format expected
 
-The LLM may return one of four shapes:
+The LLM may return one of six shapes. The four answer shapes:
 1. `{"verdict":"true","proof_kind":"rewrite_chain","chain":["lhs","...","rhs"]}` — rewrite chain, verified locally
 2. `{"verdict":"true","proof_kind":"guided_chain","chain":[...]}` — chain where steps may need closure, verified locally
 3. `{"verdict":"true","proof":"intro x y\n  exact ..."}` — raw Lean proof body, sanitized then sent to judge
 4. `{"verdict":"false","counterexample_table":[[0,1],[1,0]]}` — finite table, verified locally before Lean is emitted
+
+And the two **steering** shapes (reja-class, ported 2026-08-19). Steering follows
+the *verified-hint* principle: the model never authors trusted output, it only
+chooses an action; every consequence is machine-executed and machine-proved, so
+a wrong hint costs time, never correctness:
+5. `{"kind":"midpoint","lemma":"x * (y * z) = x * (z * y)"}` — an untrusted
+   bridge law. `custom_bridge_route` proves it from H via `_cp_saturation_attempt`
+   (lemmas prefix-renamed `B0…`), then attacks the goal with the bridge as a
+   standing rule via `proof_between_terms_guided`; emits route `true:steer_bridge`.
+6. `{"kind":"tool_call","tool":"saturate"|"ladder"|"backtrack"|"dual"}` — asks the
+   solver to re-run a deterministic engine with a bigger budget: `saturate` →
+   `cp_saturation_route(time_budget=40)`, `ladder` → `standard_ladder_route`,
+   `backtrack` → `backtracking_countermodel`, `dual` → `find_counterexample` on duals.
+
+### Steering state (`steer_dispatch`, blackboard, journal)
+
+`steer_dispatch(problem, eq1, eq2, obj, blackboard)` executes a steering object and
+returns `(candidate | None, feedback)`. The **blackboard** (`proved` / `refuted` /
+`tools_tried`) persists across rounds and dedupes: a failed bridge or an already-run
+tool is refused with `bridge_skipped_or_repeated:` / `tool_repeated:` instead of
+re-executed. The **journal** records `route→status` for every judge call. Both are
+rendered by `render_blackboard` into the `{solver.blackboard}` placeholder of the
+prompt, so each round sees what was proved, what failed, and what the judge said.
+
+### Crash wall
+
+The whole LLM tier of `run_solo` is wrapped in one `try/except Exception`: any
+exception raised while consuming model-invented data logs `llm:crash_wall` to
+stderr and costs only that round — the solver process survives. (Precedent: a
+`KeyError` from a peak-only variable in an LLM chain once killed a live run.)
 
 ### LLM Response Processing
 
@@ -383,6 +413,25 @@ The LLM may return one of four shapes:
 3. For FALSE: calls `table_is_counterexample` to verify locally
 4. For TRUE chains: calls `chain_certificate_from_terms` or `guided_chain_certificate_from_terms`
 5. For raw Lean: calls `sanitize_lean_code` to check for banned keywords and import restrictions
+
+### Salvage cascade (added 2026-08-19, motivated by the Gemma pilot)
+
+Verbose models often state the right idea in a broken wrapper (19 KB prose,
+fenced JSON, trailing commas → the old parser rejected the whole reply as
+`no_json_object`). Recovery is now a ladder:
+
+1. `extract_json_object` — after fence-stripping, tries in order: whole text →
+   `_json_repair`ed text → every outermost balanced `{...}` block found by the
+   string-aware scanner `_balanced_json_blocks` (longest first, raw then
+   repaired) → the old greedy regex as final fallback.
+2. `_json_repair` — conservative fixes only: smart quotes, Python literals
+   (`True`/`False`/`None`), trailing commas before `}`/`]`.
+3. `salvage_bridge_equations(text, limit=3)` — when no JSON survives at all,
+   mines equation-shaped lines (`lowercase vars, one =, at least one *`,
+   parseable, non-trivial) out of free-form prose. `run_solo` feeds each as an
+   untrusted `midpoint` bridge through `steer_dispatch`; an accepted salvage
+   gets `+salvaged` appended to its route. Safe by construction — bridges are
+   mechanically re-proved before use.
 
 ### Lean Sanitizer (`sanitize_lean_code`)
 Rejects any Lean code that:
