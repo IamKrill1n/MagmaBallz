@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Equational implication over magmas: strategies and theorems</title>
+  <style>
+    :root {
+      --bg: #f7f4ed;
+      --paper: #fffdf8;
+      --ink: #24211d;
+      --muted: #686158;
+      --rule: #d9d0c3;
+      --accent: #8b3f2f;
+      --accent-soft: #f3e3d8;
+      --code: #eee8de;
+      --shadow: 0 16px 50px rgba(62, 48, 35, .08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171512;
+        --paper: #211e1a;
+        --ink: #ece5da;
+        --muted: #b8aea1;
+        --rule: #423a32;
+        --accent: #e39a80;
+        --accent-soft: #3b2922;
+        --code: #2c2823;
+        --shadow: none;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 18px;
+      line-height: 1.72;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(210px, 280px) minmax(0, 860px);
+      gap: 3rem;
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+      align-items: start;
+    }
+    nav {
+      position: sticky;
+      top: 1.5rem;
+      max-height: calc(100vh - 3rem);
+      overflow: auto;
+      padding: 1.25rem 1rem;
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: .78rem;
+      line-height: 1.35;
+    }
+    nav .toc-title {
+      margin: 0 0 .8rem;
+      color: var(--ink);
+      font-size: .72rem;
+      font-weight: 750;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    nav ul { margin: 0; padding: 0; list-style: none; }
+    nav li { margin: .3rem 0; }
+    nav .toc-level-3 { padding-left: .9rem; font-size: .92em; }
+    nav a { color: inherit; text-decoration: none; }
+    nav a:hover { color: var(--accent); }
+    main {
+      min-width: 0;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: clamp(2rem, 5vw, 5rem);
+    }
+    h1, h2, h3 {
+      line-height: 1.18;
+      letter-spacing: -.02em;
+      text-wrap: balance;
+      scroll-margin-top: 1.5rem;
+    }
+    h1 { margin: 0 0 2.2rem; font-size: clamp(2.15rem, 5vw, 3.75rem); }
+    h2 { margin: 3.3rem 0 1rem; padding-top: .8rem; border-top: 1px solid var(--rule); font-size: 1.75rem; }
+    h3 { margin: 2.5rem 0 .8rem; font-size: 1.3rem; }
+    .heading-anchor { margin-left: .4em; color: var(--rule); text-decoration: none; font: 400 .65em ui-sans-serif, system-ui, sans-serif; }
+    h1:hover .heading-anchor, h2:hover .heading-anchor, h3:hover .heading-anchor { color: var(--accent); }
+    p { margin: .85rem 0; }
+    a { color: var(--accent); text-decoration-thickness: .07em; text-underline-offset: .15em; }
+    strong { font-weight: 750; }
+    code {
+      padding: .12em .32em;
+      border-radius: 4px;
+      background: var(--code);
+      font: .86em ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+    pre {
+      overflow-x: auto;
+      margin: 1.3rem 0;
+      padding: 1rem 1.15rem;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      background: var(--code);
+      line-height: 1.5;
+    }
+    pre code { padding: 0; background: transparent; font-size: .82rem; }
+    ul, ol { padding-left: 1.4rem; }
+    li { margin: .4rem 0; padding-left: .25rem; }
+    .display-math { overflow-x: auto; margin: 1.35rem 0; padding: .3rem 0; }
+    .table-wrap { overflow-x: auto; margin: 1.5rem 0; border: 1px solid var(--rule); border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; font-family: ui-sans-serif, system-ui, sans-serif; font-size: .84rem; line-height: 1.45; }
+    th, td { padding: .72rem .8rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+    th { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+    tbody tr:last-child td { border-bottom: 0; }
+    blockquote { margin: 1.4rem 0; padding: .25rem 1rem; border-left: 4px solid var(--accent); color: var(--muted); }
+    .source-note { margin: -1.5rem 0 2.5rem; color: var(--muted); font: .78rem ui-sans-serif, system-ui, sans-serif; }
+    .back-to-top { display: block; margin-top: 4rem; text-align: right; font: .8rem ui-sans-serif, system-ui, sans-serif; }
+    @media (max-width: 900px) {
+      .layout { display: block; padding: 0; }
+      nav { position: static; max-height: none; padding: 1rem 1.25rem; border-bottom: 1px solid var(--rule); }
+      nav ul { display: none; }
+      main { border: 0; border-radius: 0; padding: 2rem clamp(1.2rem, 5vw, 3rem) 4rem; }
+    }
+    @media print {
+      body { background: white; color: black; font-size: 11pt; }
+      .layout { display: block; max-width: none; padding: 0; }
+      nav, .heading-anchor, .back-to-top { display: none; }
+      main { border: 0; box-shadow: none; padding: 0; }
+      a { color: inherit; text-decoration: none; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .75em; overflow-wrap: anywhere; }
+      h2 { break-after: avoid; }
+      pre, table { break-inside: avoid; }
+    }
+  </style>
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body id="top">
+  <div class="layout">
+    <nav aria-label="Table of contents">
+      <p class="toc-title">Contents</p>
+      <ul><li class="toc-level-2"><a href="#conclusion">Conclusion</a></li><li class="toc-level-2"><a href="#precise-framing-and-certificate-contract">Precise framing and certificate contract</a></li><li class="toc-level-2"><a href="#mathematical-foundations-that-directly-guide-search">Mathematical foundations that directly guide search</a></li><li class="toc-level-3"><a href="#birkhoff-completeness-semantic-consequence-equals-finite-derivability">Birkhoff completeness: semantic consequence equals finite derivability</a></li><li class="toc-level-3"><a href="#free-magma-modulo-the-premise-one-canonical-model-decides-the-question">Free magma modulo the premise: one canonical model decides the question</a></li><li class="toc-level-3"><a href="#hsp-closure-and-reusable-model-families">HSP closure and reusable model families</a></li><li class="toc-level-3"><a href="#cheap-theorems-and-invariants">Cheap theorems and invariants</a></li><li class="toc-level-3"><a href="#finiteness-creates-extra-implications">Finiteness creates extra implications</a></li><li class="toc-level-2"><a href="#decidability-and-semi-decidability-boundaries">Decidability and semi-decidability boundaries</a></li><li class="toc-level-2"><a href="#existing-proof-search-methods">Existing proof-search methods</a></li><li class="toc-level-3"><a href="#1-closed-form-and-bounded-substitution-synthesis">1. Closed-form and bounded substitution synthesis</a></li><li class="toc-level-3"><a href="#2-bidirectional-rewrite-search-and-iterative-deepening">2. Bidirectional rewrite search and iterative deepening</a></li><li class="toc-level-3"><a href="#3-term-rewriting-and-knuth-bendix-completion">3. Term rewriting and Knuth--Bendix completion</a></li><li class="toc-level-3"><a href="#4-equality-saturation-with-e-graphs">4. Equality saturation with e-graphs</a></li><li class="toc-level-3"><a href="#5-superposition-saturation-atps">5. Superposition/saturation ATPs</a></li><li class="toc-level-3"><a href="#6-specialized-algebraic-reasoning">6. Specialized algebraic reasoning</a></li><li class="toc-level-2"><a href="#existing-countermodel-and-model-finding-methods">Existing countermodel and model-finding methods</a></li><li class="toc-level-3"><a href="#1-exhaustive-tiny-tables-and-shared-model-signatures">1. Exhaustive tiny tables and shared model signatures</a></li><li class="toc-level-3"><a href="#2-fixed-size-sat-smt-csp-encoding">2. Fixed-size SAT/SMT/CSP encoding</a></li><li class="toc-level-3"><a href="#3-direct-finite-model-builders">3. Direct finite model builders</a></li><li class="toc-level-3"><a href="#4-constraint-propagating-partial-table-backtracking">4. Constraint-propagating partial-table backtracking</a></li><li class="toc-level-3"><a href="#5-structured-finite-families">5. Structured finite families</a></li><li class="toc-level-3"><a href="#6-infinite-models-and-why-they-still-matter-here">6. Infinite models and why they still matter here</a></li><li class="toc-level-3"><a href="#7-countermodel-minimization-and-canonicalization">7. Countermodel minimization and canonicalization</a></li><li class="toc-level-2"><a href="#recommended-benchmark-portfolio">Recommended benchmark portfolio</a></li><li class="toc-level-3"><a href="#phase-a-canonicalization-and-cheap-classification">Phase A: canonicalization and cheap classification</a></li><li class="toc-level-3"><a href="#phase-b-balanced-proof-and-countermodel-deepening">Phase B: balanced proof and countermodel deepening</a></li><li class="toc-level-3"><a href="#phase-c-corpus-level-reuse-without-confusing-it-with-reasoning">Phase C: corpus-level reuse without confusing it with reasoning</a></li><li class="toc-level-3"><a href="#phase-d-certificate-first-admission">Phase D: certificate-first admission</a></li><li class="toc-level-2"><a href="#claims-a-solver-must-not-make">Claims a solver must not make</a></li><li class="toc-level-2"><a href="#source-quality-and-limitations">Source quality and limitations</a></li></ul>
+    </nav>
+    <main>
+      <p class="source-note">Readable HTML edition · converted from <code>equational-implication-strategies-and-theorems.md</code></p>
+      <h1 id="equational-implication-over-magmas-strategies-and-theorems">Equational implication over magmas: strategies and theorems<a class="heading-anchor" href="#equational-implication-over-magmas-strategies-and-theorems" aria-label="Link to this section">#</a></h1>
+<p>Research date: 2026-08-15</p>
+<h2 id="conclusion">Conclusion<a class="heading-anchor" href="#conclusion" aria-label="Link to this section">#</a></h2>
+<p>The benchmark asks a classical <strong>equational consequence</strong> question.  For magma terms <code>s</code>, <code>t</code>, <code>u</code>, and <code>v</code>, it asks whether</p>
+<div class="display-math">\[
+  (\forall \bar x,\ s(\bar x)=t(\bar x))
+  \quad\Longrightarrow\quad
+  (\forall \bar y,\ u(\bar y)=v(\bar y))
+\]</div>
+<p>holds in every magma.  Birkhoff completeness says that a true implication has a finite equational derivation using substitution, equality, and congruence. Thus proof enumeration is a complete semi-decision procedure for the <code>true</code> side.  A false implication has a model of the premise in which one assignment falsifies the conclusion, but that model need not be finite.  Consequently, finite-table search is only a semi-decision procedure for the subset of false instances with finite countermodels.</p>
+<p>There can be no total algorithm for arbitrary input identities in this signature.  McKenzie proved that, in a language with just one binary operation, it is undecidable whether a single identity has a nontrivial model, and also whether it has a finite nontrivial model.  Fixing the target identity to the singleton law <code>x = y</code> reduces either problem to implication: <code>E =&gt; (x = y)</code> holds exactly when <code>E</code> has no model with two distinct elements.  This does not make the competition's fixed, finite corpus undecidable; it rules out a general complete solver and explains why a resource-bounded portfolio is the right architecture.  <a href="https://www.cambridge.org/core/journals/journal-of-symbolic-logic/article/on-spectra-and-the-negative-solution-of-the-decision-problem-for-identities-having-a-finite-nontrivial-model1/101AF2F2F2858A6265074FD677B154E0" target="_blank" rel="noopener noreferrer">McKenzie, 1975, publisher's article and extract</a></p>
+<p>For this benchmark, the strongest practical design is therefore a fair, deterministic portfolio:</p>
+<ol>
+<li>canonicalize and try closed-form implications;</li>
+<li>interleave reconstructible equational proof search with exhaustive size-2 and size-3 countermodel search;</li>
+<li>deepen the proof side through short substitution chains, bidirectional rewriting, equality saturation, and superposition;</li>
+<li>deepen the model side through structured finite families and a fixed-size constraint solver/backtracker, increasing the size only as budget permits;</li>
+<li>validate every proposed proof or table independently and emit the smallest Lean certificate found.</li>
+</ol>
+<p>The sections below separate sourced mathematical facts from recommendations. Statements prefixed <strong>Inference</strong> are engineering conclusions drawn from the sources rather than theorems stated by them.  Statements prefixed <strong>Local evidence</strong> report this repository's prototypes and are not mathematical or held-back-benchmark guarantees.</p>
+<h2 id="precise-framing-and-certificate-contract">Precise framing and certificate contract<a class="heading-anchor" href="#precise-framing-and-certificate-contract" aria-label="Link to this section">#</a></h2>
+<p>A magma is a carrier <code>G</code> with a binary operation <code>G -&gt; G -&gt; G</code>.  A magma term is a full binary tree whose leaves are variables.  A law is a pair of terms and is satisfied when the two evaluations agree for every assignment of its variables. The official Equational Theories Project (ETP) uses this same definition and writes <code>E |= E&#x27;</code> when every magma satisfying <code>E</code> satisfies <code>E&#x27;</code>. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=2" target="_blank" rel="noopener noreferrer">ETP paper, Sections 1.1 and 2</a></p>
+<p>For a positive answer, this repository asks Lean for</p>
+<pre><code class="language-text">forall (G : Type) [Magma G], EquationLHS G -&gt; EquationRHS G</code></pre>
+<p>For a negative answer the generated Lean goal asks for</p>
+<pre><code class="language-text">∃ (G : Type) (_ : Magma G), EquationLHS G ∧ ¬ EquationRHS G</code></pre>
+<p>The README's stated competition contract expects a finite magma witness, and the canonical certificate is a complete operation table on <code>Fin n</code>, checked by Lean.  The proposition generated by the current judge does not itself include a finiteness hypothesis, however: a constructively defined infinite countermodel could inhabit the displayed goal if it can be expressed using allowed dependencies.  See the local <a href="../../../README.md#answer-format">README certificate forms</a>, <a href="../../../judge/verify.py">judge goal construction</a>, and the judge-provided helpers <a href="../../../judge/JudgeDecide/DecideBang.lean">DecideBang.lean</a> and <a href="../../../judge/JudgeFinOp/MemoFinOp.lean">MemoFinOp.lean</a>.</p>
+<p>Two scope points matter:</p>
+<ul>
+<li>The semantic question in the positive branch ranges over arbitrary magmas, not merely finite ones.</li>
+<li>The README's stated negative-certificate contract is narrower than semantic non-implication: it demands a <strong>finite</strong> witness.  Some genuine non-implications have no such witness.  Any corpus intended to be total under that stated two-certificate contract must therefore select false cases for which a finite certificate exists; a solver cannot manufacture a finite one for an Austin pair.  This is a contract-level limitation, not a restriction expressed in the current Lean <code>Goal</code> type.</li>
+</ul>
+<p>The usual universal-algebra convention takes carriers to be nonempty.  Lean's <code>Type</code> also admits the empty type, but this does not affect the undecidability reduction above: <code>x = y</code> is vacuously true on an empty carrier and true on a singleton, while any carrier with two distinct elements falsifies it.</p>
+<h2 id="mathematical-foundations-that-directly-guide-search">Mathematical foundations that directly guide search<a class="heading-anchor" href="#mathematical-foundations-that-directly-guide-search" aria-label="Link to this section">#</a></h2>
+<h3 id="birkhoff-completeness-semantic-consequence-equals-finite-derivability">Birkhoff completeness: semantic consequence equals finite derivability<a class="heading-anchor" href="#birkhoff-completeness-semantic-consequence-equals-finite-derivability" aria-label="Link to this section">#</a></h3>
+<p>For a theory <code>Gamma</code>, the ETP formalization defines derivability using premise, reflexivity, symmetry, transitivity, substitution of arbitrary terms for variables, and compatibility with the magma operation.  Its formalized Birkhoff completeness theorem states</p>
+<div class="display-math">\[
+  \Gamma \vdash s \simeq t \quad\Longleftrightarrow\quad
+  \Gamma \models s \simeq t.
+\]</div>
+<p><a href="https://teorth.github.io/equational_theories/blueprint/basic-theory-chapter.html#theorem-18" target="_blank" rel="noopener noreferrer">ETP blueprint, Definition 1.7 and Theorem 1.8</a> This is the magma instance of Birkhoff's foundational result. <a href="https://www.cambridge.org/core/journals/mathematical-proceedings-of-the-cambridge-philosophical-society/article/on-the-structure-of-abstract-algebras/D142B3886A3B7A218D8DF8E6DDA2B5B1" target="_blank" rel="noopener noreferrer">Birkhoff, <em>On the Structure of Abstract Algebras</em>, 1935</a></p>
+<p>Consequences for a solver:</p>
+<ul>
+<li>Enumerating finite derivation trees is complete for true implications, but there is no computable global bound sufficient to turn this enumeration into a decision procedure for unrestricted inputs.</li>
+<li>The natural proof IR needs only <code>refl</code>, an instantiated hypothesis, <code>symm</code>, <code>trans</code>, and congruence under the binary operation.  This is also exactly the fragment from which MagmaEgg reconstructed Lean proofs in the ETP. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=42" target="_blank" rel="noopener noreferrer">ETP paper, proof reconstruction</a></li>
+<li>A failed bounded proof search says nothing about validity.</li>
+</ul>
+<h3 id="free-magma-modulo-the-premise-one-canonical-model-decides-the-question">Free magma modulo the premise: one canonical model decides the question<a class="heading-anchor" href="#free-magma-modulo-the-premise-one-canonical-model-decides-the-question" aria-label="Link to this section">#</a></h3>
+<p>Let <code>X</code> contain the variables of the goal and let <code>M_(X,E1)</code> be the free magma on <code>X</code> subject to <code>E1</code>, constructed by quotienting raw terms by the congruence generated by <code>E1</code>.  Then <code>E1 |= (u = v)</code> exactly when the equivalence classes of <code>u</code> and <code>v</code> are equal in this free magma.  If they differ, the free magma itself is a countermodel.  <a href="https://teorth.github.io/equational_theories/blueprint/abstract-nonsense-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Theorems 10.2--10.3 and Corollary 10.4</a></p>
+<p>This is conceptually decisive but not automatically computational: the quotient word problem can be undecidable and the free model is generally infinite. When <code>E1</code> admits a terminating confluent presentation or a computable canonizer, however, canonical forms turn the semantic criterion into an algorithm.  The ETP used canonizers as computable invariants for refutations. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=35" target="_blank" rel="noopener noreferrer">ETP paper, Section 6.3</a></p>
+<h3 id="hsp-closure-and-reusable-model-families">HSP closure and reusable model families<a class="heading-anchor" href="#hsp-closure-and-reusable-model-families" aria-label="Link to this section">#</a></h3>
+<p>Birkhoff's variety theorem identifies equational classes as exactly the classes closed under homomorphic images, subalgebras, and products.  In particular, <code>Mod(E1)</code> is a variety and <code>E1 |= E2</code> means that <code>E2</code> is an identity throughout that variety.  <a href="https://doi.org/10.1017/S0305004100013463" target="_blank" rel="noopener noreferrer">Birkhoff, 1935</a></p>
+<p>Practical uses are modest but real:</p>
+<ul>
+<li>a submagma of a premise-model remains a premise-model;</li>
+<li>a direct product of premise-models remains a premise-model;</li>
+<li>a homomorphic image remains a premise-model, although quotienting can destroy the particular disequality witnessing failure of <code>E2</code>;</li>
+<li>a smallest closed submagma containing a falsifying assignment is therefore a sound way to shrink a countermodel before rendering it.</li>
+</ul>
+<p>The last point is an <strong>inference</strong> from closure under subalgebras, not a guarantee that every found table has a proper shrink.</p>
+<h3 id="cheap-theorems-and-invariants">Cheap theorems and invariants<a class="heading-anchor" href="#cheap-theorems-and-invariants" aria-label="Link to this section">#</a></h3>
+<p>The formal ETP development supplies several low-cost transformations:</p>
+<ul>
+<li><strong>Duality.</strong> Reversing every operation preserves implication: <code>E1 |= E2</code> iff <code>dual(E1) |= dual(E2)</code>. <a href="https://teorth.github.io/equational_theories/blueprint/general-implications-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Lemma 3.5</a></li>
+<li><strong>Diagonalization.</strong> If the variables on the two sides of <code>F(xbar) = G(ybar)</code> are disjoint, two instances eliminate <code>G</code> and show that <code>F</code> is constant over its arguments; this often collapses a law to the singleton or constant class. <a href="https://teorth.github.io/equational_theories/blueprint/general-implications-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Theorem 3.6</a></li>
+<li><strong>Variable multiplicity.</strong> If both sides of <code>E1</code> contain each variable equally often, every consequence must have the same property.  A multiset-addition magma proves the obstruction. <a href="https://teorth.github.io/equational_theories/blueprint/general-implications-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Theorem 3.8</a></li>
+<li><strong>Other matching invariants.</strong> Leftmost leaf, rightmost leaf, ordered leaf sequence, multiplicities modulo <code>m</code>, and computable images in suitable free objects can rule out implications. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=34" target="_blank" rel="noopener noreferrer">ETP paper, Section 6.2</a></li>
+</ul>
+<p>These are both triage features and certificate recipes.  An invariant mismatch is not itself a finite witness, but many basic invariants have small finite realizations: projections realize leftmost/rightmost-leaf invariants, and finite cyclic linear magmas often realize multiplicity obstructions.</p>
+<h3 id="finiteness-creates-extra-implications">Finiteness creates extra implications<a class="heading-anchor" href="#finiteness-creates-extra-implications" aria-label="Link to this section">#</a></h3>
+<p>On finite sets, injective self-maps are surjective, right inverses are left inverses, and iterates are eventually periodic.  The ETP formalizes these facts and uses them to prove implications valid only for finite magmas. <a href="https://teorth.github.io/equational_theories/blueprint/infinite-model-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Lemmas 5.5--5.7</a></p>
+<p>An <strong>Austin law</strong> has an infinite nontrivial model but no finite nontrivial model.  More generally, an Austin pair <code>(E1,E2)</code> satisfies <code>E1 |=fin E2</code> but not <code>E1 |= E2</code>.  The ETP records 820 such implications among its order-at-most-four laws and gives explicit infinite countermodels. <a href="https://teorth.github.io/equational_theories/blueprint/infinite-model-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Chapter 5</a> Therefore neither exhaustive finite search nor an <code>unsat</code> result at every tested size proves unrestricted implication.</p>
+<h2 id="decidability-and-semi-decidability-boundaries">Decidability and semi-decidability boundaries<a class="heading-anchor" href="#decidability-and-semi-decidability-boundaries" aria-label="Link to this section">#</a></h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Problem</th><th>Status</th><th>Reason and caveat</th></tr></thead>
+<tbody>
+<tr><td>Unrestricted <code>E1 |= E2</code> for arbitrary input magma identities</td><td>Undecidable</td><td>Reduce McKenzie's undecidable nontrivial-model problem to <code>E1 |= (x=y)</code>.</td></tr>
+<tr><td><code>E1 |=fin E2</code> over all finite magmas</td><td>Undecidable</td><td>The same reduction uses McKenzie's finite-nontrivial-model result.</td></tr>
+<tr><td>True unrestricted implications</td><td>Recursively enumerable</td><td>Enumerate Birkhoff derivations; completeness guarantees eventual success.</td></tr>
+<tr><td>False implications having a finite countermodel</td><td>Recursively enumerable</td><td>Enumerate sizes, all operation tables, and goal assignments.</td></tr>
+<tr><td>A fixed carrier size <code>n</code></td><td>Decidable</td><td>There are finitely many tables and assignments; SAT/CSP is an equivalent finite encoding.</td></tr>
+<tr><td>A fixed finite corpus such as the competition files</td><td>Decidable in principle</td><td>It can be tabulated once; this says nothing about generalization to unseen larger laws.</td></tr>
+</tbody></table></div>
+<p>The first two rows are directly verified by McKenzie's theorem and the stated reduction.  The next three are elementary consequences of Birkhoff completeness and finite enumeration.  The final row is a finite-set observation.</p>
+<p>For a carrier of size <code>n</code> there are exactly <code>n^(n^2)</code> labelled binary operation tables.  Thus sizes 2 and 3 contain only 16 and 19,683 tables, while size 4 contains 4,294,967,296.  This calculation is an <strong>inference</strong> directly from the definition of a table.  The ETP exhaustively searched through size 4, used only 524 distinct witnesses to refute 96.3% of all false order-at-most-four implications, and reported 165 CPU-hours for that campaign. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=20" target="_blank" rel="noopener noreferrer">ETP paper, Section 5.1</a></p>
+<h2 id="existing-proof-search-methods">Existing proof-search methods<a class="heading-anchor" href="#existing-proof-search-methods" aria-label="Link to this section">#</a></h2>
+<h3 id="1-closed-form-and-bounded-substitution-synthesis">1. Closed-form and bounded substitution synthesis<a class="heading-anchor" href="#1-closed-form-and-bounded-substitution-synthesis" aria-label="Link to this section">#</a></h3>
+<p>Try, in increasing proof cost:</p>
+<ul>
+<li>reflexivity and premise/goal equality up to side swap and variable relabeling;</li>
+<li>a single total substitution instance of either orientation of <code>E1</code>;</li>
+<li>one instance under a subterm context (one or more congruence wrappers);</li>
+<li>two applications joined by transitivity, solving the shared midpoint by unification rather than merely comparing partially instantiated terms;</li>
+<li>diagonalization, derived constancy, and singleton collapse;</li>
+<li>the dual problem when its canonical form is cheaper or already supported.</li>
+</ul>
+<p>These are instances of Birkhoff's rules, so every emitted proof is sound after endpoint checking.  They are attractive because the search space can be explicitly stratified by term size and proof cost.  The ETP found about 15,000 direct implications by brute-force simple rewriting; transitive closure exposed about four million more relations in its fixed graph. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=33" target="_blank" rel="noopener noreferrer">ETP paper, Section 6.1</a></p>
+<p><strong>Local evidence.</strong> The repository has already selected closed-form synthesis, short-chain unification, specialized algebraic synthesis, and bidirectional subterm rewriting as its four proof lanes.  It also specifies a reconstructible derivation DAG over <code>refl</code>, <code>hyp</code>, <code>symm</code>, <code>trans</code>, and <code>congr</code>. <a href="../issues/03-choose-proof-search-portfolio.md">Local proof-portfolio decision</a> The recorded prototype was a shape test, not broad coverage evidence.</p>
+<h3 id="2-bidirectional-rewrite-search-and-iterative-deepening">2. Bidirectional rewrite search and iterative deepening<a class="heading-anchor" href="#2-bidirectional-rewrite-search-and-iterative-deepening" aria-label="Link to this section">#</a></h3>
+<p>Treat an edge as replacing a matched subterm with the opposite side of a fully instantiated <code>E1</code>, in either direction.  Search outward from both goal endpoints and stop on a collision.  Useful controls are:</p>
+<ul>
+<li>iterative deepening on proof length, intermediate-term size, and substitution pool size;</li>
+<li>canonical variable naming and hash-consed terms;</li>
+<li>stable subterm-position and substitution order;</li>
+<li>parent pointers carrying the exact instantiated premise and context;</li>
+<li>subsumption by the cheapest proof of the same term.</li>
+</ul>
+<p>Unbounded, fair enumeration is complete by Birkhoff; every practical bound is incomplete.  Meet-in-the-middle search reduces depth at the cost of storing both frontiers.  The ETP's equation-search tool similarly searched outward from hypotheses and goals using substitutions and an implication graph. <a href="https://teorth.github.io/equational_theories/blueprint/equation-search-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Equation Search</a></p>
+<p>For this repository, graph-derived lemmas belong to the optional oracle subsystem when they depend on known equation IDs.  The same mechanism becomes ordinary reasoning only when the intermediate identities are derived from the current premise during the case run.</p>
+<h3 id="3-term-rewriting-and-knuth-bendix-completion">3. Term rewriting and Knuth--Bendix completion<a class="heading-anchor" href="#3-term-rewriting-and-knuth-bendix-completion" aria-label="Link to this section">#</a></h3>
+<p>Orient <code>E1</code> by a well-founded reduction order, simplify terms, generate critical pairs, and add oriented consequences until the system is convergent.  If a terminating confluent presentation is obtained, equality is decided by comparing normal forms.  Completion may fail to orient an equation, generate an unbounded set of rules, or run forever; those outcomes do not decide the original problem. The original algorithm was introduced for word problems in universal algebras with exactly this success-without-general-termination character. <a href="https://www.cs.tufts.edu/~nr/cs257/archive/don-knuth/knuth-bendix.pdf" target="_blank" rel="noopener noreferrer">Knuth and Bendix, <em>Simple Word Problems in Universal Algebras</em>, 1970</a></p>
+<p>This lane is especially promising for collapsing or size-decreasing premises. It is less suitable when either side introduces variables absent from the other: such a law cannot simply be applied as a deterministic rewrite without choosing values for the extra variables.</p>
+<h3 id="4-equality-saturation-with-e-graphs">4. Equality saturation with e-graphs<a class="heading-anchor" href="#4-equality-saturation-with-e-graphs" aria-label="Link to this section">#</a></h3>
+<p>An e-graph compactly stores many terms and their congruence classes, allowing both orientations to be explored without choosing a single global normal form. Equality saturation repeatedly matches and applies the premise until the goal endpoints merge or resource bounds are hit.  Proof explanations must retain substitutions and congruence edges so they can be reconstructed in Lean.</p>
+<p>The ETP used <code>lean-egg</code> and a magma-specific <code>MagmaEgg</code>.  It explicitly handled extra variables by instantiating them with terms found in the proof context or goal subexpressions, and reconstructed explanations into Lean proof terms. <a href="https://teorth.github.io/equational_theories/blueprint/egraphs-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, E-Graphs</a> The underlying <code>egg</code> implementation describes e-graphs as compact congruence representations and equality saturation as their rewrite-driven application. <a href="https://www.mwillsey.com/papers/egg" target="_blank" rel="noopener noreferrer">Willsey et al., <em>egg: Fast and Extensible E-graphs</em>, 2021</a></p>
+<p>Ground congruence closure alone is not enough: the premise is universally quantified.  Non-ground search needs a fair instantiation policy such as e-matching, which remains a semi-decision procedure here. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=40" target="_blank" rel="noopener noreferrer">ETP paper, Section 7.1.2</a></p>
+<h3 id="5-superposition-saturation-atps">5. Superposition/saturation ATPs<a class="heading-anchor" href="#5-superposition-saturation-atps" aria-label="Link to this section">#</a></h3>
+<p>Encode <code>E1</code> as a universally quantified equality, negate <code>E2</code> using fresh witness constants, clausify, and run a prover such as Vampire or Prover9. Superposition is designed for first-order equality and can discover lemmas whose intermediate terms are hard for local rewrite search to guess.  The ETP used both tools because their solved sets were complementary, and translated proof steps back into Lean rather than trusting a yes/no result. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=39" target="_blank" rel="noopener noreferrer">ETP paper, Sections 7.1--7.3</a> The project specifically reports 1,775 implications found with Vampire and a Lean elaborator for the superposition steps. <a href="https://teorth.github.io/equational_theories/blueprint/vampire-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Vampire</a></p>
+<p><strong>Inference.</strong> In the competition's single-file, sandboxed setting, an external ATP is useful only if its binary is available or its essential search is reimplemented.  The lasting design lesson is to separate discovery from trusted certificate reconstruction.</p>
+<h3 id="6-specialized-algebraic-reasoning">6. Specialized algebraic reasoning<a class="heading-anchor" href="#6-specialized-algebraic-reasoning" aria-label="Link to this section">#</a></h3>
+<p>Rewrite laws in terms of left/right translations <code>L_x</code>, <code>R_x</code>, and the squaring map <code>S</code>.  Equations such as <code>L_a R_b = id</code> expose injectivity, surjectivity, cancellation, or inverse relations that a syntactic term search may rediscover only after long chains.  For unrestricted implications these arguments must not use finiteness; for finite-only reasoning, injective/surjective equivalence and eventual periodicity become available.  The ETP's difficult finite searches and proofs repeatedly used exactly these derived map properties. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=50" target="_blank" rel="noopener noreferrer">ETP paper, Sections 2, 7.3.8, and 8</a></p>
+<h2 id="existing-countermodel-and-model-finding-methods">Existing countermodel and model-finding methods<a class="heading-anchor" href="#existing-countermodel-and-model-finding-methods" aria-label="Link to this section">#</a></h2>
+<h3 id="1-exhaustive-tiny-tables-and-shared-model-signatures">1. Exhaustive tiny tables and shared model signatures<a class="heading-anchor" href="#1-exhaustive-tiny-tables-and-shared-model-signatures" aria-label="Link to this section">#</a></h3>
+<p>For each table, evaluate <code>E1</code> on every assignment; only premise-models need goal testing.  A countermodel is a premise-model with at least one goal-falsifying assignment.  Across many cases, compute once the bitset of corpus laws satisfied by each table.  One table then refutes every pair <code>(E1,E2)</code> for which the first bit is set and the second is clear.  This signature reuse is how a small witness set can cover millions of implication pairs, as the ETP results above show.</p>
+<p><strong>Local evidence.</strong> The repository's deterministic prototype found 6 of 145 development false cases first at size 2 and 34 more at size 3.  Structured families and seeded size-4 backtracking raised the total to 99, with no benefit from 46,000 pseudo-random candidates on the residue. <a href="../issues/02-choose-countermodel-search-portfolio.md">Local countermodel-portfolio decision</a> These figures are public-corpus engineering evidence, not a theorem about order-five generalization.</p>
+<h3 id="2-fixed-size-sat-smt-csp-encoding">2. Fixed-size SAT/SMT/CSP encoding<a class="heading-anchor" href="#2-fixed-size-sat-smt-csp-encoding" aria-label="Link to this section">#</a></h3>
+<p>For a chosen <code>n</code>, introduce one finite-domain variable <code>op[i,j]</code> for every table cell.  For every assignment of the premise variables, introduce or inline term evaluation and assert equality of the two premise terms.  Introduce one assignment of the goal variables and assert disequality of its two term values. The resulting constraint problem is satisfiable exactly when an <code>n</code>-element countermodel exists.</p>
+<p>Useful implementation techniques are:</p>
+<ul>
+<li>increase <code>n</code> incrementally;</li>
+<li>flatten nested terms with auxiliary definitions;</li>
+<li>reuse clauses learned at the same size where the encoding permits it;</li>
+<li>add sound carrier-permutation symmetry breaking;</li>
+<li>branch on table cells with equality propagation;</li>
+<li>extract a total table and recheck it independently.</li>
+</ul>
+<p>Claessen and Soerensson's Paradox work describes this MACE-style pipeline and the specific improvements of term definitions, incremental SAT, static symmetry reduction, and sort inference. <a href="https://research.chalmers.se/en/publication/2547" target="_blank" rel="noopener noreferrer">Primary publication record, Chalmers</a></p>
+<p>Z3 can also find finite models of quantified formulas, and the official ETP script encodes the operation as an uninterpreted binary function, negates the implication, asks Z3 for a model, and emits Lean source from the resulting table. <a href="https://raw.githubusercontent.com/teorth/equational_theories/main/scripts/generate_z3_counterexample.py" target="_blank" rel="noopener noreferrer">ETP <code>generate_z3_counterexample.py</code></a> However, Z3's own guide stresses that quantified reasoning is incomplete in general and may diverge.  An explicit fixed finite sort or bit-vector encoding turns the bounded problem into a genuine decision problem. <a href="https://microsoft.github.io/z3guide/docs/logic/Quantifiers/" target="_blank" rel="noopener noreferrer">Official Z3 quantifier guide</a></p>
+<h3 id="3-direct-finite-model-builders">3. Direct finite model builders<a class="heading-anchor" href="#3-direct-finite-model-builders" aria-label="Link to this section">#</a></h3>
+<p>Mace4 builds all ground instances at a selected domain size and uses a ground equational-rewriting decision procedure to search for a table.  Its author describes it as complementary to a theorem prover and particularly useful for finite algebras and equational problems. <a href="https://www.cs.unm.edu/~mccune/mace4/mace4.pdf" target="_blank" rel="noopener noreferrer">McCune, <em>Mace4 Reference Manual and Guide</em></a> The ETP found well-configured Mace4 substantially faster than a generic SAT-based finite model builder on some project equations, while Vampire's portfolio mode sometimes found an unspecified-size model faster.  Those are project observations, not universal benchmarks. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=44" target="_blank" rel="noopener noreferrer">ETP paper, Section 7.3.1</a></p>
+<h3 id="4-constraint-propagating-partial-table-backtracking">4. Constraint-propagating partial-table backtracking<a class="heading-anchor" href="#4-constraint-propagating-partial-table-backtracking" aria-label="Link to this section">#</a></h3>
+<p>Assign operation cells in a fixed order.  Whenever all cells needed to evaluate a premise instance are known, reject the branch if that instance fails.  Seed a goal-falsifying assignment early, and propagate equalities between partially evaluated terms.  Retained premise-models can order cell values without deleting branches.  This is a direct, deterministic analogue of SEM/Mace-style table construction and naturally supports pause/resume by storing its stack.</p>
+<p><strong>Inference.</strong> For these very small signatures, a specialized evaluator can avoid the generic clausification overhead of an ATP.  It should nevertheless borrow model-finder techniques: least-number/symmetry rules, most-constrained cell selection when deterministic, and aggressive equality propagation.</p>
+<h3 id="5-structured-finite-families">5. Structured finite families<a class="heading-anchor" href="#5-structured-finite-families" aria-label="Link to this section">#</a></h3>
+<p>Cheap, incomplete families have high value before generic size-4+ search:</p>
+<ul>
+<li>constant and left/right projection operations;</li>
+<li>min/max, bands, semilattices, groups, and quasigroups;</li>
+<li>affine or linear operations <code>x diamond y = a*x + b*y + c</code> over <code>Z/nZ</code> or a finite field;</li>
+<li>small quadratic families;</li>
+<li>products of smaller examples;</li>
+<li>projection tables with a small number of exceptional cells;</li>
+<li>translation-invariant operations on a finite group.</li>
+</ul>
+<p>The ETP reports linear and quadratic magmas, cancellative magmas, quasigroups, translation-invariant constructions, and hand-guided finite models as productive sources. <a href="https://teorth.github.io/equational_theories/blueprint/selected-magmas-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Selected magmas</a> For a linear magma, every term evaluates to a linear combination whose coefficients are polynomials in <code>a</code> and <code>b</code>; implication obstructions can therefore be searched algebraically, including with Groebner bases in the commutative case. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=22" target="_blank" rel="noopener noreferrer">ETP paper, Section 5.2</a></p>
+<p>The structured lane should enumerate parameters deterministically and dedupe tables before universal premise checking.  Random unrestricted tables are weak because they tend to satisfy few nontrivial laws; the ETP made the same empirical observation at size 5. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=21" target="_blank" rel="noopener noreferrer">ETP paper, Section 5.1</a></p>
+<h3 id="6-infinite-models-and-why-they-still-matter-here">6. Infinite models and why they still matter here<a class="heading-anchor" href="#6-infinite-models-and-why-they-still-matter-here" aria-label="Link to this section">#</a></h3>
+<p>An unrestricted non-implication may require a free-algebra, string, arithmetic, translation-invariant, or greedy infinite construction.  The ETP developed translation-invariant magmas of the form</p>
+<div class="display-math">\[
+  x \diamond y = x + f(y-x)
+\]</div>
+<p>and greedy extensions of partial operations to resolve hard anti-implications. <a href="https://teorth.github.io/equational_theories/blueprint/infinite-magma-constructions-chapter.html" target="_blank" rel="noopener noreferrer">ETP blueprint, Infinite magma constructions</a></p>
+<p>These methods explain residual cases and can refute a proposed global theorem, but they do not meet this benchmark's false-certificate contract unless the construction can be specialized to a finite model.  In particular, lack of a finite witness should not cause the proof lane to assert <code>true</code>; it may indicate an Austin pair or simply that the smallest finite witness exceeds the budget.</p>
+<h3 id="7-countermodel-minimization-and-canonicalization">7. Countermodel minimization and canonicalization<a class="heading-anchor" href="#7-countermodel-minimization-and-canonicalization" aria-label="Link to this section">#</a></h3>
+<p>After a table is found:</p>
+<ol>
+<li>keep a concrete assignment falsifying <code>E2</code>;</li>
+<li>compute the submagma generated by the values in that assignment;</li>
+<li>if it is proper, restrict the table and recheck both laws exhaustively;</li>
+<li>relabel elements to a canonical deterministic order;</li>
+<li>emit the table only after shape, range, premise, and failure checks pass.</li>
+</ol>
+<p>This can reduce Lean source size and exhaustive checking cost.  Do not quotient by a congruence unless the falsifying values remain distinct after quotienting.</p>
+<h2 id="recommended-benchmark-portfolio">Recommended benchmark portfolio<a class="heading-anchor" href="#recommended-benchmark-portfolio" aria-label="Link to this section">#</a></h2>
+<p>The following is an engineering recommendation synthesized from the cited results and the repository's prototype decisions.</p>
+<h3 id="phase-a-canonicalization-and-cheap-classification">Phase A: canonicalization and cheap classification<a class="heading-anchor" href="#phase-a-canonicalization-and-cheap-classification" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>Parse to an immutable tree representation and alpha-normalize variables by first occurrence.</li>
+<li>Canonicalize equality side order for fingerprints while retaining the required output orientation.</li>
+<li>Compute dual, variable sets, multiplicities, leaf sequence, leftmost/rightmost leaves, subterms, and sizes.</li>
+<li>Discharge reflexive, direct-instance, disjoint-variable diagonalization, and singleton/constant-collapse patterns.</li>
+<li>Probe the shared size-2 and size-3 table bank immediately.</li>
+</ul>
+<p>This phase should be exhaustive over its declared finite spaces and produce an exact derivation or table, never a verdict score.</p>
+<h3 id="phase-b-balanced-proof-and-countermodel-deepening">Phase B: balanced proof and countermodel deepening<a class="heading-anchor" href="#phase-b-balanced-proof-and-countermodel-deepening" aria-label="Link to this section">#</a></h3>
+<p>Interleave deterministic effort slices rather than choosing one direction irrevocably:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Proof lane</th><th>Countermodel lane</th></tr></thead>
+<tbody>
+<tr><td>direct premise substitutions</td><td>exhaustive size 2, then size 3</td></tr>
+<tr><td>one-context and two-hop chains</td><td>structured families, sizes 4--7</td></tr>
+<tr><td>specialized constancy/map lemmas</td><td>constraint backtracking at size 4</td></tr>
+<tr><td>bidirectional rewrite frontiers</td><td>fixed-size SAT/CSP or Mace-style search</td></tr>
+<tr><td>equality saturation</td><td>increasing sizes while budget remains</td></tr>
+<tr><td>superposition/ATP fallback</td><td>selected larger structured/seeded searches</td></tr>
+</tbody></table></div>
+<p>The direction predictor, if enabled, may decide which lane gets the first slice but is not evidence.  A surviving premise-model is reusable ordering information and may become a countermodel later; it is not yet a candidate.  This follows the repository glossary's distinction between a premise-model and a countermodel.</p>
+<h3 id="phase-c-corpus-level-reuse-without-confusing-it-with-reasoning">Phase C: corpus-level reuse without confusing it with reasoning<a class="heading-anchor" href="#phase-c-corpus-level-reuse-without-confusing-it-with-reasoning" aria-label="Link to this section">#</a></h3>
+<p>For Marathon runs, share:</p>
+<ul>
+<li>parsed canonical terms and substitution pools;</li>
+<li>each finite magma's satisfied-law signature;</li>
+<li>derived identities with reconstructible proofs;</li>
+<li>canonical tables and failed exact candidate fingerprints.</li>
+</ul>
+<p>Known pair-specific certificates and an implication graph are a <strong>certificate cache</strong> in this repository's terminology.  They can be valuable in oracle mode but do not establish generalization.  Content fingerprints, not equation-list positions, must bind cache entries; IDs are enumeration metadata, not implication topology. <a href="equation-order-topology.md">Existing local research on equation order</a></p>
+<h3 id="phase-d-certificate-first-admission">Phase D: certificate-first admission<a class="heading-anchor" href="#phase-d-certificate-first-admission" aria-label="Link to this section">#</a></h3>
+<p>Before paying for a judge call:</p>
+<ul>
+<li>recompute every derivation node's endpoints and require the root to match the goal exactly;</li>
+<li>require substitutions to be total for every premise variable used;</li>
+<li>render shared proof DAG nodes once as <code>have</code> bindings;</li>
+<li>exhaustively verify table dimensions, values, every premise assignment, and a concrete failing goal assignment;</li>
+<li>canonicalize and deduplicate evidence;</li>
+<li>leave enough deadline for Lean compilation.</li>
+</ul>
+<p>The search program is an untrusted discovery engine.  Acceptance comes only from the local checks plus the deterministic Lean judge, matching the ETP's successful pattern of translating ATP/model output into kernel-checked proof objects. <a href="https://teorth.github.io/equational_theories/paper.pdf#page=10" target="_blank" rel="noopener noreferrer">ETP paper, Sections 3 and 7.2</a></p>
+<h2 id="claims-a-solver-must-not-make">Claims a solver must not make<a class="heading-anchor" href="#claims-a-solver-must-not-make" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><code>No model of size &lt;= n</code> does <strong>not</strong> imply <code>E1 |= E2</code>.</li>
+<li><code>Z3 returned unknown</code>, ATP timeout, e-graph saturation limit, or empty bounded rewrite frontier is not mathematical evidence either way.</li>
+<li>A model satisfying <code>E1</code> is only a premise-model until a specific assignment falsifies <code>E2</code>.</li>
+<li>A syntactic invariant mismatch proves non-implication only when the invariant is justified by a model/free-object argument; it is not enough that a feature merely correlates with labels.</li>
+<li>An implication valid on all tested finite models need not hold on arbitrary magmas; Austin pairs are explicit counterexamples.</li>
+<li>An ATP proof or model is not a benchmark answer until it has been translated into and accepted as the required Lean certificate.</li>
+<li>The complete order-at-most-four ETP graph is a finite solved artifact.  Its impressive coverage statistics should guide strategy order, but they do not prove performance on the roughly 62,000 order-five laws used by Stage 2.</li>
+</ul>
+<h2 id="source-quality-and-limitations">Source quality and limitations<a class="heading-anchor" href="#source-quality-and-limitations" aria-label="Link to this section">#</a></h2>
+<p>The central sources are primary:</p>
+<ul>
+<li>the <a href="https://teorth.github.io/equational_theories/paper.pdf" target="_blank" rel="noopener noreferrer">ETP contributors' paper</a>, <a href="https://teorth.github.io/equational_theories/blueprint/" target="_blank" rel="noopener noreferrer">formal blueprint</a>, and <a href="https://github.com/teorth/equational_theories" target="_blank" rel="noopener noreferrer">first-party repository</a>;</li>
+<li>Birkhoff's <a href="https://doi.org/10.1017/S0305004100013463" target="_blank" rel="noopener noreferrer">original 1935 paper</a>;</li>
+<li>McKenzie's <a href="https://doi.org/10.2307/2271899" target="_blank" rel="noopener noreferrer">original 1975 paper</a>;</li>
+<li>Knuth and Bendix's <a href="https://www.cs.tufts.edu/~nr/cs257/archive/don-knuth/knuth-bendix.pdf" target="_blank" rel="noopener noreferrer">original completion paper</a>;</li>
+<li>the authors' or institutions' first-party documentation for <a href="https://www.cs.unm.edu/~mccune/mace4/mace4.pdf" target="_blank" rel="noopener noreferrer">Mace4</a>, <a href="https://research.chalmers.se/en/publication/2547" target="_blank" rel="noopener noreferrer">Paradox</a>, <a href="https://www.mwillsey.com/papers/egg" target="_blank" rel="noopener noreferrer"><code>egg</code></a>, and <a href="https://microsoft.github.io/z3guide/docs/logic/Quantifiers/" target="_blank" rel="noopener noreferrer">Z3</a>.</li>
+</ul>
+<p>The ETP blueprint is a live formalization companion.  Some of its less-developed sections visibly contain placeholders or conjectural prose; this report relies only on theorem statements marked formalized, explicit constructions, the final project paper, and source code.  Tool timings in the ETP paper were collected on heterogeneous machines and are treated only as observations, not comparative benchmarks.  Repository prototype counts are likewise local evidence from the public development corpus.  No claim here establishes expected performance on held-back Stage 2 instances, a finite countermodel bound for them, or completeness of any resource-bounded portfolio.</p>
+      <a class="back-to-top" href="#top">Back to top ↑</a>
+    </main>
+  </div>
+</body>
+</html>
