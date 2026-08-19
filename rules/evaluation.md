@@ -18,6 +18,12 @@ The solver is a free-form Python program. No required function signatures — th
 
 If the solver uses LLM calls in **Solo**, it declares its prompt template as a top-level `PROMPT = "..."` string literal; the proxy extracts it via static AST parsing (the module is never imported or executed on the host), fills `{placeholder}` variables, and queries the LLM. In **Marathon**, the solver makes LLM calls itself via the helper `from marathon_llm import call_llm` (or any OpenAI-SDK call) against a local HTTP proxy; no template extraction.
 
+## Submission Note
+
+A solver that includes compressed data or binary blobs must disclose them in a submission note (plain text or Markdown, submitted alongside `solver.py`): what they contain, and the methodology used to generate them. Participants can add links to any open-source code used to generate or process them. Solvers without such payloads do not need a note.
+
+The note is not machine-checked and does not affect judge verdicts — see [Human-Interpretable Artifacts](overview.md#human-interpretable-artifacts).
+
 ## Tracks
 
 Stage 2 has two tracks. Both share the same judge, the same five-status verdict mapping, and the same single-file `solver.py` contract (≤ 500 KB). They differ only in I/O shape and budgeting:
@@ -25,7 +31,7 @@ Stage 2 has two tracks. Both share the same judge, the same five-status verdict 
 | Track | Workload per process | Budget | I/O |
 |-------|----------------------|--------|-----|
 | **Solo** | One problem per solver subprocess | Fixed per-problem | stdin (problem JSON) / stdout (answer JSON) |
-| **Marathon** | N problems per solver subprocess (reference N=100) | Single global budget = `compression_ratio × N × Solo per-problem` (default `compression_ratio = 0.5`) | manifest JSONL in / append-only JSONL out |
+| **Marathon** | N problems per solver subprocess (reference N=100) | Single global budget = `N × 5 minutes` wall-clock, `N × 32768` tokens | manifest JSONL in / append-only JSONL out |
 
 One solver source can support both. Full specs: `docs/solo_mode.md` and `docs/marathon_mode.md` in the repository.
 
@@ -57,14 +63,14 @@ Reference values in `pipeline/config.json`. Numbers may still be tuned during St
 
 **Marathon (per run, N problems):**
 
-The global budget is derived from Solo's per-problem reference:
+The global budget is a flat per-problem allowance × N:
 
 | Resource | Formula | Default at N=100 |
 |----------|---------|------------------|
-| Wall-clock | `compression_ratio × N × 3600 s` | 180 000 s (50 h) at `0.5` |
-| Tokens | `compression_ratio × N × 65536` | ~3.3 M at `0.5` |
+| Wall-clock | `N × 300 s` (5 minutes per problem) | 30 000 s (≈8.3 h) |
+| Tokens | `N × 32768` | ~3.3 M |
 
-`compression_ratio` defaults to `0.5` — the solver cannot finish all N at single-problem cost and must triage. Setting it to `1.0` removes compression; smaller values squeeze harder.
+The per-problem allowance is deliberately far below Solo's (300 s vs 3600 s wall-clock) — the solver cannot give every problem a Solo-depth attempt and must triage.
 
 The solver manages its own pacing within the budget. Deterministic strategies cost no tokens. Exceeding the wall-clock or token budget terminates the solver.
 
@@ -83,7 +89,7 @@ or
 ```
 
 - **True certificate**: a Lean 4 proof that the hypothesis equation implies the goal equation.
-- **False certificate**: a Lean 4 proof that there exists a finite magma satisfying the hypothesis but not the goal.
+- **False certificate**: a Lean 4 proof that there exists a magma satisfying the hypothesis but not the goal. The carrier may be finite (e.g. an explicit operation table on `Fin n`) or infinite (e.g. `Nat` or a submission-defined inductive type) — the judge's goal is `∃ (G : Type) (_ : Magma G), EquationLHS G ∧ ¬ EquationRHS G`, with no finiteness constraint.
 
 Both are verified by the deterministic Lean judge. The judge returns exactly one of the following statuses:
 
@@ -136,7 +142,7 @@ The official GitHub repository for Stage 2:
 This repository includes:
 
 - the evaluation pipeline (proxy, runner, judge)
-- demo solvers organized by track under `examples/{solo,marathon}/demos/` (Solo: `baseline/`, `oss_twophase/`, `oss_opnorm/`; Marathon: `baseline/`, `triage_oss/`, `fewshot_oss/`)
+- demo solvers organized by track under `examples/{solo,marathon}/demos/` (Solo: `baseline/`, `twophase/`, `opnorm/`; Marathon: `baseline/`, `triage/`, `fewshot/`)
 - a step-by-step tutorial per track (`examples/solo/TUTORIAL.md`, `examples/marathon/TUTORIAL.md`)
 - local testing support via `scripts/run_harness.py` (Solo) and `scripts/run_marathon_harness.py` (Marathon)
 

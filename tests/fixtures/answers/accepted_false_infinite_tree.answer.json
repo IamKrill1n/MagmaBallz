@@ -1,0 +1,4 @@
+{
+  "verdict": "false",
+  "code": "import JudgeProblem\n\nnamespace submission\ninductive T : Type\n  | leaf : T\n  | node : T -> T -> T\nend submission\n\nopen submission in\ndef submission : Goal :=\n  ⟨T, ⟨fun x _ => x⟩, fun x _ => Eq.refl x,\n   fun h => T.noConfusion (h T.leaf (T.node T.leaf T.leaf))⟩\n"
+}

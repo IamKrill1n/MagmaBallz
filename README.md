@@ -20,8 +20,8 @@ Example: `E_4: x = x * y` implies `E_3: x = x * x`.
 
 Stage 1 asked models for a yes/no answer. **Stage 2 raises the bar**:
 every answer must come with a machine-verifiable Lean 4 certificate —
-a proof for true implications, or a finite magma witness where the
-hypothesis holds but the goal fails. A deterministic Lean judge
+a proof for true implications, or a magma witness (finite or infinite)
+where the hypothesis holds but the goal fails. A deterministic Lean judge
 accepts or rejects each answer — no partial credit, no probabilistic
 scoring, no LLM-as-judge. The same judge code runs locally and at the
 official evaluation: if the harness in this repo turns green for
@@ -51,7 +51,7 @@ problems and budgets are shaped — one solver source can support both.
 ### → Marathon track
 
 - **N problems per solver subprocess** (reference: N=100). One process, one shared global budget.
-- **Compressed global budget**: `compression_ratio × N × Marathon per-problem reference` (600 s + 65 536 tokens per problem; deliberately tighter than Solo's wall-clock, see [`docs/marathon_mode.md`](docs/marathon_mode.md)). Default `compression_ratio = 0.5` — solver cannot finish all N at the per-problem reference cost and must triage.
+- **Compressed global budget**: `N × 5 minutes` wall-clock + `N × 32 768` tokens (see [`docs/marathon_mode.md`](docs/marathon_mode.md)) — far below Solo's per-problem budget, so the solver cannot give every problem a Solo-depth attempt and must triage.
 - Communication: file-based (read manifest JSONL, append answers JSONL).
 - **Best for**: triage strategies, cross-problem caching, prompt reuse.
 - **Quick Start**: [Marathon Quick Start](#marathon-quick-start) below.
@@ -154,20 +154,16 @@ python3 scripts/run_marathon.py \
 export OPENROUTER_API_KEY=sk-...
 python3 scripts/run_marathon.py \
   --solver examples/marathon/demos/triage \
-  --manifest examples/problems/marathon/normal_100.jsonl \
-  --compression-ratio 0.5
-# 100 problems × 600 s × 0.5 ≈ 30 000 s wall-clock. Swap in
-# examples/problems/normal.jsonl (1000 problems, ~83 h at the same
-# compression) when you're ready for the full reference set.
+  --manifest examples/problems/marathon/normal_100.jsonl
+# 100 problems × 300 s = 30 000 s wall-clock. Swap in
+# examples/problems/normal.jsonl (1000 problems, ~83 h) when you're
+# ready for the full reference set.
 ```
 
-The runner derives `budget_seconds` and `budget_tokens` from
-`compression_ratio × N × Marathon-per-problem-reference` (600 s and
-65 536 tokens; see [`docs/marathon_mode.md`](docs/marathon_mode.md)).
-Override either budget directly with `--budget-seconds` /
-`--budget-tokens`, or change just the multiplier with
-`--compression-ratio` (default `0.5`; smaller squeezes harder, `1.0` =
-no compression).
+The runner derives `budget_seconds` and `budget_tokens` from a flat
+per-problem allowance: `N × 300 s` and `N × 32 768` tokens (see
+[`docs/marathon_mode.md`](docs/marathon_mode.md)). Override either
+budget directly with `--budget-seconds` / `--budget-tokens`.
 
 Regression harness (separate from `run_harness.py`):
 
@@ -376,8 +372,9 @@ external Mathlib imports needed for the canonical false-cert shape):
   problem text is auto-normalized to `◇`)
 - `Magma G` — Lean type class declaring `G` as a magma; `[Magma G]`
   introduces an instance bringing `◇` into scope
-- `Fin n` — the standard finite type `{0, 1, …, n-1}`; the canonical
-  false-certificate domain
+- `Fin n` — the standard finite type `{0, 1, …, n-1}`; the most common
+  false-certificate domain (infinite carriers are equally accepted — see
+  the False certificate section below)
 - `finOpTable "<json>"` — judge helper that turns a JSON-encoded n×n
   table into a `Fin n → Fin n → Fin n` operation
 - `decideFin!` — judge tactic that closes a finite-domain goal by
@@ -411,12 +408,36 @@ def submission : Goal := by
   decideFin!
 ```
 
+The carrier does **not** have to be finite — `Goal` carries no
+`Finite`/`Fintype` constraint, and the judge accepts any verified
+countermodel. For example, for a problem whose hypothesis is
+`x = x ◇ y` (satisfied by left projection) and whose goal reduces to
+`x = y` under that operation, an infinite countermodel over `Nat` is:
+
+```lean
+import JudgeProblem
+
+def submission : Goal :=
+  ⟨Nat, ⟨fun x _ => x⟩, fun x _ => Eq.refl x, fun h => Nat.noConfusion (h 0 1)⟩
+```
+
+Infinite carriers can't use `decideFin!` (it exhausts a finite table) —
+close the two conjuncts with ordinary Lean proofs instead. If your
+countermodel needs helper declarations (a custom inductive carrier, a
+recursive operation, lemmas), define them **inside the `submission`
+namespace**: the dependency allowlist admits `submission.*` names
+(alongside standard-library namespaces like `Nat.*` / `List.*`), while a
+top-level helper under any other name is rejected as `incomplete_proof`
+(`DISALLOWED_DECLARATIONS`). Both shapes — a `Nat` countermodel and a
+`submission`-namespaced inductive tree carrier — are pinned as accepted
+regressions in the harness.
+
 > **Universe note**: `Goal` is pinned to concrete `Type` (= `Type 0`)
 > in both branches because `abbrev Goal : Prop := ∀ (G : Type _) …`
 > leaves a stuck universe meta that Lean can't resolve at `abbrev`
-> elaboration. Submitters work with small types (`Fin n`, concrete
-> magmas) which all live in `Type 0`, so this isn't a practical
-> restriction.
+> elaboration. Submitters work with concrete carriers — `Fin n`, `Nat`,
+> submission-defined inductive types — which all live in `Type 0`, so
+> this isn't a practical restriction (finite and infinite alike).
 >
 > **Backward compatibility**: old-style `theorem submission :
 > <explicit goal> := …` submissions still verify if they use the new
@@ -664,7 +685,7 @@ modules and the Mathlib olean cache. Available imports:
 
 ## Configuration
 
-> Below: **Solo** reference budgets and LLM parameters. Marathon derives its global budgets from these via `compression_ratio` — see [`docs/marathon_mode.md`](docs/marathon_mode.md).
+> Below: **Solo** reference budgets and LLM parameters. Marathon uses its own flat per-problem allowance (`N × 300 s` / `N × 32 768` tokens) — see [`docs/marathon_mode.md`](docs/marathon_mode.md).
 
 > The numbers in `pipeline/config.json` (wall-clock timeout, Lean timeout, code-size caps, sandbox limits, LLM parameters) are a **reference configuration** for Stage 2. They will be tuned based on community feedback as the competition progresses — expect the wall-clock budget and sandbox limits in particular to settle once we see how contestant solvers actually behave. The single-file solver contract and the public five-status verdict semantics are stable; the numerical knobs are not.
 
@@ -789,7 +810,7 @@ The canonical completion gate is `python3 scripts/run_harness.py` — determinis
 
 | Suite | Current count | Source of truth | Covers |
 |---|---|---|---|
-| Judge cases | 66 | `tests/harness_manifest.json` | Accepted / malformed / unparsed / incomplete_proof / incorrect on curated fixtures (incl. FALSE_CERT_TOO_LARGE) |
+| Judge cases | 68 | `tests/harness_manifest.json` | Accepted / malformed / unparsed / incomplete_proof / incorrect on curated fixtures (incl. FALSE_CERT_TOO_LARGE; accepted FALSE certificates cover finite tables and infinite carriers — `Nat` and a submission-defined inductive tree type) |
 | Judge internals | 32 | `run_judge_internal_cases` in `scripts/run_harness.py` | Unit-level invariants on verify.py helpers (equation normalization, byte-length cap, path stripping, render template stability, JudgeConfig budget-field plumbing for the three judge caps) |
 | Banned tokens | 24 | `run_banned_token_cases` in `scripts/run_harness.py` | Placeholder-detector word-boundary + substring matrix for every entry in `BANNED_PROOF_TOKENS` |
 | Repeatability | 4 | `repeatability_cases` in the same manifest | Selected cases run 3× and must project byte-identical results |
@@ -798,7 +819,7 @@ The canonical completion gate is `python3 scripts/run_harness.py` — determinis
 | Public challenger | 79 | `tests/challenger_manifest.json :: public_attack_cases` | Bypass attempts (banned placeholder / axiom / declaration smuggling, stdout injection) plus positive-control regressions for previously-false-negative proofs |
 | Infra challenger | 4 | same manifest, `infra_attack_cases` | Organizer-side malformed problems must raise `JudgeConfigurationError`, never map to a contestant verdict |
 
-Current repo baseline: **267 green checks** across the suites above (the harness also runs submit-CLI and loader smoke tests, plus a README self-check; the JSON summary lists every `passed_*_count` field separately). The README self-check (`run_readme_consistency_check`) reads the live `summary` map after every suite has run and compares each cell here to the matching `passed_*_count` — so adding a regression auto-bumps the canonical numbers, and any drift here fails the gate. Any nonzero exit blocks completion — do not weaken a test to get green.
+Current repo baseline: **269 green checks** across the suites above (the harness also runs submit-CLI and loader smoke tests, plus a README self-check; the JSON summary lists every `passed_*_count` field separately). The README self-check (`run_readme_consistency_check`) reads the live `summary` map after every suite has run and compares each cell here to the matching `passed_*_count` — so adding a regression auto-bumps the canonical numbers, and any drift here fails the gate. Any nonzero exit blocks completion — do not weaken a test to get green.
 
 Reading the JSON summary the harness prints:
 
@@ -832,7 +853,7 @@ Exits `0` when the sandbox image boots, blocks network, and blocks writes to the
 ├── README.md                        # This file (entry point + Pick Your Track)
 ├── docs/                            # Track specs (read these before submitting)
 │   ├── solo_mode.md                 #   Solo track: I/O contract, budgets, scoring
-│   └── marathon_mode.md             #   Marathon track: same, plus compression_ratio
+│   └── marathon_mode.md             #   Marathon track: same, plus global budget
 │
 ├── judge/                           # Deterministic Lean verifier (shared by both tracks)
 │   ├── verify.py                    #   Core verification logic

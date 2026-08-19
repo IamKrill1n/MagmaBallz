@@ -302,10 +302,10 @@ def run_marathon():
 
     # max_output_tokens is moderate (8192). The marathon_llm helper refuses
     # any call where ``estimated_prompt + max_output_tokens > budget_tokens``,
-    # so on a compressed marathon (e.g. ``compression_ratio=0.5`` × 5 problems
-    # × 65536 tokens = 32k cap) a 32k max_out blocks every call. 8192 fits
-    # the median equational-theory proof body comfortably; non-compressed
-    # contestants can raise this as needed.
+    # so on a small marathon (e.g. 5 problems × 32768 tokens = 164k cap,
+    # mostly spent) a too-large max_out can block every remaining call.
+    # 8192 fits the median equational-theory proof body comfortably;
+    # contestants with token headroom can raise this as needed.
     llm_config = {
         "model": os.environ.get("JUDGE_MARATHON_MODEL", "openai/gpt-oss-120b"),
         "provider": "deepinfra/bf16",
