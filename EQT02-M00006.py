@@ -128,6 +128,9 @@ CP_SATURATION_TERM_SLACK = 8
 CP_SATURATION_WIDE_SLACK = 20
 CP_SATURATION_WIDE_PAIR_CAP = 8000
 CP_SATURATION_WIDE_GAP_TIME = 10.0
+CP_SATURATION_WIDE_ROUNDS = 60
+CP_SATURATION_WIDE_LEMMA_BUDGET = 1500
+CP_SATURATION_WIDE_TIME = 45.0
 LLM_MAX_ROUNDS = 2
 MARATHON_LLM_MAX_CALLS = 24
 MARATHON_LLM_BATCH_SIZE = 10
@@ -2525,15 +2528,19 @@ def cp_saturation_route(
     )
     deadline = time.monotonic() + time_budget
     for beam, extra in attempts:
+        attempt_rounds, attempt_budget = rounds, lemma_budget
         if extra:
-            # the wide pass must not be starved by attempts 1-2 having spent
-            # the shared budget: grant it its own slice on top
-            deadline = time.monotonic() + time_budget * 0.75
+            # the wide pass runs at its own dosage on its own budget slice:
+            # the heavy instance-chaining cases need ~7 lemmas over deep
+            # rounds (normal_0492 measured 36 s at this dosage, MISS below it)
+            deadline = time.monotonic() + max(time_budget * 0.75, CP_SATURATION_WIDE_TIME)
+            attempt_rounds = max(rounds, CP_SATURATION_WIDE_ROUNDS)
+            attempt_budget = max(lemma_budget, CP_SATURATION_WIDE_LEMMA_BUDGET)
         result = _cp_saturation_attempt(
             eq1,
             eq2,
-            lemma_budget=lemma_budget,
-            rounds=rounds,
+            lemma_budget=attempt_budget,
+            rounds=attempt_rounds,
             deadline=deadline,
             beam=beam,
             **extra,

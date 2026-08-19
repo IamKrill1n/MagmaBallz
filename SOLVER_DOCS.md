@@ -348,7 +348,9 @@ exactly as the single-rule versions did.
 **Wide-slack escalation (2026-08-20).** `cp_saturation_route` now runs THREE
 attempts in strict escalation: classic (slack 8) → beam (slack 8) → wide
 (classic algorithm, `CP_SATURATION_WIDE_SLACK = 20`, pair cap 8000, gap time
-10 s, its own extra 0.75×time_budget so attempts 1-2 cannot starve it).
+10 s, rounds 60, lemma budget 1500, own budget slice max(0.75×time_budget, 45 s)
+so attempts 1-2 cannot starve it — dosage set by normal_0492, the heaviest
+faller: 7 lemmas, ~33 s; MISS below this dosage).
 Attempts 1-2 are byte-identical to the pre-wide behavior, so every previously
 solved case keeps its exact proof. Rationale: instance-chaining proofs (the
 reja-class E-lemma chains) pass through self-nested intermediates far larger
