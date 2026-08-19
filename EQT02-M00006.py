@@ -418,6 +418,29 @@ def submission : Goal := by
 
 
 def false_certificate(n: int, table: list[list[int]]) -> str:
+    # finOpTable parses the JSON by filtering DIGIT CHARACTERS one at a time
+    # (JudgeFinOp/MemoFinOp.lean:extractDigits), so any cell value >= 10
+    # desynchronizes the whole table: n >= 11 certificates verify locally and
+    # fail in Lean. Discovered 2026-08-20 on hard2_0051 (witness 7i+7j mod 13).
+    # For n >= 11 emit a List-literal op instead — Nat.mul/Nat.add/Nat.mod in
+    # bare-function form, because the judge's dependency policy disallows the
+    # typeclass operators (HAdd.hAdd/HMul.hMul/HMod.hMod). Judge-verified.
+    if n >= 11:
+        flat = ",".join(str(v) for row in table for v in row)
+        return (
+            "import JudgeProblem\n"
+            "import JudgeDecide.DecideBang\n"
+            "set_option maxRecDepth 40000\n"
+            "set_option maxHeartbeats 1000000000\n\n"
+            "def submission : Goal := by\n"
+            f"  let vals : List Nat := [{flat}]\n"
+            f"  let m : Magma (Fin {n}) := {{ op := fun i j =>\n"
+            f"    ⟨Nat.mod (vals.getD (Nat.add (Nat.mul i.val {n}) j.val) 0) {n}, "
+            "Nat.mod_lt _ (Nat.lt_of_le_of_lt (Nat.zero_le i.val) i.isLt)⟩ }\n"
+            f"  refine Exists.intro (Fin {n}) ?_\n"
+            "  refine Exists.intro m ?_\n"
+            "  decideFin!\n"
+        )
     table_str = json.dumps(table, separators=(",", ":"))
     max_rec_depth = "set_option maxRecDepth 20000\n" if n >= 7 else ""
     return (
@@ -850,6 +873,43 @@ def structured_family_tables(max_n: int = STRUCTURED_MAX_N):
             item = emit(f"false:rectband:{rows}x{cols}", table)
             if item is not None:
                 yield item
+
+
+EXTENDED_AFFINE_SIZES = (11, 13, 16, 17, 19, 23, 25)
+
+
+def extended_affine_scan(eq1, eq2, deadline=None):
+    """Affine op = (a*i + b*j + c) mod n for n past the old finOpTable digit
+    ceiling (legal now via the list-literal certificate). Deterministic
+    fail-fast probes make the full coefficient scan cheap; the exhaustive
+    check runs only on probe survivors. Returns (n, table, route) | None."""
+    vs = eq1["variables"]
+    def ev(term, env, table, n):
+        if term[0] == "var":
+            return env[term[1]]
+        return table[ev(term[1], env, table, n)][ev(term[2], env, table, n)]
+    for n in EXTENDED_AFFINE_SIZES:
+        probes = [
+            tuple((i * k + s) % n for k, s in ((3, 1), (7, 2), (5, 0)))[: max(1, len(vs))]
+            for i in range(12)
+        ]
+        for a in range(n):
+            for b in range(n):
+                if deadline is not None and time.monotonic() >= deadline:
+                    return None
+                for c in (0, 1):
+                    table = [[(a * x + b * y + c) % n for y in range(n)] for x in range(n)]
+                    ok = True
+                    for p in probes:
+                        env = dict(zip(vs, list(p) + [p[0]] * (len(vs) - len(p))))
+                        if ev(eq1["lhs"], env, table, n) != ev(eq1["rhs"], env, table, n):
+                            ok = False
+                            break
+                    if not ok:
+                        continue
+                    if table_is_counterexample(eq1, eq2, table):
+                        return n, table, f"false:affine_ext:z{n}:{a},{b},{c}"
+    return None
 
 
 def affine_family_tables(max_n: int = 5):
@@ -3019,6 +3079,12 @@ def find_counterexample(
     if found is not None:
         n, table = found
         return n, table, f"false:backtrack_fin{n}"
+
+    # Last structured tier before the dual retry: cheap probe-gated scan, and
+    # placed here so it can never starve the tiers above of budget.
+    ext = extended_affine_scan(eq1, eq2, deadline=deadline)
+    if ext is not None:
+        return ext
 
     if allow_dual:
         remaining_budget = None

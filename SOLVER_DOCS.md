@@ -160,6 +160,17 @@ def submission : Goal := by
 
 ### `false_certificate(n, table)`
 
+**Two encodings (2026-08-20).** `JudgeFinOp/MemoFinOp.lean:extractDigits` parses
+the table JSON by filtering digit *characters* one at a time, so any cell value
+≥ 10 desynchronizes the decoded table — n ≥ 11 table certificates verify locally
+but are refuted by `decide` in Lean. Therefore: n ≤ 10 keeps the battle-tested
+`finOpTable` string; n ≥ 11 emits a `List Nat` literal indexed with bare-function
+arithmetic (`Nat.mod (vals.getD (Nat.add (Nat.mul i.val n) j.val) 0) n`) — the
+typeclass operators `HAdd.hAdd`/`HMul.hMul`/`HMod.hMod` are disallowed by the
+judge's dependency policy. Both paths judge-verified. This lifts the FALSE
+search's order ceiling entirely.
+
+
 Embeds a counterexample table into Lean and uses `decideFin!` to mechanically verify it.
 
 ```lean
@@ -297,7 +308,14 @@ bounding by used values alone is over-restrictive — indices are elements — a
 cell; complete tables are kept iff they falsify eq2. Node caps 150k/90k/40k, own 12 s budget.
 Runs after brute force, before the dual retry (which therefore inherits it).
 
-### 7. Dual Search
+### 7. Extended Affine Scan (`extended_affine_scan`, added 2026-08-20)
+Affine models `(a·i + b·j + c) mod n` for `n ∈ {11,13,16,17,19,23,25}` — orders
+past the finOpTable digit ceiling (see certificate note below). Deterministic
+fail-fast probes gate the exhaustive check. Runs after the backtracker so it can
+never starve earlier tiers. First scalp: hard2_0051 (`7i+7j mod 13`, 0.1 s,
+judge-accepted) — a case no build of ours nor reja23 had ever solved via table.
+
+### 8. Dual Search
 If the above all fail, tries the same search on the **dual problem** (swap operand order everywhere). A counterexample to the dual corresponds to a transposed counterexample to the original.
 
 ---
