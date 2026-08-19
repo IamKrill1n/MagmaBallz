@@ -1,0 +1,2 @@
+{"id": "forge_433_15235", "eq1_law": 433, "eq2_law": 15235, "equation1": "x = x * (y * (x * (z * y)))", "equation2": "x = x * (((x * (y * x)) * x) * y)", "provenance": "sieve_v1: 3var sparse-spectrum hyp, bank-inseparable, portfolio-unsolved"}
+{"id": "forge_862_51509", "eq1_law": 862, "eq2_law": 51509, "equation1": "x = x * ((y * z) * (z * z))", "equation2": "x * y = ((x * z) * (w * y)) * x", "provenance": "sieve_v1: 3var sparse-spectrum hyp, bank-inseparable, portfolio-unsolved"}

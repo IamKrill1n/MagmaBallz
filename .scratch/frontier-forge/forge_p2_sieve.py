@@ -47,10 +47,20 @@ def main() -> None:
     print(f"{len(feats)} laws, {len(sigs)} signatures, {len(models)} models", flush=True)
 
     # hypothesis pool: 3-var laws with sparse known spectra (eq168-shaped)
+    def singleton_forcing(f) -> bool:
+        # a bare-variable side whose variable is absent from the other side
+        # forces |S| = 1 (every implication trivially TRUE) — not frontier
+        eq = m6.parse_equation(f["text"])
+        for a, b in ((eq["lhs"], eq["rhs"]), (eq["rhs"], eq["lhs"])):
+            if a[0] == "var" and str(a[1]) not in m6.term_vars(b):
+                return True
+        return False
+
     hyp_pool = sorted(
         law for law, f in feats.items()
-        if f["vars"] == 3 and not f["one_sided"] and law in sigs
+        if f["vars"] == 3 and law in sigs
         and 0 < sigs[law].count("1") <= MAX_SIG_POP
+        and not singleton_forcing(f)
     )
     hyps = hyp_pool[:: max(1, len(hyp_pool) // HYP_COUNT)][:HYP_COUNT]
     print(f"hypothesis pool {len(hyp_pool)}, drawn {len(hyps)}", flush=True)
@@ -63,29 +73,30 @@ def main() -> None:
     candidates: list[tuple[int, int]] = []
     for hi, h in enumerate(hyps):
         sh = sigs[h]
-        picked = 0
-        # deterministic stride walk over targets, offset by hypothesis index
-        for off in range(len(tgt_pool)):
+        hbits = [k for k, c in enumerate(sh) if c == "1"]
+        # bank-inseparable targets BY CONSTRUCTION: every model satisfying the
+        # hypothesis also satisfies the target (random targets are separated
+        # ~100% of the time for sparse hypotheses — measured, v1 found zero)
+        compatible = [t for t in tgt_pool if t != h
+                      and all(sigs[t][k] != "0" for k in hbits)]
+        # deterministic spread over the compatible set
+        step = max(1, len(compatible) // TGT_PER_HYP)
+        chosen = compatible[(hi % max(1, step))::step][:TGT_PER_HYP]
+        candidates.extend((h, t) for t in chosen)
+        # keep a small sample of separated pairs as free FALSE labels
+        for off in range(6):
             t = tgt_pool[(hi * 7919 + off * 104729) % len(tgt_pool)]
             if t == h:
                 continue
             st = sigs[t]
-            sep = next((k for k in range(len(sh))
-                        if sh[k] == "1" and st[k] == "0"), None)
+            sep = next((k for k in hbits if st[k] == "0"), None)
             if sep is not None:
-                # bank refutes: free FALSE label (only keep a sample)
-                if off < 40:
-                    labeled.write(json.dumps({
-                        "eq1_law": h, "eq2_law": t,
-                        "equation1": feats[h]["text"], "equation2": feats[t]["text"],
-                        "answer": False, "witness_model": models[sep]["name"],
-                        "provenance": "bank_separated",
-                    }) + "\n")
-                continue
-            candidates.append((h, t))
-            picked += 1
-            if picked >= TGT_PER_HYP:
-                break
+                labeled.write(json.dumps({
+                    "eq1_law": h, "eq2_law": t,
+                    "equation1": feats[h]["text"], "equation2": feats[t]["text"],
+                    "answer": False, "witness_model": models[sep]["name"],
+                    "provenance": "bank_separated",
+                }) + "\n")
     labeled.close()
     print(f"bank-inseparable candidates: {len(candidates)}", flush=True)
 
