@@ -1,0 +1,2 @@
+{"solver": "suii0x", "id": "hard1_0001", "expected": false, "solved": false, "verdict": null, "judge_statuses": ["incorrect"], "llm_calls": 0, "judge_calls": 1, "elapsed": 4.1, "corpus": "hard1"}
+{"solver": "suii0x", "id": "hard1_0035", "expected": true, "solved": false, "verdict": null, "judge_statuses": ["incorrect"], "llm_calls": 0, "judge_calls": 1, "elapsed": 4.7, "corpus": "hard1"}

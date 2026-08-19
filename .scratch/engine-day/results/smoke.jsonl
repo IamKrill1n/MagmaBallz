@@ -1,0 +1,6 @@
+{"solver": "generalized", "id": "hard1_0001", "expected": false, "solved": true, "verdict": "false", "judge_statuses": [null], "llm_calls": 0, "judge_calls": 1, "elapsed": 8.0, "corpus": "hard1"}
+{"solver": "generalized", "id": "hard1_0024", "expected": false, "solved": true, "verdict": "false", "judge_statuses": [null], "llm_calls": 0, "judge_calls": 1, "elapsed": 8.0, "corpus": "hard1"}
+{"solver": "suii0x", "id": "hard1_0024", "expected": false, "solved": false, "verdict": null, "judge_statuses": [null], "llm_calls": 0, "judge_calls": 1, "elapsed": 0.6, "corpus": "hard1"}
+{"solver": "suii0x", "id": "hard1_0001", "expected": false, "solved": false, "verdict": null, "judge_statuses": [null], "llm_calls": 0, "judge_calls": 1, "elapsed": 0.7, "corpus": "hard1"}
+{"solver": "suii0x", "id": "hard1_0047", "expected": false, "solved": false, "verdict": null, "judge_statuses": [null], "llm_calls": 0, "judge_calls": 1, "elapsed": 0.6, "corpus": "hard1"}
+{"solver": "generalized", "id": "hard1_0047", "expected": false, "solved": true, "verdict": "false", "judge_statuses": [null], "llm_calls": 0, "judge_calls": 1, "elapsed": 82.1, "corpus": "hard1"}
