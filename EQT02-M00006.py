@@ -2626,6 +2626,165 @@ def find_h_models(eq1: dict[str, Any], *, max_models: int = 4,
     return found
 
 
+BRIDGE_ENUM_MAX_LEAVES = 4
+BRIDGE_ENUM_TIME_BUDGET = 25.0
+BRIDGE_ENUM_GOAL_TESTS = 200     # số ứng viên tối đa được thử "đóng goal"
+BRIDGE_ENUM_PROVE_CAP = 6        # số cầu đóng-được-goal tối đa được thử chứng minh
+
+
+def _enum_terms(max_leaves: int, variables: tuple[str, ...]) -> list[tuple]:
+    by_leaves: dict[int, list[tuple]] = {1: [("var", v) for v in variables]}
+    for k in range(2, max_leaves + 1):
+        acc: list[tuple] = []
+        for left_k in range(1, k):
+            for a in by_leaves[left_k]:
+                for b in by_leaves[k - left_k]:
+                    acc.append(("op", a, b))
+        by_leaves[k] = acc
+    return [t for terms in by_leaves.values() for t in terms]
+
+
+def _canon_equation(lhs: tuple, rhs: tuple) -> tuple | None:
+    """Chuẩn hóa tên biến theo thứ tự xuất hiện (trái trước phải); loại
+    phản xạ; định hướng cặp (lhs,rhs) ~ (rhs,lhs) về một đại diện."""
+    order: list[str] = []
+    def walk(t):
+        if t[0] == "var":
+            if t[1] not in order:
+                order.append(t[1])
+        else:
+            walk(t[1]); walk(t[2])
+    walk(lhs); walk(rhs)
+    ren = {v: n for v, n in zip(order, ("x", "y", "z", "w"))}
+    def sub(t):
+        if t[0] == "var":
+            return ("var", ren[t[1]])
+        return ("op", sub(t[1]), sub(t[2]))
+    a, b = sub(lhs), sub(rhs)
+    if a == b:
+        return None
+    return (a, b) if a <= b else (b, a)
+
+
+def _subterm_set(t: tuple, acc: set) -> set:
+    acc.add(t)
+    if t[0] == "op":
+        _subterm_set(t[1], acc); _subterm_set(t[2], acc)
+    return acc
+
+
+def bridge_enumeration_route(
+    eq1: dict[str, Any],
+    eq2: dict[str, Any],
+    *,
+    lemma_budget: int,
+    time_budget: float = BRIDGE_ENUM_TIME_BUDGET,
+) -> tuple[str, str] | None:
+    """Vét cạn cầu nhỏ-vừa một cách hệ thống — tổng quát hóa của ladder.
+    Mọi phương trình canonical tới BRIDGE_ENUM_MAX_LEAVES lá được lọc qua
+    model của H (bác chắc chắn cầu bất khả), xếp hạng theo độ trùng subterm
+    với goal, thử ĐÓNG GOAL trước (rẻ), và chỉ cầu đóng được goal mới được
+    tốn saturation chứng minh từ H (đắt). Chi phí lọc trả một lần; không
+    lời đoán đơn lẻ nào cùng cỡ có thể thắng máy này về độ phủ."""
+    deadline = time.monotonic() + time_budget
+    h_models = find_h_models(eq1, max_models=10, time_box=3.0)
+    if not h_models:
+        return None  # không có lưới lọc thì liệt kê chỉ đốt thời gian
+    terms = _enum_terms(BRIDGE_ENUM_MAX_LEAVES, ("x", "y", "z"))
+    # Chữ ký giá trị: value của term trên MỌI assignment (x,y,z) của MỌI
+    # model-H. Hai term cùng chữ ký ⟺ phương trình giữa chúng đúng trong
+    # mọi model-H — nên "cặp sống sót" = cặp trong cùng nhóm chữ ký. Sụp
+    # O(T^2) phép check cặp thành O(T) phép tính chữ ký.
+    def term_sig(t: tuple) -> tuple:
+        vals = []
+        for table in h_models:
+            n = len(table)
+            for cx in range(n):
+                for cy in range(n):
+                    for cz in range(n):
+                        env = {"x": cx, "y": cy, "z": cz}
+                        def ev(u):
+                            if u[0] == "var":
+                                return env[u[1]]
+                            return table[ev(u[1])][ev(u[2])]
+                        vals.append(ev(t))
+        return tuple(vals)
+    groups: dict[tuple, list[tuple]] = {}
+    for t in terms:
+        groups.setdefault(term_sig(t), []).append(t)
+    seen: set[tuple] = set()
+    survivors: list[tuple] = []
+    goal_subs = _subterm_set(eq2["lhs"], set()) | _subterm_set(eq2["rhs"], set())
+    # Sinh cặp theo thứ tự tổng-kích-thước tăng dần với nắp cứng: cầu nhỏ
+    # trước (cầu to là lãnh địa của tầng LLM đệ quy), và khâu chuẩn hóa
+    # không bao giờ được ăn cả ngân sách như bản đầu (36k cặp đo được).
+    SURVIVOR_CAP = 1500
+    sized_groups = [sorted(g, key=term_size) for g in groups.values() if len(g) > 1]
+    pair_stream = sorted(
+        ((term_size(g[i]) + term_size(g[j]), gi, i, j)
+         for gi, g in enumerate(sized_groups)
+         for i in range(len(g)) for j in range(i + 1, len(g))),
+    )
+    for _sz, gi, i, j in pair_stream:
+        if len(survivors) >= SURVIVOR_CAP or time.monotonic() >= deadline:
+            break
+        key = _canon_equation(sized_groups[gi][i], sized_groups[gi][j])
+        if key is None or key in seen:
+            continue
+        seen.add(key)
+        lhs_c, rhs_c = key
+        overlap = len((_subterm_set(lhs_c, set()) | _subterm_set(rhs_c, set())) & goal_subs)
+        survivors.append((term_size(lhs_c) + term_size(rhs_c), -overlap, lhs_c, rhs_c))
+    survivors.sort()
+    closers: list[dict[str, Any]] = []
+    for _sz, _neg, lhs_c, rhs_c in survivors[:BRIDGE_ENUM_GOAL_TESTS]:
+        if time.monotonic() >= deadline or len(closers) >= BRIDGE_ENUM_PROVE_CAP:
+            break
+        varset = sorted({t[1] for t in _subterm_set(lhs_c, set()) | _subterm_set(rhs_c, set()) if t[0] == "var"})
+        bridge_lemma = {"variables": varset, "lhs": lhs_c, "rhs": rhs_c,
+                        "name": "EBbridge", "proof": "", "cites": ("h",)}
+        step = proof_between_terms_guided(
+            eq1, eq2["variables"], eq2["lhs"], eq2["rhs"], lemmas=(bridge_lemma,))
+        if step is not None:
+            closers.append(bridge_lemma)
+    for rank, bridge in enumerate(closers):
+        if time.monotonic() >= deadline:
+            break
+        bridge_eq = {"variables": bridge["variables"], "lhs": bridge["lhs"],
+                     "rhs": bridge["rhs"],
+                     "text": f"{bridge['lhs']} = {bridge['rhs']}"}
+        proved = _cp_saturation_attempt(
+            eq1, bridge_eq,
+            lemma_budget=max(lemma_budget, CP_SATURATION_LEMMA_BUDGET),
+            rounds=20,
+            deadline=min(deadline, time.monotonic() + 8.0),
+            beam=False,
+            # cầu kiểu instance-chaining cần đi qua term khổng lồ — slack 8
+            # trượt sau 10 s, slack 20 chứng minh proj_r trong 0.3 s (đo)
+            term_slack=CP_SATURATION_WIDE_SLACK,
+            raw_pair_cap=CP_SATURATION_WIDE_PAIR_CAP,
+            gap_time=5.0,
+        )
+        if proved is None:
+            continue
+        _tag, bridge_proof, bridge_cited = proved
+        prefix = f"EB{rank}"
+        renamed = _prefix_lemma_names(bridge_cited, prefix)
+        bridge_final = dict(bridge)
+        bridge_final["name"] = f"{prefix}bridge"
+        bridge_final["proof"] = re.sub(r"\blem(\d+)\b", prefix + r"lem\1", bridge_proof)
+        bridge_final["cites"] = tuple(l["name"] for l in renamed) or ("h",)
+        step = proof_between_terms_guided(
+            eq1, eq2["variables"], eq2["lhs"], eq2["rhs"], lemmas=(bridge_final,))
+        if step is None:
+            continue
+        proof, _hop = step
+        code = guided_true_certificate_with_lemmas(
+            eq2["variables"], renamed + [bridge_final], proof)
+        return f"true:bridge_enum:{rank}", code
+    return None
+
+
 def standard_ladder_route(
     eq1: dict[str, Any],
     eq2: dict[str, Any],
@@ -3427,6 +3586,15 @@ def solve_problem(
         ladder = standard_ladder_route(eq1, eq2, lemma_budget=guided_lemma_budget(problem))
         if ladder is not None:
             route, code = ladder
+            return {
+                "answer": make_true_answer(problem, code),
+                "route": route,
+                "priority": problem_priority(problem, eq1, eq2),
+            }
+        enum_bridge = bridge_enumeration_route(
+            eq1, eq2, lemma_budget=guided_lemma_budget(problem))
+        if enum_bridge is not None:
+            route, code = enum_bridge
             return {
                 "answer": make_true_answer(problem, code),
                 "route": route,

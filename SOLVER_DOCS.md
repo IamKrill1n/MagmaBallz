@@ -391,6 +391,24 @@ Additional engine behaviors (originally gated to the order-5 band; enabled on ev
 
 ---
 
+## Systematic Bridge Enumeration (`bridge_enumeration_route`, 2026-08-20)
+
+The deterministic generalization of the ladder, built on the user's directive:
+"exhaust small-to-medium bridges systematically; the LLM's niche is only what
+enumeration cannot reach." All terms up to `BRIDGE_ENUM_MAX_LEAVES = 4` leaves
+over (x,y,z) get a VALUE SIGNATURE — their outputs on every assignment of
+every H-model — so the surviving candidate bridges are exactly the pairs
+within one signature group (O(T) signatures instead of O(T²) pair checks).
+Survivors are generated smallest-first under a hard cap (1500), ranked by
+goal-subterm overlap, tested cheaply for GOAL CLOSURE first
+(`proof_between_terms_guided` with the bridge as a standing rule), and only
+closers get the expensive prove-from-H step — at wide slack, since
+instance-chaining bridges need the giant intermediates (proj_r from
+hard1_0007's H: 10 s MISS at slack 8, 0.3 s proof at slack 20, measured).
+Runs after the ladder in `solve_problem`. Route: `true:bridge_enum:<rank>`.
+By construction no single small-bridge guess (LLM or human) can beat this
+tier on coverage; the LLM midpoint lane is for bridges past enumeration size.
+
 ## Semantic Guidance (H-model bridge filter, 2026-08-20)
 
 `find_h_models(eq1)` collects up to 4 small (order 2-3) models OF the
