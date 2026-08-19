@@ -1,8 +1,9 @@
 # Reja23 (EQT02-S00023) — Solver Strategy Diagram
 
-This document visualizes Part 1 of `SOLVER_STRATEGY.md`. It contains two diagrams:
-(1) the collaboration loop between the LLM and trusted mechanical tools, and (2) the
-main solving loop, organized into increasingly expensive stages.
+This document visualizes Part 1 of `SOLVER_STRATEGY.md`. It contains: (1) the
+collaboration loop between the LLM and trusted mechanical tools, (2) the main solving
+loop organized into increasingly expensive stages, (3) a sequence diagram showing the
+lifecycle of one problem, and (4) measured benchmark results.
 
 ## Before reading the diagrams
 
@@ -174,17 +175,201 @@ The order is deliberately **cheap before expensive** and alternates between FALS
 countermodel search and TRUE-side proof search. This avoids committing the full budget
 to the wrong answer direction too early.
 
-## 3. One-line comparison
+## 3. Sequence diagram — lifecycle of one problem
+
+This timeline shows the actual order of events. Cheap tools run first without using the
+LLM. Only after they fail is telemetry packaged and sent to the LLM. Every LLM
+suggestion is mechanically verified before use, and a judge rejection becomes feedback
+for another attempt. This submit–reject–resubmit loop accounts for reja23's 252 rejected
+submissions.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant S as Solver (mechanical side)
+    participant L as LLM (strategist)
+    participant J as Judge (Lean)
+
+    Note over S: Stages 1–5 — audit and cheap tools;<br/>the LLM has not been used yet
+    S->>S: implication_semantics (semantic audit)
+    S->>S: rigidity scout, model finder n=4..5,<br/>superposition with standard lemmas
+
+    alt cheap tools solve the problem
+        S->>J: submit Lean certificate
+        J-->>S: accepted — done
+    else cheap tools fail
+        S->>S: package protocol-state JSON<br/>(status, contract, frontier, need_hint)
+
+        loop LLM collaboration rounds (Stages 6 and 9)
+            S->>L: fresh goal + failure telemetry<br/>+ current blackboard
+            L-->>S: exactly one JSON action
+
+            alt action = midpoint / lemma_chain / candidate_bundle
+                S->>S: mechanically prove H implies M
+                alt proof succeeds
+                    S->>S: add M to the blackboard;<br/>attack Goal using H + M
+                else proof fails
+                    S->>S: silently discard it;<br/>record failure signature to prevent repetition
+                end
+            else action = tool_call / false_model_family
+                S->>S: run the tool with LLM-selected parameters<br/>(interleaved with expensive FALSE routes: SAT, CP-SAT, poly_ce, etc.)
+            else action = symbolic_model_plan (infinite route)
+                S->>S: assemble the infinite model from components
+                S->>J: submit a trial Lean artifact
+                J-->>S: Lean rejects component X
+                S->>L: request symbolic_model_patch for X only
+                L-->>S: patched component X
+            end
+        end
+
+        Note over S: Stage 8 — expensive TRUE routes:<br/>pc_saturate and ordered completion (no LLM needed)
+
+        S->>J: submit a certificate when a candidate exists
+        J-->>S: verdict (accepted / incorrect / etc.)
+        Note over S,J: rejection = feedback; retry within budget<br/>(source of 252 rejected SAIR submissions)
+    end
+```
+
+### How the sequence works
+
+1. **Start mechanically:** The solver classifies the problem and tries its cheapest
+   proof and countermodel tools before spending an LLM call.
+2. **Finish immediately when possible:** If those tools produce a certificate, Lean
+   checks it; acceptance ends the run without involving the LLM.
+3. **Package useful failure information:** If they fail, the solver records what was
+   tried, the closest search frontier, and the specific hint needed next.
+4. **Request exactly one action:** The LLM receives that context and must choose one
+   tool call, bridge-lemma proposal, model family, or symbolic-model action.
+5. **Verify the response:** The solver proves bridge lemmas, checks model families, or
+   compiles symbolic artifacts. Unverified content is never trusted.
+6. **Repair narrow failures:** If Lean rejects one component of an infinite model, the
+   solver asks the LLM to patch only that component instead of rebuilding everything.
+7. **Continue within budget:** Expensive mechanical proof tools and additional judge
+   attempts continue until a certificate is accepted or the budget is exhausted.
+
+## 4. Benchmark results
+
+All figures below come from evidence packs in `.scratch/engine-day/results/` and the
+final table in `SOLVER_STRATEGY.md` (2026-08-19). Each table names its source. The JSONL
+files contain results from different solver builds created during the campaign, so our
+solver name varies by run: `m00006` is the early build, `m6beam2` is the final
+evaluation build, and `m6union` is the final SAIR build.
+
+### 4.1 Overall results — all 2,469 labeled problems
+
+Source: final table in `SOLVER_STRATEGY.md`; reja23's SAIR figure is calculated from
+`full.jsonl`.
+
+| Solver | Evaluation (800) | SAIR (1,669) | Total (2,469) | Rejected submissions |
+|---|---|---|---|---|
+| **EQT02-M00006 (ours)** | **786** | 1,644 | **2,430** | **0** |
+| reja23 (EQT02-S00023) | 762 | 1,649 | 2,411 | 252 |
+
+The overall table hides one notable result: on SAIR alone, reja23 solved five more
+problems than our solver (1,649 versus 1,644), but did so with 252 incorrect certificate
+submissions. Our advantage came from the evaluation set (+24) and from never submitting
+an incorrect certificate.
+
+### 4.2 Evaluation set of 800 — by band
+
+Source: ours = `beam_gate2.jsonl` (`m6beam2`) plus the final order5 count in
+`SOLVER_STRATEGY.md`; reja23 = `full.jsonl` plus `xh_full.jsonl`.
+
+| Band (200 problems each) | Ours | reja23 | Difference |
+|---|---|---|---|
+| normal | 196 | 200 | −4 |
+| hard | 197 | 198 | −1 |
+| extra_hard | 200 | 169 | **+31** |
+| order5 | 193 | 195 | −2 |
+| **Total** | **786** | **762** | **+24** |
+
+```mermaid
+xychart-beta
+    title "Evaluation by band — bar 1: ours (m6beam2), bar 2: reja23"
+    x-axis [normal, hard, extra-hard, order5]
+    y-axis "problems solved out of 200" 0 --> 200
+    bar [196, 197, 200, 193]
+    bar [200, 198, 169, 195]
+```
+
+The entire overall gap comes from `extra_hard`: 200/200 versus 169/200. This is the
+band where our witness bank and CG9 matter. CG9 refuted all 74 problems with hypothesis
+equation 168 in the evaluation set, including the cluster of 31 that no solver had
+previously reached—exactly matching the +31 difference for this band.
+
+### 4.3 SAIR set of 1,669 — by corpus
+
+Source: ours = `union_sair.jsonl` (`m6union`); reja23 = `full.jsonl`.
+
+| Corpus | Problems | Ours | reja23 |
+|---|---|---|---|
+| normal | 1,000 | 994 | 997 |
+| hard1 | 69 | 68 | 66 |
+| hard2 | 200 | 191 | 193 |
+| hard3 | 400 | 391 | 393 |
+| **Total** | **1,669** | **1,644** | **1,649** |
+
+### 4.4 Pilot sample of 80 problems — all solvers
+
+Source: `nollm.jsonl` plus `eulerv5.jsonl`. This sample contains 20 problems per band
+and was run without an LLM. It was an early pilot, not the final result: our solver in
+this run was the old `m00006`, before the saturation engine and witness bank. The table
+is useful for relative ranking, but not for inferring final absolute success rates.
+
+| Solver | normal | hard | extra_hard | order5 | Total /80 |
+|---|---|---|---|---|---|
+| reja23 | 20 | 20 | 17 | 20 | **77** |
+| reja22 | 20 | 20 | 17 | 19 | 76 |
+| m00006 (ours, old build) | 12 | 14 | 16 | 14 | 56 |
+| generalized | 16 | 9 | 14 | 14 | 53 |
+| eulerv5 | 10 | 12 | 8 | 10 | 40 |
+| suii0x | 11 | 8 | 0 | 13 | 32 |
+
+Both reja versions nearly saturated this sample from the beginning. That is why the
+engine-day campaign measured itself directly against reja23 rather than the other
+solvers.
+
+### 4.5 Equation 168 cluster — where CG9 is decisive
+
+Source: `eq168.jsonl` (a sample of 16 problems with hypothesis equation 168) and
+`SOLVER_STRATEGY.md`.
+
+| Solver | Equation 168 sample (16 problems) |
+|---|---|
+| reja23 | 9/16 |
+| generalized | 9/16 |
+| ours (after adding CG9 to the bank) | 16/16—and 74/74 across the full evaluation set |
+
+Finite central groupoids exist only at square orders (1, 4, 9, 16, and so on).
+Consequently, table searches only through size 8—including reja23's broad FALSE
+portfolio—cannot find CG9 in principle. It has to be explicitly named in the witness
+bank.
+
+### 4.6 Our progress during the campaign
+
+Source: commit history (`91565b6` → `2d69120` → `2738f26`) and `dose_gate.jsonl` /
+`beam_gate.jsonl` for the `order5_true` subcorpus of 100 TRUE problems from the order5
+band.
+
+| Milestone | Evaluation (800) | order5_true /100 |
+|---|---|---|
+| Before the campaign | 570 | 41 |
+| + saturation engine, CG9, and gate opening | 762 | 83 (`m6dose`) |
+| + backtracker, harvest, beam, and ladder | **786** | 94 (`m6beam`/`m6beam2`) |
+
+### 4.7 One-line comparison
 
 | Measure | reja23 | EQT02-M00006 (ours) |
 |---|---|---|
 | Philosophy | Broad search guided by the LLM | Deterministic ladder; verify before submission |
-| Score (out of 800) | 762 | 786 |
+| Evaluation (800) | 762 | 786 |
+| SAIR (1,669) | 1,649 | 1,644 |
+| Total (2,469) | 2,411 | 2,430 |
 | Rejected submissions | 252 | 0 |
 | LLM dependency | Structural: routing and bridge lemmas | None: scores 786/800 with the LLM disabled |
 
 The comparison highlights the tradeoff: `reja23` explores more broadly and uses the
 LLM to steer important choices, while `EQT02-M00006` relies on a fixed sequence of
-verified methods. The latter scored higher in this run and avoided rejected
-submissions, but the table alone does not establish that it will dominate on every
-problem set.
+verified methods. The latter scored higher across the combined benchmark and avoided
+rejected submissions, but the table alone does not establish that it will dominate on
+every problem set.
