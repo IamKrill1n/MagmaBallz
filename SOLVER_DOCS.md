@@ -345,6 +345,19 @@ exactly as the single-rule versions did.
 
 ## Critical-Pair Lemma Engine (order-5 guided chains)
 
+**Wide-slack escalation (2026-08-20).** `cp_saturation_route` now runs THREE
+attempts in strict escalation: classic (slack 8) → beam (slack 8) → wide
+(classic algorithm, `CP_SATURATION_WIDE_SLACK = 20`, pair cap 8000, gap time
+10 s, its own extra 0.75×time_budget so attempts 1-2 cannot starve it).
+Attempts 1-2 are byte-identical to the pre-wide behavior, so every previously
+solved case keeps its exact proof. Rationale: instance-chaining proofs (the
+reja-class E-lemma chains) pass through self-nested intermediates far larger
+than slack 8 admits — the search space was drying up, not timing out. Measured:
+7 never-before-solved TRUE cases fall (hard1_0007, hard2_0080/0106/0110/0116,
+hard3_0068/0137), most in under 2 s once the wide pass starts; all
+judge-accepted. Route tag: `true:cp_saturation:wide:<n>`.
+
+
 Widens the guided-chain rule set beyond the single hypothesis, demand-driven.
 This is a generalization of the existing closure route, **not** a new route in
 `solve_problem` — the deterministic route table is unchanged.

@@ -123,6 +123,11 @@ CP_SATURATION_LEMMA_BUDGET = 200
 CP_SATURATION_RAW_PAIR_CAP = 2500
 CP_SATURATION_GAP_TIME = 2.5
 CP_SATURATION_TERM_SLACK = 8
+# Wide-slack escalation (attempt 3): admits the giant self-nested intermediate
+# terms that instance-chaining proofs traverse; slack 8 provably blocks them.
+CP_SATURATION_WIDE_SLACK = 20
+CP_SATURATION_WIDE_PAIR_CAP = 8000
+CP_SATURATION_WIDE_GAP_TIME = 10.0
 LLM_MAX_ROUNDS = 2
 MARATHON_LLM_MAX_CALLS = 24
 MARATHON_LLM_BATCH_SIZE = 10
@@ -2430,6 +2435,9 @@ def _cp_saturation_attempt(
     rounds: int,
     deadline: float,
     beam: bool,
+    term_slack: int = CP_SATURATION_TERM_SLACK,
+    raw_pair_cap: int = CP_SATURATION_RAW_PAIR_CAP,
+    gap_time: float = CP_SATURATION_GAP_TIME,
 ) -> tuple[str, str, list[dict[str, Any]]] | None:
     """One saturation attempt with its own pool. Returns
     (tag, proof_expr, cited_lemmas) — certificate assembly is the caller's job.
@@ -2443,7 +2451,7 @@ def _cp_saturation_attempt(
     wide_cap = (
         2 * max(term_size(eq1["lhs"]), term_size(eq1["rhs"]),
                 term_size(eq2["lhs"]), term_size(eq2["rhs"]))
-        + CP_SATURATION_TERM_SLACK
+        + term_slack
     )
     pool: list[dict[str, Any]] = []
     for _round in range(rounds + 1):
@@ -2453,7 +2461,7 @@ def _cp_saturation_attempt(
         if step is not None:
             proof, _hop_route = step
             cited = _cited_lemmas(pool, [proof])
-            tag = "beam" if beam else "classic"
+            tag = "beam" if beam else ("wide" if term_slack > CP_SATURATION_TERM_SLACK else "classic")
             return tag, proof, cited
         if _round >= rounds or deadline_expired(deadline) or len(pool) >= lemma_budget:
             return None
@@ -2473,9 +2481,9 @@ def _cp_saturation_attempt(
                 src,
                 dst,
                 max_new=min(slice_size, lemma_budget - len(pool)),
-                deadline=min(deadline, time.monotonic() + CP_SATURATION_GAP_TIME),
-                raw_pair_cap=CP_SATURATION_RAW_PAIR_CAP,
-                term_slack=CP_SATURATION_TERM_SLACK,
+                deadline=min(deadline, time.monotonic() + gap_time),
+                raw_pair_cap=raw_pair_cap,
+                term_slack=term_slack,
                 allow_var_overlap=var_overlap,
                 **cap_kwargs,
             )
@@ -2502,14 +2510,33 @@ def cp_saturation_route(
     if lemma_budget <= 0:
         return None
     lemma_budget = max(lemma_budget, CP_SATURATION_LEMMA_BUDGET)
-    for beam in (False, True):
+    # Attempts run in strict escalation order so every previously-solved case
+    # keeps its exact proof: classic and beam first, byte-identical to the
+    # pre-wide behavior (shared deadline, unchanged); then one wide-slack
+    # classic pass on ITS OWN extra budget. Wide slack (20) admits the huge
+    # self-nested intermediates that instance-chaining proofs pass through
+    # (measured 2026-08-20: 7 previously-unsolved TRUE cases fall, most <2 s).
+    attempts = (
+        (False, {}),
+        (True, {}),
+        (False, {"term_slack": CP_SATURATION_WIDE_SLACK,
+                 "raw_pair_cap": CP_SATURATION_WIDE_PAIR_CAP,
+                 "gap_time": CP_SATURATION_WIDE_GAP_TIME}),
+    )
+    deadline = time.monotonic() + time_budget
+    for beam, extra in attempts:
+        if extra:
+            # the wide pass must not be starved by attempts 1-2 having spent
+            # the shared budget: grant it its own slice on top
+            deadline = time.monotonic() + time_budget * 0.75
         result = _cp_saturation_attempt(
             eq1,
             eq2,
             lemma_budget=lemma_budget,
             rounds=rounds,
-            deadline=time.monotonic() + time_budget,
+            deadline=deadline,
             beam=beam,
+            **extra,
         )
         if result is not None:
             tag, proof, cited = result
