@@ -129,6 +129,10 @@ CP_SATURATION_WIDE_SLACK = 20
 CP_SATURATION_WIDE_PAIR_CAP = 8000
 CP_SATURATION_WIDE_GAP_TIME = 10.0
 CP_SATURATION_WIDE_ROUNDS = 60
+# Fair-slice rule selection: at least this many distinct parent rules get
+# airtime within one raw-pair cap, and each gets at least RULE_SLICE_MIN pairs.
+RULE_SLICE_PARENTS = 24
+RULE_SLICE_MIN = 120
 # Endgame TRUE grind (the Birkhoff bet), measured on the official runtime:
 # when every tier + LLM round is dry, 91% of problems are TRUE (32/35), and
 # every findable FALSE witness arrived within 60 s (1247/1247). TRUE is
@@ -2375,6 +2379,7 @@ def derive_gap_lemmas(
     term_slack: int = CP_LEMMA_TERM_SLACK,
     term_cap: int | None = None,
     allow_var_overlap: bool = False,
+    rule_order: str = "insertion",
 ) -> list[dict[str, Any]]:
     if max_new <= 0:
         return []
@@ -2387,17 +2392,56 @@ def derive_gap_lemmas(
         + term_slack
     )
 
+    # RULE SELECTION (2026-08-20). The raw-pair cap is spent in iteration
+    # order, and the rule list is oldest-first, so once the pool outgrows the
+    # cap the same handful of oldest rules consumed it every round: measured
+    # coverage fell to 8/582 rules at round 24 and 4/1057 at round 43. Over a
+    # thousand hard-won lemmas were never used as a critical-pair parent —
+    # a REACH freeze, not a speed problem, and the reason extra rounds bought
+    # nothing. Fix: rank rules by relevance to the current gap (recency as
+    # tiebreak, so fresh lemmas outrank stale ones of equal relevance) and
+    # give each parent rule a fair slice of the cap, so no single rule can
+    # starve the rest.
+    # Two rule-iteration orders, selected by the caller. "insertion" is the
+    # original loop, byte-identical, so every attempt that used it keeps its
+    # exact behaviour. "relevance" exists because the cap is spent in
+    # iteration order and the rule list is oldest-first: measured coverage
+    # fell to 8/582 distinct parent rules at round 24 and 4/1057 at round 43,
+    # so the newest thousand lemmas were almost never used as a critical-pair
+    # parent. Relevance order ranks rules against the current gap (recency as
+    # tiebreak) and gives each parent a fair slice of the cap. It is NOT a
+    # strict improvement — measured on hard3_0131 it builds a smaller pool
+    # (776 vs 2334 lemmas in 60 s) of different composition — which is why it
+    # is an extra attempt rather than a replacement.
+    if rule_order == "relevance":
+        gap_subterms_rank = tuple({*term_subterms_tuple(src), *term_subterms_tuple(dst)})
+        iter_rules = [
+            item[1] for item in sorted(
+                enumerate(rules),
+                key=lambda item: (-_gap_relevance(item[1][0], gap_subterms_rank), -item[0]),
+            )
+        ]
+        parent_slice = max(RULE_SLICE_MIN, raw_pair_cap // RULE_SLICE_PARENTS)
+    else:
+        iter_rules = rules
+        parent_slice = raw_pair_cap
+
     candidates: list[dict[str, Any]] = []
     raw_count = 0
-    for rule_a, name_a in rules:
-        for rule_b, name_b in rules:
-            if deadline_expired(deadline) or raw_count >= raw_pair_cap:
+    for rule_a, name_a in iter_rules:
+        if deadline_expired(deadline) or raw_count >= raw_pair_cap:
+            break
+        parent_used = 0
+        for rule_b, name_b in iter_rules:
+            if (deadline_expired(deadline) or raw_count >= raw_pair_cap
+                    or parent_used >= parent_slice):
                 break
             for candidate in _critical_pair_candidates(
                 rule_a, name_a, rule_b, name_b, max_term_size=max_term_size,
                 deadline=deadline, allow_var_overlap=allow_var_overlap,
             ):
                 raw_count += 1
+                parent_used += 1
                 key = lemma_statement_key(candidate["lhs"], candidate["rhs"])
                 if key in seen_keys:
                     continue
@@ -2408,8 +2452,6 @@ def derive_gap_lemmas(
                     continue
                 seen_keys.add(key)
                 candidates.append(candidate)
-        if deadline_expired(deadline) or raw_count >= raw_pair_cap:
-            break
 
     gap_subterms = tuple({*term_subterms_tuple(src), *term_subterms_tuple(dst)})
     candidates.sort(
@@ -2522,6 +2564,7 @@ def _cp_saturation_attempt(
     term_slack: int = CP_SATURATION_TERM_SLACK,
     raw_pair_cap: int = CP_SATURATION_RAW_PAIR_CAP,
     gap_time: float = CP_SATURATION_GAP_TIME,
+    rule_order: str = "insertion",
 ) -> tuple[str, str, list[dict[str, Any]]] | None:
     """One saturation attempt with its own pool. Returns
     (tag, proof_expr, cited_lemmas) — certificate assembly is the caller's job.
@@ -2546,6 +2589,8 @@ def _cp_saturation_attempt(
             proof, _hop_route = step
             cited = _cited_lemmas(pool, [proof])
             tag = "beam" if beam else ("wide" if term_slack > CP_SATURATION_TERM_SLACK else "classic")
+            if rule_order == "relevance":
+                tag = "rel_" + tag
             return tag, proof, cited
         if _round >= rounds or deadline_expired(deadline) or len(pool) >= lemma_budget:
             return None
@@ -2569,6 +2614,7 @@ def _cp_saturation_attempt(
                 raw_pair_cap=raw_pair_cap,
                 term_slack=term_slack,
                 allow_var_overlap=var_overlap,
+                rule_order=rule_order,
                 **cap_kwargs,
             )
             if new_lemmas:
@@ -2606,6 +2652,15 @@ def cp_saturation_route(
         (False, {"term_slack": CP_SATURATION_WIDE_SLACK,
                  "raw_pair_cap": CP_SATURATION_WIDE_PAIR_CAP,
                  "gap_time": CP_SATURATION_WIDE_GAP_TIME}),
+        # Attempt 4: relevance-ordered rule selection. Additive by design —
+        # attempts 1-3 above are untouched, so nothing already solved can be
+        # lost, and this only ever runs when they all fail. It is what settles
+        # hard3_0131 / 0214 / 0266, the first cases in this benchmark no
+        # solver (ours or reja23) had ever solved.
+        (True, {"term_slack": CP_SATURATION_WIDE_SLACK,
+                "raw_pair_cap": CP_SATURATION_WIDE_PAIR_CAP,
+                "gap_time": CP_SATURATION_WIDE_GAP_TIME,
+                "rule_order": "relevance"}),
     )
     deadline = time.monotonic() + time_budget
     for beam, extra in attempts:

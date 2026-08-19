@@ -391,6 +391,41 @@ Additional engine behaviors (originally gated to the order-5 band; enabled on ev
 
 ---
 
+## Rule Selection in Critical-Pair Generation (attempt 4, 2026-08-20)
+
+**The finding.** `derive_gap_lemmas` spends its raw-pair cap in iteration
+order, and the rule list is `[h] + pool` — oldest first, growing monotonically.
+Measured coverage of distinct parent rules: 32/32 at round 2, 28/132 at round
+6, 8/582 at round 24, **4/1057 at round 43**. Past round ~7 the newest
+thousand lemmas were essentially never used as a critical-pair parent. This is
+a REACH freeze wearing a rate problem's clothes, and it explains why the 231×
+speedup (7 → 56 rounds) bought nothing on resisting problems.
+
+Diagnostic rule this generalises to: **a cap becomes a freeze when the
+collection it truncates both grows monotonically and is ordered by insertion.**
+Audited across the engine — this was the only site meeting both conditions;
+the closure frontier and absorption pools are recomputed per call (beam bias
+only), and the bridge-enumeration cap truncates after sorting by size.
+
+**The fix, and why it is additive.** `rule_order="relevance"` ranks rules by
+`_gap_relevance` against the current gap (recency as tiebreak) and gives each
+parent a fair slice of the cap (`RULE_SLICE_PARENTS = 24`,
+`RULE_SLICE_MIN = 120`). It is NOT a strict improvement: measured on
+hard3_0131 it builds a smaller pool of different composition (776 vs 2334
+lemmas in 60 s), and applied as a *replacement* it lost hard2_0028,
+normal_0062 and normal_0492 while gaining three others. So it is attempt 4 of
+`cp_saturation_route`; attempts 1-3 keep `rule_order="insertion"`, verified
+lemma-for-lemma identical to the pre-change function across 3 problems × 4
+rounds. Route tag: `true:cp_saturation:rel_<tag>:<n>`.
+
+**What it settles.** hard3_0131 (`beam:22`), hard3_0214 (`beam:30`) and
+hard3_0266 (`beam:23`) — judge-accepted, and the first problems in this
+benchmark that **no** solver had ever settled, ours or reja23's. Note the
+cited-lemma counts: 22-30, against 1-7 typical and 17 the previous maximum.
+Correction to an earlier claim in this file's history: the freeze did NOT cap
+derivation depth (measured max depth 8 both before and after) — it changed
+which lemmas the pool contains, not how deep the DAG goes.
+
 ## Bidirectional Chain Search (`find_rewrite_chain`, 2026-08-20)
 
 The RATE lever, and the largest single win measured so far. Profiling a
