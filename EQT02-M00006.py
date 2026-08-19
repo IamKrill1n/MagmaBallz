@@ -2593,6 +2593,39 @@ def _prefix_lemma_names(lemmas: list[dict[str, Any]], prefix: str) -> list[dict[
     return out
 
 
+def table_satisfies_equation(eq: dict[str, Any], table: list[list[int]]) -> bool:
+    """True iff the equation holds under every assignment into the table."""
+    n = len(table)
+    vs = eq["variables"]
+    def ev(term, env):
+        if term[0] == "var":
+            return env[term[1]]
+        return table[ev(term[1], env)][ev(term[2], env)]
+    for combo in product(range(n), repeat=len(vs)):
+        env = dict(zip(vs, combo))
+        if ev(eq["lhs"], env) != ev(eq["rhs"], env):
+            return False
+    return True
+
+
+def find_h_models(eq1: dict[str, Any], *, max_models: int = 4,
+                  time_box: float = 0.8) -> list[list[list[int]]]:
+    """Small nontrivial models OF the hypothesis (not countermodels) — the
+    semantic-guidance filter: every derivable consequence of H must hold in
+    each of them, so any bridge that fails in one is UNPROVABLE with
+    certainty. Time-boxed; a partial scan only weakens the filter, never its
+    soundness."""
+    t_end = time.monotonic() + time_box
+    found: list[list[list[int]]] = []
+    for n in (2, 3):
+        for table in enumerate_tables(n):
+            if time.monotonic() >= t_end or len(found) >= max_models:
+                return found
+            if table_satisfies_equation(eq1, table):
+                found.append(table)
+    return found
+
+
 def standard_ladder_route(
     eq1: dict[str, Any],
     eq2: dict[str, Any],
@@ -2609,11 +2642,17 @@ def standard_ladder_route(
         return None
     deadline = time.monotonic() + time_budget
     goal_vars = set(eq2["variables"]) | set(eq1["variables"])
+    h_models = find_h_models(eq1)
     for rung_idx, (rung_name, rung_text) in enumerate(STANDARD_LADDER):
         if deadline_expired(deadline):
             return None
         bridge_eq = parse_equation(rung_text)
         if bridge_eq["text"] == eq2["text"]:
+            continue
+        # Semantic guidance: a bridge that fails in any model of H is not a
+        # consequence of H — skip it with certainty instead of burning the
+        # saturation core on an unprovable rung.
+        if any(not table_satisfies_equation(bridge_eq, t) for t in h_models):
             continue
         proved = _cp_saturation_attempt(
             eq1,

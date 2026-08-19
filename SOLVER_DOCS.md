@@ -391,6 +391,16 @@ Additional engine behaviors (originally gated to the order-5 band; enabled on ev
 
 ---
 
+## Semantic Guidance (H-model bridge filter, 2026-08-20)
+
+`find_h_models(eq1)` collects up to 4 small (order 2-3) models OF the
+hypothesis, time-boxed at 0.8 s. Every derivable consequence of H must hold in
+each of them, so `standard_ladder_route` now skips — with certainty, not
+heuristically — any bridge rung that fails in one (`table_satisfies_equation`).
+A partial model scan only weakens the filter, never its soundness. This is the
+"search in more correct directions" axis: the ladder spends its saturation
+budget only on rungs that remain semantically possible.
+
 ## LLM Integration
 
 When deterministic routes fail, the solver escalates to an LLM.
