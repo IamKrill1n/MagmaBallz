@@ -1905,6 +1905,7 @@ def _critical_pair_candidates(
     *,
     max_term_size: int,
     deadline: float,
+    allow_var_overlap: bool = False,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     renamed_a, map_a = _rule_renamed_apart(rule_a, "A")
@@ -1914,7 +1915,7 @@ def _critical_pair_candidates(
     for peak_side, other_a, ori_a in orientations_a:
         for path in subterm_paths(peak_side):
             overlap = term_at_path(peak_side, path)
-            if overlap[0] != "op":
+            if overlap[0] != "op" and not allow_var_overlap:
                 continue
             for inner_side, other_b, ori_b in orientations_b:
                 if deadline_expired(deadline):
@@ -1999,6 +2000,8 @@ def derive_gap_lemmas(
     deadline: float,
     raw_pair_cap: int = CP_RAW_PAIR_CAP,
     term_slack: int = CP_LEMMA_TERM_SLACK,
+    term_cap: int | None = None,
+    allow_var_overlap: bool = False,
 ) -> list[dict[str, Any]]:
     if max_new <= 0:
         return []
@@ -2006,7 +2009,7 @@ def derive_gap_lemmas(
     rules.extend((lemma, lemma["name"]) for lemma in pool)
     seen_keys = {lemma_statement_key(eq1["lhs"], eq1["rhs"])}
     seen_keys.update(lemma_statement_key(lemma["lhs"], lemma["rhs"]) for lemma in pool)
-    max_term_size = (
+    max_term_size = term_cap if term_cap is not None else (
         max(term_size(eq1["lhs"]), term_size(eq1["rhs"]), term_size(src), term_size(dst))
         + term_slack
     )
@@ -2018,7 +2021,8 @@ def derive_gap_lemmas(
             if deadline_expired(deadline) or raw_count >= raw_pair_cap:
                 break
             for candidate in _critical_pair_candidates(
-                rule_a, name_a, rule_b, name_b, max_term_size=max_term_size, deadline=deadline
+                rule_a, name_a, rule_b, name_b, max_term_size=max_term_size,
+                deadline=deadline, allow_var_overlap=allow_var_overlap,
             ):
                 raw_count += 1
                 key = lemma_statement_key(candidate["lhs"], candidate["rhs"])
@@ -2093,16 +2097,20 @@ def _cited_lemmas(pool: list[dict[str, Any]], proofs: list[str]) -> list[dict[st
     return [lemma for lemma in pool if lemma["name"] in cited]
 
 
-def frontier_bridge_hint(eq1: dict[str, Any], eq2: dict[str, Any], *, top: int = 3) -> str:
-    """SearchState-lite: expand one rewrite step from each side of the goal,
-    rank cross-frontier pairs by shared-subterm structure (not string
-    similarity), and describe the closest gaps so the LLM proposes chains
-    where the components almost touch."""
-    left = [eq2["lhs"]] + [t for t, _p, _r in rewrite_steps_from_term(eq1, eq2["lhs"])][:12]
-    right = [eq2["rhs"]] + [t for t, _p, _r in rewrite_steps_from_term(eq1, eq2["rhs"])][:12]
-    left_set, right_set = set(left), set(right)
-    if left_set & right_set:
-        return ""  # already connected; deterministic routes handle it
+def frontier_closest_pairs(
+    eq1: dict[str, Any],
+    eq2: dict[str, Any],
+    *,
+    lemmas: tuple[dict[str, Any], ...] = (),
+    top: int = 3,
+) -> list[tuple[Term, Term]]:
+    """Expand one rewrite step from each goal side under the current rule set
+    and rank cross-frontier pairs by shared-subterm structure (deliberately not
+    string similarity). Empty list when the frontiers already meet."""
+    left = [eq2["lhs"]] + [t for t, _p, _r in rewrite_steps_from_term(eq1, eq2["lhs"], lemmas=lemmas)][:12]
+    right = [eq2["rhs"]] + [t for t, _p, _r in rewrite_steps_from_term(eq1, eq2["rhs"], lemmas=lemmas)][:12]
+    if set(left) & set(right):
+        return []
     scored: list[tuple[float, Term, Term]] = []
     for a in left:
         subs_a = set(term_subterms_tuple(a))
@@ -2111,8 +2119,16 @@ def frontier_bridge_hint(eq1: dict[str, Any], eq2: dict[str, Any], *, top: int =
             score = sum(term_size(s) for s in shared) / (1 + abs(term_size(a) - term_size(b)))
             scored.append((score, a, b))
     scored.sort(key=lambda item: (-item[0], term_to_lean(item[1]), term_to_lean(item[2])))
+    return [(a, b) for _s, a, b in scored[:top]]
+
+
+def frontier_bridge_hint(eq1: dict[str, Any], eq2: dict[str, Any], *, top: int = 3) -> str:
+    """SearchState-lite for the LLM round-0 analysis."""
+    pairs = frontier_closest_pairs(eq1, eq2, top=top)
+    if not pairs:
+        return ""  # already connected; deterministic routes handle it
     lines = ["Search frontier (one rewrite from each goal side; closest structural gaps):"]
-    for _score, a, b in scored[:top]:
+    for a, b in pairs:
         lines.append(f"  bridge needed: {term_to_lean(a)} = {term_to_lean(b)}")
     lines.append(
         "A guided_chain that passes through either side of one of these gaps "
@@ -2122,26 +2138,28 @@ def frontier_bridge_hint(eq1: dict[str, Any], eq2: dict[str, Any], *, top: int =
     return "\n".join(lines)
 
 
-def cp_saturation_route(
+def _cp_saturation_attempt(
     eq1: dict[str, Any],
     eq2: dict[str, Any],
     *,
     lemma_budget: int,
-    rounds: int = CP_SATURATION_ROUNDS,
-    time_budget: float = CP_SATURATION_TIME_BUDGET,
+    rounds: int,
+    deadline: float,
+    beam: bool,
 ) -> tuple[str, str] | None:
-    """Native (zero-LLM) targeted saturation: alternate goal-proof attempts with
-    critical-pair derivation aimed at the goal, all through the same engine the
-    guided-chain route uses. Gated by the order-5 lemma budget, so order <= 4
-    problems never reach it."""
-    if lemma_budget <= 0:
-        return None
-    # Dosage: the deterministic route runs at industrial scale (the guided-chain
-    # LLM path keeps its own small per-hop budgets). Rounds grow the pool in
-    # slices so early rounds stay cheap and the goal re-check interleaves.
-    lemma_budget = max(lemma_budget, CP_SATURATION_LEMMA_BUDGET)
+    """One saturation attempt with its own pool.
+
+    beam=False reproduces the pre-beam algorithm exactly (endpoint-targeted,
+    slack-based term cap) plus the strictly-additive var-overlap fallback on
+    dry rounds. beam=True targets the closest cross-frontier gap after round 0
+    and explores with a wide term cap. The two run as SEPARATE attempts:
+    sharing one pool measurably lost previously-solved cases in both mixes."""
     slice_size = max(12, lemma_budget // rounds)
-    deadline = time.monotonic() + time_budget
+    wide_cap = (
+        2 * max(term_size(eq1["lhs"]), term_size(eq1["rhs"]),
+                term_size(eq2["lhs"]), term_size(eq2["rhs"]))
+        + CP_SATURATION_TERM_SLACK
+    )
     pool: list[dict[str, Any]] = []
     for _round in range(rounds + 1):
         step = proof_between_terms_guided(
@@ -2154,22 +2172,66 @@ def cp_saturation_route(
                 code = guided_true_certificate_with_lemmas(eq2["variables"], cited, proof)
             else:
                 code = substitution_true_certificate(eq2["variables"], proof)
-            return f"true:cp_saturation:{len(cited)}", code
+            tag = "beam" if beam else "classic"
+            return f"true:cp_saturation:{tag}:{len(cited)}", code
         if _round >= rounds or deadline_expired(deadline) or len(pool) >= lemma_budget:
             return None
-        new_lemmas = derive_gap_lemmas(
-            eq1,
-            pool,
-            eq2["lhs"],
-            eq2["rhs"],
-            max_new=min(slice_size, lemma_budget - len(pool)),
-            deadline=min(deadline, time.monotonic() + CP_SATURATION_GAP_TIME),
-            raw_pair_cap=CP_SATURATION_RAW_PAIR_CAP,
-            term_slack=CP_SATURATION_TERM_SLACK,
-        )
+        src, dst = eq2["lhs"], eq2["rhs"]
+        cap_kwargs: dict[str, Any] = {}
+        if beam:
+            cap_kwargs["term_cap"] = wide_cap
+            if _round > 0:
+                pairs = frontier_closest_pairs(eq1, eq2, lemmas=tuple(pool), top=1)
+                if pairs:
+                    src, dst = pairs[0]
+        new_lemmas: list[dict[str, Any]] = []
+        for var_overlap in (False, True):
+            new_lemmas = derive_gap_lemmas(
+                eq1,
+                pool,
+                src,
+                dst,
+                max_new=min(slice_size, lemma_budget - len(pool)),
+                deadline=min(deadline, time.monotonic() + CP_SATURATION_GAP_TIME),
+                raw_pair_cap=CP_SATURATION_RAW_PAIR_CAP,
+                term_slack=CP_SATURATION_TERM_SLACK,
+                allow_var_overlap=var_overlap,
+                **cap_kwargs,
+            )
+            if new_lemmas:
+                break  # var-overlap only when the ordinary stream dries up
         if not new_lemmas:
             return None
         pool.extend(new_lemmas)
+    return None
+
+
+def cp_saturation_route(
+    eq1: dict[str, Any],
+    eq2: dict[str, Any],
+    *,
+    lemma_budget: int,
+    rounds: int = CP_SATURATION_ROUNDS,
+    time_budget: float = CP_SATURATION_TIME_BUDGET,
+) -> tuple[str, str] | None:
+    """Native (zero-LLM) targeted saturation. Two sequential attempts with
+    independent pools: classic (pre-beam behavior, run first so every
+    previously-solved case keeps its proof) then beam (frontier-guided, wide
+    caps) only if classic fails. Gated by the lemma budget."""
+    if lemma_budget <= 0:
+        return None
+    lemma_budget = max(lemma_budget, CP_SATURATION_LEMMA_BUDGET)
+    for beam in (False, True):
+        result = _cp_saturation_attempt(
+            eq1,
+            eq2,
+            lemma_budget=lemma_budget,
+            rounds=rounds,
+            deadline=time.monotonic() + time_budget,
+            beam=beam,
+        )
+        if result is not None:
+            return result
     return None
 
 
