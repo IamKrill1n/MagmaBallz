@@ -269,6 +269,7 @@ Pre-defined small tables known to refute many equations:
 | A2 | Asymmetric 2-element |
 | Z3A, Z3B | Cyclic group Z3 with two orientations |
 | T3L, T3R, S4A–S4F, S5A–S5D | Larger hand-picked tables up to size 5 |
+| CG9 | **Non-natural central groupoid of order 9** (Knuth: 0-1 matrix `A` with `A² = J`). Satisfies Equation 168 `x = (y ◇ x) ◇ (x ◇ z)` while falsifying its high-numbered pseudo-consequences — laws that hold in every *natural* central groupoid `(a,b) ◇ (c,d) = (b,c)` of any size, including infinite ones. Finite central groupoids exist only at orders n² (1, 4, 9, 16, …), so order ≤ 8 table search can never find this witness; it must be named. Tried last, so all previously-solved cases keep their original witnesses. |
 
 ### 2. Structured Family Tables
 Parameterized families generated programmatically:
@@ -300,12 +301,50 @@ These construct Lean 4 proof term strings (not full certificates, just expressio
 |---|---|
 | `chain_trans(prefix, proof)` | Chains two proofs: `(prefix).trans (proof)` |
 | `combine_meeting_proofs(left, right)` | Combines left-side and right-side proofs at a meeting term |
-| `proof_between_terms(eq1, src, dst)` | Finds a one-step or direct proof that `src = dst` using eq1 |
-| `proof_between_terms_guided(eq1, vars, src, dst)` | Like above but also tries rewrite chains and mini-closure |
-| `rewrite_steps_from_term(eq1, term)` | All single-step rewrites of `term` using eq1 at any subterm position |
+| `proof_between_terms(eq1, src, dst, lemmas=())` | Finds a one-step or direct proof that `src = dst` using eq1 plus any derived lemmas |
+| `proof_between_terms_guided(eq1, vars, src, dst, lemmas=())` | Like above but also tries rewrite chains and mini-closure |
+| `rewrite_steps_from_term(eq1, term, lemmas=())` | All single-step rewrites of `term` using eq1 (and lemmas) at any subterm position |
 | `context_to_lean(term, path)` | Renders context (term with hole) for `congrArg (fun t => ...)` |
 | `commutative_term_proof(src, dst)` | Proves `src = dst` assuming commutativity |
 | `projection_term_proof(eq1, term, side)` | Reduces a compound term to a variable using a projection law |
+
+All rule-driven edge generators (`rewrite_steps_from_term`, `proof_between_terms`,
+`find_rewrite_chain`, `filled_absorption_steps`, `_closure_proof_expr_impl`,
+`proof_between_terms_guided`) accept an optional `lemmas` tuple and loop over the
+rule list `[eq1, *lemmas]`. With the default `()` they behave — and emit —
+exactly as the single-rule versions did.
+
+---
+
+## Critical-Pair Lemma Engine (order-5 guided chains)
+
+Widens the guided-chain rule set beyond the single hypothesis, demand-driven.
+This is a generalization of the existing closure route, **not** a new route in
+`solve_problem` — the deterministic route table is unchanged.
+
+| Function | Description |
+|---|---|
+| `unify_terms(a, b, subst)` / `resolve_term(term, subst)` | First-order unification with occurs check, over rename-apart variables |
+| `_critical_pair_candidates(rule_a, name_a, rule_b, name_b, ...)` | KB/superposition overlaps: unify one rule's side into each **non-variable** subterm position of another's. Each candidate carries a complete Lean proof from birth — the peak term rewrites to one side via parent A and to the other via parent B (under `congrArg` for proper positions), so every lemma proof is a two-step `trans` through the peak, citing only parent names (`h` / `lem_j`). |
+| `derive_gap_lemmas(eq1, pool, src, dst, max_new, deadline)` | Demand-driven generation targeted at one failed hop `src = dst`: dedupes against the pool (statement key + instance-of-rule check), scores candidates by whether a side matches a subterm of the gap, caps count (`CP_LEMMA_BUDGET_ORDER5 = 24` per hypothesis), size (`CP_LEMMA_TERM_SLACK`), raw pairs (`CP_RAW_PAIR_CAP`) and time (`CP_GAP_TIME_BUDGET`). |
+| `guided_lemma_budget(problem)` | Originally the order-5-only scope gate (budget `0` below eq ID 4695, keeping order ≤ 4 byte-identical). **Opened 2026-08-19**: returns the full budget on every band after a paired sweep measured +114/−0 on `evaluation_normal`+`hard` with the engine enabled everywhere; the byte-identity acceptance bar was retired in favor of the measured-gain bar. Order-5 detection retained for telemetry. |
+| `guided_chain_certificate_from_terms_ex(eq1, eq2, chain_terms, lemma_budget=0)` | Budget-aware guided chain. Verifies hops with the current lemma pool; on a failed hop derives targeted lemmas and retries once; returns `(code, failed_hop_text)` so the caller can surface the exact gap. Verified hop proofs and per-hypothesis lemma pools persist across LLM rounds (`_CP_HOP_CACHE`, `_CP_LEMMA_POOLS`). |
+| `guided_true_certificate_with_lemmas(eq2_vars, lemmas, chain_expr)` | Emits cited lemmas (transitive closure via `_cited_lemmas`, in pool = topological order) as `have lem_k : ∀ … : G, A = B := by intro …; exact <birth proof>` blocks before the main chain. A lemma cited twice is emitted once — the proof is a DAG for free. |
+
+On a hop failure in Solo mode, the reject reason is
+`guided_chain_hop_unproved:<src> = <dst>` and the next LLM round's
+`{solver.analysis}` carries that exact gap, so the model re-plans one hop
+instead of the whole problem. Order ≤ 4 problems keep the legacy
+`guided_chain_unproved_or_bad_endpoints` reason.
+
+Additional engine behaviors (originally gated to the order-5 band; enabled on every band since the 2026-08-19 gate opening):
+
+| Piece | Behavior |
+|---|---|
+| `cp_saturation_route(eq1, eq2, lemma_budget=...)` | Native zero-LLM route, run last among deterministic TRUE routes: alternates goal-proof attempts (`proof_between_terms_guided` with the lemma pool) with goal-targeted critical-pair derivation, up to `CP_SATURATION_ROUNDS` rounds / `CP_SATURATION_TIME_BUDGET` seconds. Route label `true:cp_saturation:<cited>`. Dosage history: at 24 lemmas/2.5 s it measured +6/−0 on the 100 order-5 TRUE cases; at industrial dose (`CP_SATURATION_LEMMA_BUDGET` 200, 10 rounds, 20 s, 2,500 raw pairs, slack 8) it measured +36/−0 there (83/100), and opening the gate to all bands added +114/−0 on `evaluation_normal`+`hard` and +5/−0 on `extra_hard` — all zero-LLM, all judge-verified. |
+| `frontier_bridge_hint(eq1, eq2)` | Round-0 `{solver.analysis}` addition: expands one rewrite step from each goal side, ranks cross-frontier pairs by **shared-subterm structure** (deliberately not string similarity), and names the top gaps as `bridge needed: A = B` so LLM chains aim where components almost touch. Empty when the frontiers already meet. |
+| Verdict feedback | On a locally refuted FALSE answer (`false_table_not_counterexample` / `_invalid_shape`), the next round's analysis says so and steers toward a verified larger table or a guided_chain. |
+| Fallback skip | The final reflexivity fallback typechecks only when the two laws coincide (owned by the reflexive route), so on the gated band it is skipped instead of submitting a guaranteed-rejected certificate. |
 
 ---
 
@@ -445,6 +484,12 @@ A separate `llm_problem_priority` scores problems for the LLM pass, preferring a
 | `LLM_MAX_ROUNDS` | 2 | Max LLM attempts in Solo mode |
 | `MARATHON_LLM_MAX_CALLS` | 24 | Max total LLM calls in Marathon mode |
 | `LLM_HTTP_TIMEOUT_SECONDS` | 45.0 | Timeout per LLM HTTP request |
+| `KNOWN_ORDER4_MAX_EQ_ID` | 4694 | Last equation ID of the settled order ≤ 4 band (gate boundary) |
+| `CP_LEMMA_BUDGET_ORDER5` | 24 | Max derived lemmas per hypothesis on order-5 problems (0 below) |
+| `CP_GAP_TIME_BUDGET` | 0.35 | Seconds of critical-pair derivation per failed hop |
+| `CP_LEMMA_TERM_SLACK` | 4 | Term-size slack over hypothesis/gap for derived lemma sides |
+| `CP_RAW_PAIR_CAP` | 400 | Raw critical-pair candidates examined per derivation call |
+| `CP_HOP_CACHE_LIMIT` | 4096 | Max cached verified hop proofs across rounds |
 
 ---
 
