@@ -196,3 +196,58 @@ to ASSAULT agents. Post-assault trichotomy: rediscovered (confirmed),
 solved differently (two techniques for one pair), unsolved (a certified-hard
 problem WITH a known answer — premium regression material, and an exact
 statement of what heuristic is missing).
+
+## Amendment 3 — The four levers: expand what the miners hunt for (owner, 2026-08-20)
+
+The original ASSAULT mandate implicitly asked miners for ONE thing: better
+heuristics, i.e. better *choices*. Measurement on 2026-08-20 says that is one
+lever out of four, and historically not the strongest. The mandate is
+**expanded, not replaced** — every miner still hunts ordering heuristics, and
+now also reports findings under the other three headings.
+
+**The four levers** (they differ in kind, not degree):
+
+| Lever | Question | Risk profile |
+|---|---|---|
+| **REACH** | Is the solution even inside the space we search? | A GATE, not a multiplier. Outside reach → speed and ordering are both worth zero. |
+| **REFORMULATION** | Can we swap the problem for an easier one whose solution transfers? | Cheap when it lands, no downside when it misses. |
+| **ORDER** | Within reach, do we meet the right object first? | The classic heuristic axis. Safe ONLY as ranking. |
+| **RATE** | How many nodes per second? | Pure engineering, uniform gain, no risk. |
+
+**Measured evidence, 2026-08-20** (all judge-accepted):
+
+- REACH: wide slack (8 → 20) + breaking the n ≤ 10 table ceiling → **14 cases**
+  that no build of ours or reja23 had ever solved. Note the direction: we
+  WIDENED. Narrowing the space would have lost all 14.
+- REFORMULATION: heavy-ladder (prove a bridge, then close the goal — the
+  bridge's small endpoints make the pruning caps bite in the right place) +
+  systematic bridge enumeration → **7 cases and counting**.
+- ORDER: semantic H-model filter just landed, unmeasured.
+- RATE: untouched. And it is the largest single pool of waste we have measured
+  — on a resisting problem, **96 % of wall-clock sits in the goal-closure step**
+  (`proof_between_terms_guided`, re-run from scratch every round with the whole
+  pool), against 4 % in candidate generation, scoring and selection.
+
+**Hard rule falling out of this** (the slack-8 lesson, in one line): ORDER must
+be applied as *ranking only*, never as cutting. Ranking changes what we meet
+first; cutting changes what we can meet at all. A learned policy that prunes
+re-creates exactly the trap that cost us 13 problems.
+
+**Expanded miner deliverable.** Per settled pair, the technique note now
+answers all four, and explicitly says "none" where there is nothing:
+
+1. ORDER — what ranking signal would have found this sooner? (unchanged from v1)
+2. REACH — what class of object or argument was structurally OUTSIDE our
+   engine's representable space? This is the highest-value finding: name the
+   gap, not just the fix. Example from today: `hard2_0027`/`hard2_0125` have
+   many models of H at orders 8–12 in which the goal always holds — their
+   witness is outside every small finite table, i.e. a reach gap, not a
+   ranking failure or a speed failure.
+3. REFORMULATION — was there an easier target (a bridge law, the dual problem,
+   a meet-in-the-middle split) whose solution transfers to the goal?
+4. RATE — what did the agent watch the engine waste time on?
+
+Appraiser and red-team scoring is likewise extended: a technique that opens
+REACH scores higher than one that improves ORDER by the same case count,
+because reach gaps are gates — they block an entire class, permanently, and no
+amount of later tuning recovers them.

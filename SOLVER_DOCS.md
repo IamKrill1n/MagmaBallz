@@ -391,6 +391,28 @@ Additional engine behaviors (originally gated to the order-5 band; enabled on ev
 
 ---
 
+## Bidirectional Chain Search (`find_rewrite_chain`, 2026-08-20)
+
+The RATE lever, and the largest single win measured so far. Profiling a
+resisting problem showed `find_rewrite_chain` consuming **95% of wall-clock**
+(29.8 s per call, 8 calls in 251 s) while candidate generation took 4%.
+
+`rewrite_steps_from_term` applies every rule in BOTH directions (the reverse
+emits a `.symm` proof), so the step relation is symmetric and a backward
+search from the target is just a forward search from it. Splitting depth d
+into ceil(d/2) forward and floor(d/2) backward preserves completeness for
+chains of length <= d while deleting the dominant b^d term (d=3: b+b^2+b^3 →
+b^2+b). Here b is pool size × subterm positions × 2 directions — hundreds once
+the pool is warm. Node bookkeeping also moved from per-node proof-list copying
+to parent pointers (`_walk_back`), making node cost O(1) instead of O(depth).
+
+The meeting point is stitched as `(start = meet).trans ((target = meet).symm)`.
+
+**Measured, same problem, same budget: 29,803 ms → 129 ms per call (231×), and
+rounds explored in 240 s went 7 → 56.** The bottleneck moved to
+`derive_gap_lemmas` (94.9%) — which is precisely where the ORDER lever
+(ranking heuristics / a learned policy) applies.
+
 ## Systematic Bridge Enumeration (`bridge_enumeration_route`, 2026-08-20)
 
 The deterministic generalization of the ladder, built on the user's directive:

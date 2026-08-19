@@ -1862,6 +1862,32 @@ def projection_true_route(eq1: dict[str, Any], eq2: dict[str, Any]) -> tuple[str
     return f"true:projection:{side}", projection_true_certificate(eq2["variables"], proof_expr)
 
 
+def _fold_trans(proofs: list[str]) -> str:
+    expr = proofs[0]
+    for later in proofs[1:]:
+        expr = f"({expr}).trans ({later})"
+    return expr
+
+
+def _walk_back(table: dict[Term, tuple], meet: Term) -> tuple[list[str], list[str]]:
+    """Parent-pointer reconstruction: returns (proofs, routes) in forward
+    order from the table's root to `meet`."""
+    proofs: list[str] = []
+    routes: list[str] = []
+    node = meet
+    while True:
+        entry = table[node]
+        if entry is None:
+            break
+        parent, proof, route = entry
+        proofs.append(proof)
+        routes.append(route)
+        node = parent
+    proofs.reverse()
+    routes.reverse()
+    return proofs, routes
+
+
 def find_rewrite_chain(
     eq1: dict[str, Any],
     eq2: dict[str, Any],
@@ -1869,25 +1895,68 @@ def find_rewrite_chain(
     max_depth: int = REWRITE_CHAIN_MAX_DEPTH,
     lemmas: tuple[dict[str, Any], ...] = (),
 ) -> tuple[list[str], str] | None:
-    target = eq2["rhs"]
-    queue: list[tuple[Term, list[str], list[str]]] = [(eq2["lhs"], [], [])]
-    seen: set[Term] = {eq2["lhs"]}
-    for _depth in range(max_depth):
-        next_queue: list[tuple[Term, list[str], list[str]]] = []
-        for term, proofs, routes in queue:
-            for new_term, proof, route in rewrite_steps_from_term(eq1, term, lemmas=lemmas):
-                if new_term in seen:
-                    continue
-                new_proofs = proofs + [proof]
-                new_routes = routes + [route]
-                if new_term == target:
-                    expr = new_proofs[0]
-                    for later in new_proofs[1:]:
-                        expr = f"({expr}).trans ({later})"
-                    return new_routes, expr
-                seen.add(new_term)
-                next_queue.append((new_term, new_proofs, new_routes))
-        queue = next_queue
+    """Bidirectional (meet-in-the-middle) chain search.
+
+    `rewrite_steps_from_term` applies every rule in BOTH directions (the
+    reverse direction emits a `.symm` proof), so the step relation is
+    symmetric and searching backward from the target is just searching
+    forward from it. Splitting depth d into ceil(d/2) forward and floor(d/2)
+    backward keeps completeness for chains of length <= d while removing the
+    dominant b^d term: at d=3 the cost drops from b+b^2+b^3 to b^2+b, i.e. a
+    b-fold saving, and b here is the pool size times subterm positions times
+    two directions (hundreds once the lemma pool is warm).
+
+    Measured before this change: this function was 95% of a resisting
+    problem's wall-clock (29.8 s per call, 8 calls in 251 s).
+
+    Also switches from per-node proof-list copying to parent pointers, so
+    node cost is O(1) instead of O(depth).
+    """
+    start, target = eq2["lhs"], eq2["rhs"]
+    if start == target:
+        return None  # reflexivity is the caller's business, as before
+
+    # term -> (parent, proof(parent = term), route) | None for a root
+    fwd: dict[Term, tuple | None] = {start: None}
+    bwd: dict[Term, tuple | None] = {target: None}
+    frontier_f: list[Term] = [start]
+    frontier_b: list[Term] = [target]
+    fwd_depth = (max_depth + 1) // 2
+    bwd_depth = max_depth // 2
+
+    def stitch(meet: Term) -> tuple[list[str], str]:
+        proofs_f, routes_f = _walk_back(fwd, meet)   # start = meet
+        proofs_b, routes_b = _walk_back(bwd, meet)   # target = meet
+        if proofs_b:
+            back = f"({_fold_trans(proofs_b)}).symm"  # meet = target
+            expr = f"({_fold_trans(proofs_f)}).trans ({back})" if proofs_f else back
+        else:
+            expr = _fold_trans(proofs_f)
+        return routes_f + [f"back:{r}" for r in reversed(routes_b)], expr
+
+    for step in range(max(fwd_depth, bwd_depth)):
+        if step < fwd_depth and frontier_f:
+            next_f: list[Term] = []
+            for term in frontier_f:
+                for new_term, proof, route in rewrite_steps_from_term(eq1, term, lemmas=lemmas):
+                    if new_term in fwd:
+                        continue
+                    fwd[new_term] = (term, proof, route)
+                    if new_term in bwd:
+                        return stitch(new_term)
+                    next_f.append(new_term)
+            frontier_f = next_f
+        if step < bwd_depth and frontier_b:
+            next_b: list[Term] = []
+            for term in frontier_b:
+                for new_term, proof, route in rewrite_steps_from_term(eq1, term, lemmas=lemmas):
+                    if new_term in bwd:
+                        continue
+                    bwd[new_term] = (term, proof, route)
+                    if new_term in fwd:
+                        return stitch(new_term)
+                    next_b.append(new_term)
+            frontier_b = next_b
     return None
 
 
