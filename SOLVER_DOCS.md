@@ -516,6 +516,22 @@ stdin  →  read problem JSON
 
 **LLM rounds:** controlled by `MAGMA_SOLO_LLM_ROUNDS` env variable (default: 2).
 
+**Endgame TRUE grind (2026-08-20, "the Birkhoff bet").** After the LLM rounds,
+instead of idling into the fallback, the remaining Solo budget goes to an
+escalating saturation ladder — `ENDGAME_PASSES`: (slack 26, 120 rounds, 3000
+lemmas, 300 s) → (32, 240, 6000, 600 s) → (40, 400, 12000, rest). Measured
+rationale on the official runtime, 2469 labeled problems: when every tier and
+LLM round is dry, 91% of problems are TRUE (32/35), and every findable FALSE
+witness arrived within 60 s (1247/1247, 98% within 10 s). TRUE is
+semi-decidable (Birkhoff), finite-table FALSE search is not — so past the
+60-second dry mark the expected-value play is all-in on proof search. Env:
+`MAGMA_SOLO_TIME_LIMIT` (default 3600), `SOLO_ENDGAME_MARGIN = 120 s`. The
+grind is crash-walled; each pass logs `endgame:pass` to stderr; a pass may
+overshoot its deadline by one in-flight round (costs nothing on the gated
+band, where the fallback is skipped anyway). Route: `true:endgame:<slack>:...`.
+Note: 120 s-timeout sweeps never reach the endgame — its gains only show in
+real-budget Solo runs.
+
 ### Marathon Mode (`run_marathon`)
 
 Activated when both `JUDGE_MARATHON_MANIFEST` and `JUDGE_MARATHON_OUTPUT` are set.

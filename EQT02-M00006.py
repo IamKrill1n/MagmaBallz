@@ -129,6 +129,18 @@ CP_SATURATION_WIDE_SLACK = 20
 CP_SATURATION_WIDE_PAIR_CAP = 8000
 CP_SATURATION_WIDE_GAP_TIME = 10.0
 CP_SATURATION_WIDE_ROUNDS = 60
+# Endgame TRUE grind (the Birkhoff bet), measured on the official runtime:
+# when every tier + LLM round is dry, 91% of problems are TRUE (32/35), and
+# every findable FALSE witness arrived within 60 s (1247/1247). TRUE is
+# semi-decidable, finite-table FALSE search is not — so the remaining Solo
+# budget goes to escalating proof search, not to idling into the fallback.
+SOLO_TIME_LIMIT_SECONDS = float(os.environ.get("MAGMA_SOLO_TIME_LIMIT", "3600"))
+SOLO_ENDGAME_MARGIN = 120.0
+ENDGAME_PASSES = (  # (term_slack, rounds, lemma_budget, slice_seconds)
+    (26, 120, 3000, 300.0),
+    (32, 240, 6000, 600.0),
+    (40, 400, 12000, float("inf")),  # pass cuối ăn toàn bộ thời gian còn lại
+)
 CP_SATURATION_WIDE_LEMMA_BUDGET = 1500
 CP_SATURATION_WIDE_TIME = 45.0
 LLM_MAX_ROUNDS = 2
@@ -4060,6 +4072,7 @@ def render_blackboard(blackboard: dict[str, list[str]], journal: list[str]) -> s
 
 
 def run_solo() -> int:
+    t_start = time.monotonic()
     payload = load_json_line(sys.stdin)
     if not payload:
         return 0
@@ -4228,6 +4241,57 @@ def run_solo() -> int:
             journal.append(f"{candidate['route']}→{judge_response.get('status')}")
             if judge_response.get("status") == "accepted":
                 return 0
+    # ENDGAME TRUE GRIND — see the constants block for the measured rationale.
+    # Crash-walled like the LLM tier: a bug here may cost the grind, never the
+    # process (the fallback below must always stay reachable).
+    try:
+        eq1_g = parse_equation(str(problem["equation1"]))
+        eq2_g = parse_equation(str(problem["equation2"]))
+        hard_deadline = t_start + SOLO_TIME_LIMIT_SECONDS - SOLO_ENDGAME_MARGIN
+        if not is_reflexive_problem(problem):
+            for slack_g, rounds_g, budget_g, slice_g in ENDGAME_PASSES:
+                if time.monotonic() + 90.0 >= hard_deadline:
+                    break
+                pass_deadline = min(hard_deadline, time.monotonic() + slice_g)
+                print(json.dumps({"route": "endgame:pass", "slack": slack_g,
+                                  "window_s": round(pass_deadline - time.monotonic(), 1)}),
+                      file=sys.stderr)
+                for beam_g in (False, True):
+                    result_g = _cp_saturation_attempt(
+                        eq1_g,
+                        eq2_g,
+                        lemma_budget=budget_g,
+                        rounds=rounds_g,
+                        deadline=pass_deadline,
+                        beam=beam_g,
+                        term_slack=slack_g,
+                        raw_pair_cap=600 * slack_g,
+                        gap_time=15.0,
+                    )
+                    if result_g is None:
+                        continue
+                    tag_g, proof_g, cited_g = result_g
+                    if cited_g:
+                        code_g = guided_true_certificate_with_lemmas(
+                            eq2_g["variables"], cited_g, proof_g)
+                    else:
+                        code_g = substitution_true_certificate(eq2_g["variables"], proof_g)
+                    answer_g = make_true_answer(problem, code_g)
+                    key_g = (str(answer_g.get("verdict")), str(answer_g.get("code")))
+                    if key_g in attempted:
+                        continue
+                    attempted.add(key_g)
+                    response_g = judge_via_solo_proxy(answer_g)
+                    if response_g:
+                        route_g = f"true:endgame:{slack_g}:{tag_g}:{len(cited_g)}"
+                        print(json.dumps({"judge_status": response_g.get("status"),
+                                          "route": route_g}), file=sys.stderr)
+                        if response_g.get("status") == "accepted":
+                            return 0
+    except Exception as exc:  # noqa: BLE001 — wall, not a handler
+        print(json.dumps({"route": "endgame:crash_wall", "error": repr(exc)[:200]}),
+              file=sys.stderr)
+
     if guided_lemma_budget(problem) > 0 and not is_reflexive_problem(problem):
         # The reflexivity fallback typechecks only when the two laws coincide,
         # which the reflexive route already owns — for any other pair it is a
