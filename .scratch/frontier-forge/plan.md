@@ -251,3 +251,48 @@ Appraiser and red-team scoring is likewise extended: a technique that opens
 REACH scores higher than one that improves ORDER by the same case count,
 because reach gaps are gates — they block an entire class, permanently, and no
 amount of later tuning recovers them.
+
+
+## Amendment 4 — the Forge is insurance, not upside (owner, 2026-08-20)
+
+The owner overruled a proposal to defer the Forge and the miner-derived
+heuristics. The reasoning, quantified after the fact and confirmed:
+
+**The headroom argument was conditional and the condition is unverifiable.**
+Solve rates on the public corpora after 2026-08-20's work:
+
+| Corpus | Rate |
+|---|---|
+| normal, hard1, evaluation_{normal,hard,extra_hard} | 100 % |
+| hard3 | 99.5 % |
+| hard2 | 98.5 % |
+| evaluation_order5 | 97.5 % |
+
+Projecting a 2469-problem private set drawn from a single difficulty band:
+
+| Private set resembles… | Projected score | vs the 2460 estimate |
+|---|---|---|
+| `normal` | 2469 | +9 |
+| `hard2` | 2432 | **−28** |
+| `evaluation_order5` | 2407 | **−53** |
+
+So the downside exposure to a harder-shifted private set (up to −53) is roughly
+**six times** the entire remaining headroom on the observed distribution (+9).
+Optimising against the observed distribution is optimising the small number.
+
+**Consequence for the Forge's purpose.** Its deliverable is not "a few more
+problems on the public sets". It is the only instrument we have that (a)
+manufactures problems from the harder bands we are weakest on — order-5 and
+hard2-style — so robustness there can be *measured* instead of assumed, and
+(b) mines the techniques that band needs, under the anti-overfitting discipline
+already specified (splits by hypothesis law, transfer ratio ≥ 0.5, sealed
+vault, red-team pass).
+
+**Consequence for miner targeting.** Priority order for frontier-set
+composition is now: order-5 laws first (weakest band, 97.5 %), then hard2-style
+absorption pairs (98.5 %), then everything else. Under Amendment 3 each miner
+still reports across all four levers; Amendment 4 only changes which problems
+they are pointed at.
+
+If the private set turns out easy, this work costs time and nothing else. If it
+is hard-shifted, it is the difference between 2460 and 2407.
