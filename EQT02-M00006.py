@@ -131,6 +131,19 @@ CP_SATURATION_WIDE_GAP_TIME = 10.0
 CP_SATURATION_WIDE_ROUNDS = 60
 # Fair-slice rule selection: at least this many distinct parent rules get
 # airtime within one raw-pair cap, and each gets at least RULE_SLICE_MIN pairs.
+# WORK METER. Wall-clock cutoffs make the search extent depend on how fast and
+# how loaded the machine is: measured margins of today's wins against a slower
+# judge CPU are as thin as 1.06x (normal_0087: 42.5 s used of a 45 s slice).
+# Counting work instead makes the extent identical on any machine, with the
+# clock kept only as a safety backstop that should never bind. One unit = one
+# critical-pair candidate produced, or one rewrite-step expansion.
+_WORK = [0]
+
+
+def work_units() -> int:
+    return _WORK[0]
+
+
 RULE_SLICE_PARENTS = 24
 RULE_SLICE_MIN = 120
 # Endgame TRUE grind (the Birkhoff bet), measured on the official runtime:
@@ -147,6 +160,13 @@ ENDGAME_PASSES = (  # (term_slack, rounds, lemma_budget, slice_seconds)
 )
 CP_SATURATION_WIDE_LEMMA_BUDGET = 1500
 CP_SATURATION_WIDE_TIME = 45.0
+# Work budget for the wide/relevance passes, calibrated 2026-08-20: the
+# heaviest win measured (normal_0087) consumes 17,124 units, hard1_0007
+# 12,038. 40,000 gives a 2.3x margin and, being work rather than seconds,
+# gives the SAME search on a slow judge CPU as on a fast one. The clock stays
+# as a backstop set high enough that it binds only on a >4x slower machine.
+CP_SATURATION_WIDE_WORK = 40_000
+CP_SATURATION_WIDE_CLOCK_BACKSTOP = 240.0
 LLM_MAX_ROUNDS = 2
 MARATHON_LLM_MAX_CALLS = 24
 MARATHON_LLM_BATCH_SIZE = 10
@@ -1796,6 +1816,7 @@ def rewrite_steps_from_term(
                     context = context_to_lean(term, path, "t")
                     proof = f"congrArg (fun t => {context}) ({proof})"
                 steps.append((new_term, proof, f"rewrite:{source_idx}:{len(path)}"))
+    _WORK[0] += len(steps) + 1
     return steps
 
 
@@ -2442,6 +2463,7 @@ def derive_gap_lemmas(
             ):
                 raw_count += 1
                 parent_used += 1
+                _WORK[0] += 1
                 key = lemma_statement_key(candidate["lhs"], candidate["rhs"])
                 if key in seen_keys:
                     continue
@@ -2565,6 +2587,7 @@ def _cp_saturation_attempt(
     raw_pair_cap: int = CP_SATURATION_RAW_PAIR_CAP,
     gap_time: float = CP_SATURATION_GAP_TIME,
     rule_order: str = "insertion",
+    work_budget: int | None = None,
 ) -> tuple[str, str, list[dict[str, Any]]] | None:
     """One saturation attempt with its own pool. Returns
     (tag, proof_expr, cited_lemmas) — certificate assembly is the caller's job.
@@ -2581,6 +2604,13 @@ def _cp_saturation_attempt(
         + term_slack
     )
     pool: list[dict[str, Any]] = []
+    work_start = _WORK[0]
+
+    def out_of_budget() -> bool:
+        if work_budget is not None and _WORK[0] - work_start >= work_budget:
+            return True
+        return deadline_expired(deadline)
+
     for _round in range(rounds + 1):
         step = proof_between_terms_guided(
             eq1, eq2["variables"], eq2["lhs"], eq2["rhs"], lemmas=tuple(pool)
@@ -2592,7 +2622,7 @@ def _cp_saturation_attempt(
             if rule_order == "relevance":
                 tag = "rel_" + tag
             return tag, proof, cited
-        if _round >= rounds or deadline_expired(deadline) or len(pool) >= lemma_budget:
+        if _round >= rounds or out_of_budget() or len(pool) >= lemma_budget:
             return None
         src, dst = eq2["lhs"], eq2["rhs"]
         cap_kwargs: dict[str, Any] = {}
@@ -2665,13 +2695,16 @@ def cp_saturation_route(
     deadline = time.monotonic() + time_budget
     for beam, extra in attempts:
         attempt_rounds, attempt_budget = rounds, lemma_budget
+        attempt_work: int | None = None
         if extra:
             # the wide pass runs at its own dosage on its own budget slice:
             # the heavy instance-chaining cases need ~7 lemmas over deep
             # rounds (normal_0492 measured 36 s at this dosage, MISS below it)
-            deadline = time.monotonic() + max(time_budget * 0.75, CP_SATURATION_WIDE_TIME)
+            deadline = time.monotonic() + max(time_budget * 0.75,
+                                              CP_SATURATION_WIDE_CLOCK_BACKSTOP)
             attempt_rounds = max(rounds, CP_SATURATION_WIDE_ROUNDS)
             attempt_budget = max(lemma_budget, CP_SATURATION_WIDE_LEMMA_BUDGET)
+            attempt_work = CP_SATURATION_WIDE_WORK
         result = _cp_saturation_attempt(
             eq1,
             eq2,
@@ -2679,6 +2712,7 @@ def cp_saturation_route(
             rounds=attempt_rounds,
             deadline=deadline,
             beam=beam,
+            work_budget=attempt_work,
             **extra,
         )
         if result is not None:

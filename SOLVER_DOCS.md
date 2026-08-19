@@ -391,6 +391,30 @@ Additional engine behaviors (originally gated to the order-5 band; enabled on ev
 
 ---
 
+## Work Meter — deterministic search extent (2026-08-20)
+
+**The risk it removes.** Every tier cut on wall-clock, so the amount of search
+a problem receives depended on how fast and how loaded the machine was.
+Measured margins of the day's wins against a slower judge CPU: `normal_0087`
+used 42.5 s of a 45 s slice (**1.06×**), `hard2_0110` 1.14×, `hard3_0068`
+1.19×, `hard1_0007` 1.27×. A judge machine 6% slower than the development
+machine would drop cases with no change in logic whatsoever. The same effect,
+measured in the other direction, moved a full sweep by +4 and −18 problems
+purely with machine load.
+
+**The mechanism.** `_WORK` counts one unit per critical-pair candidate produced
+and per rewrite-step expansion — the two inner loops. `work_units()` exposes it.
+`_cp_saturation_attempt(work_budget=N)` stops after N units, and the clock
+becomes a backstop (`CP_SATURATION_WIDE_CLOCK_BACKSTOP = 240 s`) that only
+binds on a >4× slower machine.
+
+**Calibration.** Heaviest measured win: `normal_0087` at 17,124 units;
+`hard1_0007` at 12,038. `CP_SATURATION_WIDE_WORK = 40_000` gives 2.3× margin.
+Applied to the wide and relevance passes — the ones where the marginal cases
+live; classic and beam are fast enough that their margins are already large.
+Solo grants 3600 s against a ~160 s worst case, so spending the margin costs
+nothing there.
+
 ## Rule Selection in Critical-Pair Generation (attempt 4, 2026-08-20)
 
 **The finding.** `derive_gap_lemmas` spends its raw-pair cap in iteration
