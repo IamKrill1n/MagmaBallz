@@ -2623,6 +2623,22 @@ def find_h_models(eq1: dict[str, Any], *, max_models: int = 4,
                 return found
             if table_satisfies_equation(eq1, table):
                 found.append(table)
+    if not found:
+        # Lớp k=0: H không có model order 2-3 — lưới lọc lấy bằng backtracker
+        # (mẹo mapmaker: model của H = "countermodel" của x = y). Một model
+        # order 4-6 vẫn là bộ lọc sound đầy đủ.
+        try:
+            trivial = parse_equation("x = y")
+            for n in (4, 5, 6):
+                if time.monotonic() >= t_end:
+                    break
+                r = backtracking_countermodel(eq1, trivial, sizes=(n,),
+                                              deadline=t_end)
+                if r is not None:
+                    found.append(r[1])
+                    break
+        except Exception:  # noqa: BLE001 — lưới lọc rỗng vẫn hợp lệ
+            pass
     return found
 
 
@@ -4278,6 +4294,61 @@ def render_blackboard(blackboard: dict[str, list[str]], journal: list[str]) -> s
     return "\n".join(parts) if parts else "(empty)"
 
 
+HEAVY_LADDER_RUNGS = ("x = y", "x ◇ y = x", "x ◇ y = y")
+
+
+def heavy_bridge_attempt(
+    eq1: dict[str, Any],
+    eq2: dict[str, Any],
+    bridge_text: str,
+    prefix: str,
+    *,
+    lemma_budget: int,
+    rounds: int,
+    deadline: float,
+    term_slack: int,
+    raw_pair_cap: int,
+    gap_time: float,
+) -> tuple[str, str] | None:
+    """Prove one bridge law from H at an arbitrary dosage, then close the goal
+    with it. The reja-class towers (E2→…→E569→proj_r on hard3_0271) are just
+    this with a big pool: proj_r fell at slack 20 / 6000 lemmas / 141 s where
+    the ladder's starved 4-second attempt never could."""
+    bridge_eq = parse_equation(bridge_text)
+    if bridge_eq["text"] == eq2["text"]:
+        return None
+    proved = _cp_saturation_attempt(
+        eq1, bridge_eq,
+        lemma_budget=lemma_budget,
+        rounds=rounds,
+        deadline=deadline,
+        beam=False,
+        term_slack=term_slack,
+        raw_pair_cap=raw_pair_cap,
+        gap_time=gap_time,
+    )
+    if proved is None:
+        return None
+    _tag, bridge_proof, bridge_cited = proved
+    renamed = _prefix_lemma_names(bridge_cited, prefix)
+    bridge = {
+        "variables": bridge_eq["variables"],
+        "lhs": bridge_eq["lhs"],
+        "rhs": bridge_eq["rhs"],
+        "name": f"{prefix}bridge",
+        "proof": re.sub(r"\blem(\d+)\b", prefix + r"lem\1", bridge_proof),
+        "cites": tuple(l["name"] for l in renamed) or ("h",),
+    }
+    step = proof_between_terms_guided(
+        eq1, eq2["variables"], eq2["lhs"], eq2["rhs"], lemmas=(bridge,))
+    if step is None:
+        return None
+    proof, _hop = step
+    code = guided_true_certificate_with_lemmas(
+        eq2["variables"], renamed + [bridge], proof)
+    return f"{len(renamed)}", code
+
+
 def run_solo() -> int:
     t_start = time.monotonic()
     payload = load_json_line(sys.stdin)
@@ -4463,6 +4534,7 @@ def run_solo() -> int:
                 print(json.dumps({"route": "endgame:pass", "slack": slack_g,
                                   "window_s": round(pass_deadline - time.monotonic(), 1)}),
                       file=sys.stderr)
+                candidates_g: list[tuple[str, str]] = []
                 for beam_g in (False, True):
                     result_g = _cp_saturation_attempt(
                         eq1_g,
@@ -4491,6 +4563,36 @@ def run_solo() -> int:
                     response_g = judge_via_solo_proxy(answer_g)
                     if response_g:
                         route_g = f"true:endgame:{slack_g}:{tag_g}:{len(cited_g)}"
+                        print(json.dumps({"judge_status": response_g.get("status"),
+                                          "route": route_g}), file=sys.stderr)
+                        if response_g.get("status") == "accepted":
+                            return 0
+                # Heavy ladder ở cùng liều pass: các tháp lemma kiểu reja đều
+                # đổ về collapse/proj — chứng minh CẦU dễ hơn chứng minh goal
+                # (đầu mút nhỏ → cap chặt hơn), đo được trên hard3_0271.
+                h_models_g = find_h_models(eq1_g)
+                for rung_i, rung_text in enumerate(HEAVY_LADDER_RUNGS):
+                    if time.monotonic() >= pass_deadline:
+                        break
+                    rung_eq = parse_equation(rung_text)
+                    if any(not table_satisfies_equation(rung_eq, t) for t in h_models_g):
+                        continue
+                    hb = heavy_bridge_attempt(
+                        eq1_g, eq2_g, rung_text, f"HG{rung_i}",
+                        lemma_budget=budget_g, rounds=rounds_g,
+                        deadline=pass_deadline, term_slack=slack_g,
+                        raw_pair_cap=600 * slack_g, gap_time=15.0)
+                    if hb is None:
+                        continue
+                    n_cited, code_g = hb
+                    answer_g = make_true_answer(problem, code_g)
+                    key_g = (str(answer_g.get("verdict")), str(answer_g.get("code")))
+                    if key_g in attempted:
+                        continue
+                    attempted.add(key_g)
+                    response_g = judge_via_solo_proxy(answer_g)
+                    if response_g:
+                        route_g = f"true:endgame_ladder:{slack_g}:r{rung_i}:{n_cited}"
                         print(json.dumps({"judge_status": response_g.get("status"),
                                           "route": route_g}), file=sys.stderr)
                         if response_g.get("status") == "accepted":
