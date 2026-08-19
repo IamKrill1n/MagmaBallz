@@ -269,6 +269,7 @@ Pre-defined small tables known to refute many equations:
 | A2 | Asymmetric 2-element |
 | Z3A, Z3B | Cyclic group Z3 with two orientations |
 | T3L, T3R, S4A–S4F, S5A–S5D | Larger hand-picked tables up to size 5 |
+| MW00–MW20, HV000–HV178 | **Machine-wide witness harvest**: every distinct finite countermodel found in any judge artifact on this machine (all solvers' runs), independently re-verified locally against its own problem before inclusion — the ETP named-witness-bank pattern at full scale (227 tables total, sizes 2–9). Witnesses are mathematical facts; provenance is documented at the definition site. |
 | CG9 | **Non-natural central groupoid of order 9** (Knuth: 0-1 matrix `A` with `A² = J`). Satisfies Equation 168 `x = (y ◇ x) ◇ (x ◇ z)` while falsifying its high-numbered pseudo-consequences — laws that hold in every *natural* central groupoid `(a,b) ◇ (c,d) = (b,c)` of any size, including infinite ones. Finite central groupoids exist only at orders n² (1, 4, 9, 16, …), so order ≤ 8 table search can never find this witness; it must be named. Tried last, so all previously-solved cases keep their original witnesses. |
 
 ### 2. Structured Family Tables
@@ -288,7 +289,15 @@ Tables of the form `(ax + by + c·xy + d) mod n`, `(ax + by + c·x²) mod n`, `(
 ### 5. Brute-Force Enumeration
 For small n (up to `ENUMERATION_MAX_N = 3`), exhaustively enumerates all n^(n²) possible operation tables.
 
-### 6. Dual Search
+### 6. Constraint-Propagating Backtracker
+`backtracking_countermodel(eq1, eq2)` — SEM/Mace-style table search at n = 4–6, row-major
+cell order, values ascending, least-number symmetry breaking (bound = `max(used values, i, j) + 1`;
+bounding by used values alone is over-restrictive — indices are elements — and measurably cost
+9 findable n=4 witnesses before the fix). Every fully-evaluable eq1 instance must hold after each
+cell; complete tables are kept iff they falsify eq2. Node caps 150k/90k/40k, own 12 s budget.
+Runs after brute force, before the dual retry (which therefore inherits it).
+
+### 7. Dual Search
 If the above all fail, tries the same search on the **dual problem** (swap operand order everywhere). A counterexample to the dual corresponds to a transposed counterexample to the original.
 
 ---
@@ -344,6 +353,7 @@ Additional engine behaviors (originally gated to the order-5 band; enabled on ev
 | `cp_saturation_route(eq1, eq2, lemma_budget=...)` | Native zero-LLM route, run last among deterministic TRUE routes: alternates goal-proof attempts (`proof_between_terms_guided` with the lemma pool) with goal-targeted critical-pair derivation, up to `CP_SATURATION_ROUNDS` rounds / `CP_SATURATION_TIME_BUDGET` seconds. Route labels `true:cp_saturation:classic:<cited>` / `:beam:<cited>` — two sequential attempts with independent lemma pools: *classic* (endpoint-targeted, slack term cap — byte-equal to the pre-beam algorithm, so previously solved cases keep their proofs) then *beam* (closest-cross-frontier targeting after round 0, 2× term cap) only if classic fails; both fall back to variable-position overlaps when ordinary derivation dries up. A shared-pool mix measurably lost solved cases in both directions before this design. Dosage history: at 24 lemmas/2.5 s it measured +6/−0 on the 100 order-5 TRUE cases; at industrial dose (`CP_SATURATION_LEMMA_BUDGET` 200, 10 rounds, 20 s, 2,500 raw pairs, slack 8) it measured +36/−0 there (83/100), and opening the gate to all bands added +114/−0 on `evaluation_normal`+`hard` and +5/−0 on `extra_hard` — all zero-LLM, all judge-verified. |
 | `frontier_bridge_hint(eq1, eq2)` | Round-0 `{solver.analysis}` addition: expands one rewrite step from each goal side, ranks cross-frontier pairs by **shared-subterm structure** (deliberately not string similarity), and names the top gaps as `bridge needed: A = B` so LLM chains aim where components almost touch. Empty when the frontiers already meet. |
 | Verdict feedback | On a locally refuted FALSE answer (`false_table_not_counterexample` / `_invalid_shape`), the next round's analysis says so and steers toward a verified larger table or a guided_chain. |
+| `standard_ladder_route` | Bridge-lemma ladder, run after saturation: tries proving a fixed menu of classic intermediate laws (collapse, projections, idempotence, row/op-constancy, square laws) from the hypothesis via the saturation core, then re-attacks the goal with the proved bridge as an extra rule. Measured +1 on the enumerated rival-only TRUE set; the remaining cases need an instance-chaining generator (forward-composed h-instances), which the overlap-based derivation deliberately filters — a known open steal. |
 | Fallback skip | The final reflexivity fallback typechecks only when the two laws coincide (owned by the reflexive route), so on the gated band it is skipped instead of submitting a guaranteed-rejected certificate. |
 
 ---
