@@ -73,6 +73,19 @@ echo $$ > "$LOCKDIR/pid"
 trap 'rm -rf "$LOCKDIR"' EXIT INT TERM
 
 log "=== dây chuyền khởi động/tiếp tục ==="
+
+# CANH GÁC UPSTREAM. Luật chấm điểm, model chấm thi và bộ đề riêng đều đang là
+# TBD trong rules/. Ngày ban tổ chức công bố, mình phải biết NGAY — nếu điểm có
+# phần tín nhiệm/log-loss thì bài chưa giải cũng đáng nộp câu trả lời, chiến
+# lược sẽ đổi hẳn. Fork đã từng lạc hậu 8 commit mà không ai biết.
+if git fetch sair --quiet 2>/dev/null; then
+  NEW=$(git log --oneline HEAD..sair/main 2>/dev/null | wc -l | tr -d " ")
+  if [ "$NEW" != "0" ]; then
+    log "  !! UPSTREAM CÓ $NEW COMMIT MỚI:"
+    git log --oneline HEAD..sair/main 2>/dev/null | head -10 | while read -r l; do log "     $l"; done
+    git diff --stat HEAD..sair/main -- rules/ 2>/dev/null | while read -r l; do log "     RULES: $l"; done
+  fi
+fi
 if ! done_verify; then
   log "chặng 1: verify_additive"; run_stage 2h "$PY_BIN" "$S/verify_additive.py" >> "$S/verify_additive.log" 2>&1
 fi
