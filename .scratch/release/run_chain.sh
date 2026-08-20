@@ -91,6 +91,11 @@ if ! done_sweep; then
     --timeout 600 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
 fi
 gate sweep
+# LUẬT ƯU TIÊN: các chặng Tầng 3-5 CHỈ chạy khi Tầng 1-2 xong. Nếu không,
+# một chặng Tầng 2 bị gián đoạn sẽ phải xếp hàng sau nhiều giờ việc phụ —
+# đúng chuyện vừa xảy ra khi sweep bị dừng giữa chừng.
+if done_verify && done_marathon && done_sweep; then
+
 if ! done_sieve; then
   log "chặng 4: sieve Forge (có sổ cái, tự resume)"
   run_stage 4h "$PY_BIN" "$REPO/.scratch/frontier-forge/forge_p2_sieve.py" > "$S/sieve3.log" 2>&1
@@ -109,6 +114,10 @@ if ! done_label; then
   log "chặng 7: label_doubt"; run_stage 3h "$PY_BIN" "$S/label_doubt.py" >> "$S/label_doubt.log" 2>&1
 fi
 gate label
+
+else
+  log "Tầng 3-5 tạm hoãn: còn chặng chặn nộp bài chưa xong"
+fi
 "$PY_BIN" "$REPO/.scratch/release/check_stage.py" all > /dev/null 2>&1
 log "=== dây chuyền hoàn tất — xem .scratch/release/STATUS.md ==="
 status

@@ -19,3 +19,16 @@
 [08-20 09:49]   ⛔ CHẶN NỘP — verify hỏng, xem STATUS.md
 [08-20 09:49]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%)
 [08-20 09:49] chặng 3: sweep chứng nhận 2469 bài
+[08-20 16:20]   cổng sweep: · sweep: CHƯA CHẠY — chưa có kết quả
+[08-20 16:20] chặng 4: sieve Forge (có sổ cái, tự resume)
+[08-20 16:23] Tầng 3-5 tạm hoãn: còn chặng chặn nộp bài chưa xong
+[08-20 16:23] === dây chuyền hoàn tất — xem .scratch/release/STATUS.md ===
+  [ ] verify
+  [x] marathon
+  [ ] sweep
+  [ ] sieve
+  [ ] harvest
+  [ ] census
+  [ ] label
+[08-20 16:23] === dây chuyền khởi động/tiếp tục ===
+[08-20 16:23] chặng 1: verify_additive
