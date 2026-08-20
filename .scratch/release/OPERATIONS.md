@@ -58,6 +58,35 @@ launchctl unload ~/Library/LaunchAgents/com.magmaballz.chain.plist   # gỡ khi 
 Chặng: verify → Marathon → sweep chứng nhận → sieve Forge → harvest ML →
 census route → label_doubt.
 
+## 3a. PHÒNG THÍ NGHIỆM — mọi phép đo đi qua đúng một cửa
+
+Bảy lỗi ngày 20/08 đều cùng một gốc: không ai làm chủ tài nguyên máy. Hậu quả
+luôn giống nhau — một build TỐT trông như HỎNG, rồi đi sửa nhầm chỗ.
+
+**Cửa duy nhất:**
+
+```bash
+python3 .scratch/lab/measure.py --name <tên> --result <file> -- <lệnh...>
+```
+
+Nó CƯỠNG CHẾ bốn thứ, không phải nhắc nhở:
+
+1. **Máy phải sạch** — có tiến trình đo khác đang chạy thì TỪ CHỐI (mã thoát 3),
+   không "chạy nhẹ thôi".
+2. **Độc quyền** — giữ khóa máy suốt lượt; phép đo khác xin cũng bị từ chối.
+3. **Cấu hình chuẩn, không đổi cho nhanh** — sandbox `docker`, hạn Lean **120 s**
+   (giá trị thật của ban tổ chức; nâng lên là tự cho điểm lạc quan), `LEAN_PATH`
+   nạp sẵn (tránh `lake env` quá giờ), **thư mục artifact riêng từng lượt**.
+4. **Tự khai báo** — ghi `<file>.prov.json`: môi trường lúc đầu, **tải đỉnh
+   trong suốt lượt**, số đối thủ đỉnh, build, số luồng, và kết luận
+   **ĐÁNG TIN / KHÔNG ĐÁNG TIN**. `check_stage.py` đọc dấu này và **hạ kết quả
+   xuống NGỜ nếu môi trường bẩn** — không phụ thuộc việc ai nhớ nhìn.
+
+**Số luồng được TÍNH, không chọn tay:** `lab.plan_workers()` = (số lõi − 2) ÷ 6.
+Một đơn vị việc đo tốn ~6 lõi (container solver 2 CPU + Lean đa luồng khi biên
+dịch). Máy 10 lõi → **1 luồng**. Con số 3 chọn tay chính là thứ đã bỏ đói Lean,
+khiến nó vượt hạn 120 s và judge ghi certificate ĐÚNG thành SAI (20/225 bài).
+
 ## 3b. Sweep phải chạy trên HỆ THỐNG THẬT
 
 Chỉ đạo của chủ dự án (20/08): phép đo chứng nhận **không được là mô phỏng**.

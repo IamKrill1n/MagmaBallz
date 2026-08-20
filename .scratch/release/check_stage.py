@@ -126,6 +126,27 @@ def chk_label():
     return ("ĐẠT" if "LABEL DOUBT DONE" in txt else "ĐANG CHẠY"), f"{n} cấu hình đã thử, chưa cái nào ra"
 
 
+PROV = {"verify": S/"verify_additive.ledger.jsonl.prov.json",
+        "marathon": S/"marathon_100.log.prov.json",
+        "sweep": S/"results/final_cert.jsonl.prov.json",
+        "sieve": S/"sieve3.log.prov.json",
+        "harvest": REPO/".scratch/ml/train_rows.jsonl.prov.json",
+        "census": S/"route_census.log.prov.json",
+        "label": S/"label_doubt.log.prov.json"}
+
+
+def provenance(name: str):
+    """Dấu môi trường do phòng thí nghiệm ghi. Không có dấu = đo bằng đường
+    vòng, không qua cửa lab -> cũng không đáng tin."""
+    p = PROV.get(name)
+    if p is None or not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return None
+
+
 CHECKS = [("verify", chk_verify, "phép thử hồi quy — CHẶN NỘP nếu hỏng"),
           ("marathon", chk_marathon, "đường đua thứ hai"),
           ("sweep", chk_sweep, "điểm chứng nhận — CHẶN NỘP nếu hỏng"),
@@ -142,6 +163,13 @@ def main():
         if want not in ("all", name): continue
         try: verdict, detail = fn()
         except Exception as exc: verdict, detail = "HỎNG", f"phép kiểm lỗi: {exc!r}"
+        pr = provenance(name)
+        if verdict in ("ĐẠT", "NGỜ") and pr is not None and not pr.get("đáng_tin", True):
+            verdict = "NGỜ"
+            detail += (f" | ⚠️ ĐO TRONG TRANH CHẤP: tải đỉnh {pr.get('tải_đỉnh')}"
+                       f"/{pr.get('ngưỡng')}, đối thủ {pr.get('đối_thủ_đỉnh')} — số này KHÔNG dùng được")
+        elif verdict == "ĐẠT" and pr is not None:
+            detail += f" | môi trường sạch, build {pr.get('build')}, {pr.get('luồng')} luồng"
         if verdict == "ĐANG CHẠY" and not stage_alive(name):
             verdict = "DỞ DANG"      # log có nhưng không tiến trình nào sống
         mark = {"ĐẠT":"✅","HỎNG":"❌","NGỜ":"⚠️","ĐANG CHẠY":"⏳",

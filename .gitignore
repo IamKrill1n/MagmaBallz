@@ -81,3 +81,4 @@ scripts/build_equation_index.py
 .scratch/frontier-forge/checked_v1.jsonl
 .scratch/ml/train_rows.jsonl
 .scratch/ml/harvested_ids.txt
+.scratch/release/run_chain.old.sh

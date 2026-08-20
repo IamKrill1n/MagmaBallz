@@ -1,61 +1,39 @@
 #!/bin/bash
-# DÂY CHUYỀN CÓ THỂ KHỞI ĐỘNG LẠI BẤT CỨ LÚC NÀO.
-# Máy ngủ, tắt, sập nguồn, mất mạng -> chạy lại đúng lệnh này, nó tự bỏ qua
-# những chặng đã xong và tiếp tục từ chặng dở. Mỗi chặng có dấu hoàn thành
-# riêng; chặng nào có sổ cái thì tự resume bên trong.
+# DÂY CHUYỀN ĐO — chạy lại được, cô lập, tự khai báo môi trường.
 #
-#   bash .scratch/release/run_chain.sh          # chạy/tiếp tục
-#   bash .scratch/release/run_chain.sh status   # chỉ xem trạng thái
+# Gọi bao nhiêu lần cũng được: bỏ qua chặng đã xong, tiếp chặng dở. LaunchAgent
+# com.magmaballz.chain gọi nó lúc đăng nhập và mỗi 10 phút.
+#
+#   bash .scratch/release/run_chain.sh          chạy/tiếp tục
+#   bash .scratch/release/run_chain.sh status   chỉ xem
+#
+# MỌI phép đo đi qua .scratch/lab/measure.py — cửa duy nhất, cưỡng chế: máy
+# phải sạch, độc quyền suốt lượt, cấu hình chuẩn (docker + Lean 120s + thư mục
+# artifact riêng), và ghi dấu môi trường cạnh mỗi kết quả.
 set -u
 REPO=/Users/nhatminh/dev/active/MagmaBallz
 S=/private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad
-cd "$REPO"; source "$REPO/.env.judge" 2>/dev/null || true
-unset OPENAI_API_KEY OPENROUTER_API_KEY
-
-# launchd khởi chạy với môi trường TỐI THIỂU, khác hẳn terminal. Lean gọi
-# trình biên dịch C, và nếu thiếu DEVELOPER_DIR thì nó rơi vào `xcodebuild`
-# dò SDK — lệnh này TREO VÔ HẠN dưới launchd (đo được: kẹt 3'39 ở 0% CPU và
-# chặn cả dây chuyền). Đặt tường minh, không để nó tự dò.
+ML=$REPO/.scratch/ml
+cd "$REPO"
+source "$REPO/.env.judge" 2>/dev/null || true
+# launchd khởi chạy với môi trường tối thiểu: thiếu DEVELOPER_DIR thì Lean rơi
+# vào xcodebuild dò SDK và TREO VÔ HẠN; python3 phân giải sang bản hệ thống
+# thiếu openai/sympy. Ghim cả hai.
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-# judge gọi `lake env` mỗi lần verify để lấy LEAN_PATH, timeout 30s — dưới
-# launchd/khi máy bận thì lệnh đó QUÁ GIỜ và cả chặng chết. Framework có sẵn
-# cửa thoát: JUDGE_LEAN_PATH nạp sẵn thì nó bỏ qua lake hoàn toàn.
-[ -f "$REPO/.scratch/release/lean_path.txt" ] && \
-  export JUDGE_LEAN_PATH="$(cat "$REPO/.scratch/release/lean_path.txt")"
-export SDKROOT="${SDKROOT:-$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)}"
 export PATH="$HOME/.elan/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
-
-# launchd phân giải python3 sang Python HỆ THỐNG, thiếu openai/sympy mà
-# pipeline cần -> ghim đúng trình thông dịch tương tác.
-PY_BIN="/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
+PY_BIN=/Library/Frameworks/Python.framework/Versions/3.11/bin/python3
 [ -x "$PY_BIN" ] || PY_BIN="$(command -v python3)"
+MEASURE="$PY_BIN $REPO/.scratch/lab/measure.py"
+W=$("$PY_BIN" -c "import sys;sys.path.insert(0,'$REPO/.scratch/lab');import lab;print(lab.plan_workers())")
 
-# Mọi chặng chạy dưới `timeout`: một chặng treo chỉ mất chặng đó, không bao
-# giờ chặn dây chuyền. Lần gọi sau của launchd sẽ thử lại chặng dở.
-run_stage() { timeout "$1" "${@:2}"; rc=$?; [ $rc -eq 124 ] && log "  !! chặng quá giờ ${1}, sẽ thử lại lượt sau"; return 0; }
-
-# CỔNG CHẤT LƯỢNG: sau mỗi chặng, hỏi "kết quả có hợp lý không" chứ không hỏi
-# "có chạy không". Kết luận ghi vào STATUS.md để người/session sau đọc được.
-gate() {
-  local v
-  v=$("$PY_BIN" "$REPO/.scratch/release/check_stage.py" "$1" 2>&1 | head -1)
-  log "  cổng $1: $v"
-  case "$v" in *"HỎNG"*) log "  ⛔ CHẶN NỘP — $1 hỏng, xem STATUS.md" ;; esac
-}
-
-# verify chỉ được coi là XONG khi nó ĐẠT: 6 bài đều accepted. Chạy xong mà
-# hỏng thì phải thử lại ở lượt sau — vì nguyên nhân hỏng thường là nhiễm
-# (chạy chen ngang, thư mục artifact dùng chung), không phải solver sai. Lượt
-# sau máy sạch hơn thì nó tự qua; nếu hỏng thật thì STATUS.md kêu mãi cho
-# người thấy, chứ không âm thầm coi như đã kiểm.
-done_verify() {
-  [ -f "$S/verify_additive.ledger.jsonl" ] || return 1
-  [ "$(grep -c '"judge": "accepted"' "$S/verify_additive.ledger.jsonl" 2>/dev/null)" -ge 6 ]
-}
+# --- dấu hoàn thành: kiểm NỘI DUNG, không kiểm mã thoát ------------------
+done_verify()   { [ -f "$S/verify_additive.ledger.jsonl" ] &&
+                  [ "$(grep -c '"judge": "accepted"' "$S/verify_additive.ledger.jsonl" 2>/dev/null)" -ge 6 ]; }
 done_marathon() { grep -qiE "score|accuracy|solved" "$S/marathon_100.log" 2>/dev/null; }
-done_sweep()    { [ -f "$S/results/final_cert.jsonl" ] && [ "$(wc -l < "$S/results/final_cert.jsonl")" -ge 2469 ]; }
+done_sweep()    { [ -f "$S/results/final_cert.jsonl" ] &&
+                  [ "$(wc -l < "$S/results/final_cert.jsonl")" -ge 2469 ]; }
 done_sieve()    { grep -q "DONE:" "$S/sieve3.log" 2>/dev/null; }
-done_harvest()  { grep -q "HARVEST DONE" "$REPO/.scratch/ml/harvest.log" 2>/dev/null; }
+done_harvest()  { grep -q "HARVEST DONE" "$ML/harvest.log" 2>/dev/null; }
 done_census()   { grep -q "ROUTE CENSUS DONE" "$S/route_census.log" 2>/dev/null; }
 done_label()    { grep -q "LABEL DOUBT DONE" "$S/label_doubt.log" 2>/dev/null; }
 
@@ -64,110 +42,87 @@ status() {
     if done_$st; then printf "  [x] %s\n" "$st"; else printf "  [ ] %s\n" "$st"; fi
   done
 }
-[ "${1:-run}" = "status" ] && { echo "TRẠNG THÁI DÂY CHUYỀN:"; status; exit 0; }
+[ "${1:-run}" = "status" ] && { echo "TRẠNG THÁI:"; status; exit 0; }
 
 log() { echo "[$(date '+%m-%d %H:%M')] $*" | tee -a "$S/chain.log"; }
 
-# Khóa: launchd gọi lặp lại, chỉ cho phép MỘT lượt chạy tại một thời điểm.
-# mkdir là thao tác nguyên tử trên mọi hệ tệp -> không cần flock.
+# --- khóa: launchd gọi lặp, chỉ MỘT lượt được chạy ------------------------
 LOCKDIR="$S/.chain.lock"
 if ! mkdir "$LOCKDIR" 2>/dev/null; then
-  if [ -f "$LOCKDIR/pid" ] && kill -0 "$(cat "$LOCKDIR/pid")" 2>/dev/null; then
-    exit 0                      # lượt trước còn sống -> im lặng thoát
-  fi
-  rm -rf "$LOCKDIR"; mkdir "$LOCKDIR" 2>/dev/null || exit 0   # khóa mồ côi sau khi mất điện
+  if [ -f "$LOCKDIR/pid" ] && kill -0 "$(cat "$LOCKDIR/pid")" 2>/dev/null; then exit 0; fi
+  rm -rf "$LOCKDIR"; mkdir "$LOCKDIR" 2>/dev/null || exit 0
 fi
 echo $$ > "$LOCKDIR/pid"
 trap 'rm -rf "$LOCKDIR"' EXIT INT TERM
 
-log "=== dây chuyền khởi động/tiếp tục ==="
+log "=== dây chuyền: $W luồng (tính từ số lõi), build $(git rev-parse --short HEAD) ==="
 
-# CANH GÁC UPSTREAM. Luật chấm điểm, model chấm thi và bộ đề riêng đều đang là
-# TBD trong rules/. Ngày ban tổ chức công bố, mình phải biết NGAY — nếu điểm có
-# phần tín nhiệm/log-loss thì bài chưa giải cũng đáng nộp câu trả lời, chiến
-# lược sẽ đổi hẳn. Fork đã từng lạc hậu 8 commit mà không ai biết.
+# --- canh gác upstream: luật chấm điểm còn TBD, biết muộn là hỏng ---------
 if git fetch sair --quiet 2>/dev/null; then
   NEW=$(git log --oneline HEAD..sair/main 2>/dev/null | wc -l | tr -d " ")
-  if [ "$NEW" != "0" ]; then
-    log "  !! UPSTREAM CÓ $NEW COMMIT MỚI:"
-    git log --oneline HEAD..sair/main 2>/dev/null | head -10 | while read -r l; do log "     $l"; done
-    git diff --stat HEAD..sair/main -- rules/ 2>/dev/null | while read -r l; do log "     RULES: $l"; done
-  fi
+  [ "$NEW" != "0" ] && { log "  !! UPSTREAM CÓ $NEW COMMIT MỚI"; \
+    git log --oneline HEAD..sair/main 2>/dev/null | head -5 | while read -r l; do log "     $l"; done; }
 fi
+
+gate() { log "  cổng $1: $("$PY_BIN" "$REPO/.scratch/release/check_stage.py" "$1" 2>&1 | head -1)"; }
+
+# --- TẦNG 1-2: chặn nộp bài ----------------------------------------------
 if ! done_verify; then
-  # sổ cái cũ chứa kết quả của lượt hỏng -> xoá để chạy lại sạch
   [ -f "$S/verify_additive.ledger.jsonl" ] && mv "$S/verify_additive.ledger.jsonl" "$S/verify_additive.ledger.prev.jsonl"
-  log "chặng 1: verify_additive"; run_stage 2h "$PY_BIN" "$S/verify_additive.py" >> "$S/verify_additive.log" 2>&1
+  log "chặng 1: verify_additive"
+  $MEASURE --name verify --result "$S/verify_additive.ledger.jsonl" --wait 7200 \
+      -- "$PY_BIN" "$S/verify_additive.py" >> "$S/verify_additive.log" 2>&1
 fi
 gate verify
+
 if ! done_marathon; then
-  log "chặng 2: Marathon 99 bài (lần đầu)"
+  log "chặng 2: Marathon 99 bài"
   mkdir -p "$S/subs/m6marathon"; cp "$S/subs/m6final/solver.py" "$S/subs/m6marathon/solver.py"
-  run_stage 3h "$PY_BIN" scripts/run_marathon.py --solver "$S/subs/m6marathon" \
-      --manifest "$S/marathon_100.jsonl" > "$S/marathon_100.log" 2>&1
+  $MEASURE --name marathon --result "$S/marathon_100.log" --wait 7200 \
+      -- "$PY_BIN" scripts/run_marathon.py --solver "$S/subs/m6marathon" \
+         --manifest "$S/marathon_100.jsonl" > "$S/marathon_100.log" 2>&1
 fi
 gate marathon
+
 if ! done_sweep; then
-  log "chặng 3: sweep chứng nhận 2469 bài"
-  # SWEEP CHẠY TRÊN HỆ THỐNG THẬT, không mô phỏng: solver chạy TRONG container
-  # ee-solver (2 CPU, 2GB, không mạng, non-root, chỉ đọc) đúng như ban tổ chức
-  # chấm, chứ không phải trên máy trần. Ngân sách 600s mỗi bài.
-  # Khói 6 bài trước: docker hỏng thì bỏ lượt chứ không đốt nhiều giờ vô ích.
-  # Gốc artifact riêng cho lượt sweep này: judge đặt tên thư mục theo băm
-  # (bài + đáp án), nên dùng lại gốc cũ là kế thừa trạng thái build của lượt
-  # trước — đã đo được nó biến `accepted` thành `incorrect`.
-  export JUDGE_ARTIFACT_DIR="/private/tmp/mb-sweep-artifacts-$(date +%s)"
-  mkdir -p "$JUDGE_ARTIFACT_DIR"
-  export SB_SANDBOX_MODE=docker
-  # HAI luồng, không phải ba. judge/verify.py biến `subprocess.TimeoutExpired`
-  # thành trạng thái `incorrect` (mã LEAN_TIMEOUT) với hạn 120s. Ba luồng ở chế
-  # độ docker = 3 container x 2 CPU + 3 tiến trình Lean trên máy 10 lõi: Lean bị
-  # bỏ đói, vượt 120s, và certificate ĐÚNG bị ghi là SAI. Đo được 20/08: 20/225
-  # bài trượt kiểu đó, và đúng những certificate ấy `accepted` khi máy rảnh.
-  # Không nâng LEAN_TIMEOUT_SECONDS: ban tổ chức chấm ở 120s, nâng lên là tự
-  # cho điểm lạc quan.
-  log "  khói docker 6 bài"
-  if ! timeout 40m "$PY_BIN" "$S/scoreboard.py" --solvers m6final --corpora hard1 \
-        --sample 6 --timeout 600 --workers 2 --no-llm --tag docker_smoke \
-        > "$S/docker_smoke.log" 2>&1; then
-    log "  !! khói docker HỎNG — bỏ lượt sweep, xem docker_smoke.log"
-    unset SB_SANDBOX_MODE
-  else
-  run_stage 24h "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
-    --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
-    --timeout 600 --workers 2 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
-  unset SB_SANDBOX_MODE
-  rm -rf "$JUDGE_ARTIFACT_DIR"; unset JUDGE_ARTIFACT_DIR
-  fi
+  log "chặng 3: sweep chứng nhận 2469 bài, trong container, $W luồng"
+  $MEASURE --name sweep --result "$S/results/final_cert.jsonl" --wait 7200 \
+      -- "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
+         --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
+         --timeout 600 --workers "$W" --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
 fi
 gate sweep
-# LUẬT ƯU TIÊN: các chặng Tầng 3-5 CHỈ chạy khi Tầng 1-2 xong. Nếu không,
-# một chặng Tầng 2 bị gián đoạn sẽ phải xếp hàng sau nhiều giờ việc phụ —
-# đúng chuyện vừa xảy ra khi sweep bị dừng giữa chừng.
+
+# --- TẦNG 3-5: chỉ chạy khi tầng trên xong -------------------------------
 if done_verify && done_marathon && done_sweep; then
-
-if ! done_sieve; then
-  log "chặng 4: sieve Forge (có sổ cái, tự resume)"
-  run_stage 4h "$PY_BIN" "$REPO/.scratch/frontier-forge/forge_p2_sieve.py" > "$S/sieve3.log" 2>&1
-fi
-gate sieve
-if ! done_harvest; then
-  log "chặng 5: harvest ML (có sổ cái, tự resume)"
-  run_stage 2h "$PY_BIN" "$REPO/.scratch/ml/harvest.py" > "$REPO/.scratch/ml/harvest.log" 2>&1
-fi
-gate harvest
-if ! done_census; then
-  log "chặng 6: census route"; run_stage 3h "$PY_BIN" "$S/route_census.py" > "$S/route_census.log" 2>&1
-fi
-gate census
-if ! done_label; then
-  log "chặng 7: label_doubt"; run_stage 3h "$PY_BIN" "$S/label_doubt.py" >> "$S/label_doubt.log" 2>&1
-fi
-gate label
-
+  if ! done_sieve; then
+    log "chặng 4: sieve Forge"
+    $MEASURE --name sieve --result "$S/sieve3.log" --wait 7200 \
+        -- "$PY_BIN" "$REPO/.scratch/frontier-forge/forge_p2_sieve.py" > "$S/sieve3.log" 2>&1
+  fi
+  gate sieve
+  if ! done_harvest; then
+    log "chặng 5: harvest ML"
+    $MEASURE --name harvest --result "$ML/train_rows.jsonl" --wait 7200 \
+        -- "$PY_BIN" "$ML/harvest.py" > "$ML/harvest.log" 2>&1
+  fi
+  gate harvest
+  if ! done_census; then
+    log "chặng 6: census route"
+    $MEASURE --name census --result "$S/route_census.log" --wait 7200 \
+        -- "$PY_BIN" "$S/route_census.py" > "$S/route_census.log" 2>&1
+  fi
+  gate census
+  if ! done_label; then
+    log "chặng 7: label_doubt"
+    $MEASURE --name label --result "$S/label_doubt.log" --wait 7200 \
+        -- "$PY_BIN" "$S/label_doubt.py" >> "$S/label_doubt.log" 2>&1
+  fi
+  gate label
 else
   log "Tầng 3-5 tạm hoãn: còn chặng chặn nộp bài chưa xong"
 fi
+
 "$PY_BIN" "$REPO/.scratch/release/check_stage.py" all > /dev/null 2>&1
-log "=== dây chuyền hoàn tất — xem .scratch/release/STATUS.md ==="
+log "=== hoàn tất — xem .scratch/release/STATUS.md ==="
 status
