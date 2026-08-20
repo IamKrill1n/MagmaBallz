@@ -643,7 +643,23 @@ remaining Solo budget goes to `endgame_passes()`, an infinite generator whose
 caps grow without ceiling. Slack grows LINEARLY (+6 per rung from 26); rounds
 (×1.5), lemma budget (×1.6) and slice (×1.4) grow geometrically.
 
-The split is measured, not stylistic. Widening slack SATURATES: on hard3_0131,
+**Escalation is evidence-driven, never clock-driven.** `_cp_saturation_attempt`
+now reports why it stopped via `stop_reason`, and the endgame raises only the
+dimension that was actually binding:
+
+| Stop reason | What was binding | What gets raised |
+|---|---|---|
+| `dry` — no new lemma derivable | the size cap | slack, +6 |
+| `pool_full` | lemma budget | budget ×1.6 |
+| `rounds` | round count | rounds ×1.5 |
+| `budget` — clock or work only | nothing structural | **nothing** — the same rung gets more time |
+
+Raising a cap while the current rung is still producing new lemmas dilutes the
+search: it adds expensive candidates before the cheap ones have been examined.
+Only a fixed point — `derive_gap_lemmas` returning empty — is proof that
+staying is useless, and that is the sole justification for widening.
+
+The linear/geometric split is measured, not stylistic. Widening slack SATURATES: on hard3_0131,
 going from slack 60 to 200 costs 14% more work while the largest term in the
 pool stays at 26 — it buys more candidates at the same shallow depth, not
 depth. Rounds and pool size are the dimensions that actually buy derivation

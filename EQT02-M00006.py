@@ -2633,6 +2633,7 @@ def _cp_saturation_attempt(
     gap_time: float = CP_SATURATION_GAP_TIME,
     rule_order: str = "insertion",
     work_budget: int | None = None,
+    stop_reason: list[str] | None = None,
 ) -> tuple[str, str, list[dict[str, Any]]] | None:
     """One saturation attempt with its own pool. Returns
     (tag, proof_expr, cited_lemmas) — certificate assembly is the caller's job.
@@ -2668,6 +2669,10 @@ def _cp_saturation_attempt(
                 tag = "rel_" + tag
             return tag, proof, cited
         if _round >= rounds or out_of_budget() or len(pool) >= lemma_budget:
+            if stop_reason is not None:
+                stop_reason.append(
+                    "rounds" if _round >= rounds
+                    else ("pool_full" if len(pool) >= lemma_budget else "budget"))
             return None
         src, dst = eq2["lhs"], eq2["rhs"]
         cap_kwargs: dict[str, Any] = {}
@@ -2695,6 +2700,11 @@ def _cp_saturation_attempt(
             if new_lemmas:
                 break  # var-overlap only when the ordinary stream dries up
         if not new_lemmas:
+            # CẠN: không sinh được bổ đề mới nào ở nắp hiện tại -> điểm bất
+            # động. Ở lại thêm là chứng minh được vô ích; đây CHÍNH LÀ lúc
+            # duy nhất đáng nâng trần kích thước.
+            if stop_reason is not None:
+                stop_reason.append("dry")
             return None
         pool.extend(new_lemmas)
     return None
@@ -4752,7 +4762,18 @@ def run_solo() -> int:
         eq2_g = parse_equation(str(problem["equation2"]))
         hard_deadline = t_start + SOLO_TIME_LIMIT_SECONDS - SOLO_ENDGAME_MARGIN
         if not is_reflexive_problem(problem):
-            for slack_g, rounds_g, budget_g, slice_g in endgame_passes():
+            # TRẦN ĐỘNG, NÂNG CỰC KỲ DÈ DẶT. Mỗi chiều chỉ được nâng khi
+            # CHÍNH NÓ là thứ đang chặn:
+            #   dry       -> nắp kích thước đang chặn -> nâng slack
+            #   pool_full -> cỡ pool đang chặn        -> nâng lemma budget
+            #   rounds    -> số vòng đang chặn        -> nâng rounds
+            #   budget    -> chỉ hết giờ/hết công     -> GIỮ NGUYÊN mọi nắp,
+            #                cấp thêm thời gian cho đúng tầng đó
+            # Nâng trần khi tầng hiện tại còn đang sinh ra bổ đề mới là pha
+            # loãng tìm kiếm: thêm ứng viên đắt trong khi ứng viên rẻ chưa xét
+            # hết. Chỉ điểm bất động mới là bằng chứng đủ để nâng.
+            slack_g, rounds_g, budget_g, slice_g = ENDGAME_START_SLACK, 120, 3000, ENDGAME_FIRST_SLICE
+            while True:
                 if time.monotonic() + 90.0 >= hard_deadline:
                     break
                 pass_deadline = min(hard_deadline, time.monotonic() + slice_g)
@@ -4760,6 +4781,7 @@ def run_solo() -> int:
                                   "window_s": round(pass_deadline - time.monotonic(), 1)}),
                       file=sys.stderr)
                 candidates_g: list[tuple[str, str]] = []
+                stop_reasons: list[str] = []
                 for beam_g in (False, True):
                     result_g = _cp_saturation_attempt(
                         eq1_g,
@@ -4771,6 +4793,7 @@ def run_solo() -> int:
                         term_slack=slack_g,
                         raw_pair_cap=600 * slack_g,
                         gap_time=15.0,
+                        stop_reason=stop_reasons,
                     )
                     if result_g is None:
                         continue
@@ -4792,6 +4815,19 @@ def run_solo() -> int:
                                           "route": route_g}), file=sys.stderr)
                         if response_g.get("status") == "accepted":
                             return 0
+                reason = (stop_reasons[-1] if stop_reasons else "budget")
+                if reason == "dry":
+                    slack_g += ENDGAME_SLACK_STEP          # tuyến tính, không trần
+                elif reason == "pool_full":
+                    budget_g = min(int(budget_g * 1.6), 2_000_000)
+                elif reason == "rounds":
+                    rounds_g = min(int(rounds_g * 1.5), 50_000)
+                else:
+                    slice_g *= 1.4          # chỉ hết giờ: cho tầng này thêm thời gian
+                print(json.dumps({"route": "endgame:escalate", "vì": reason,
+                                  "slack": slack_g, "rounds": rounds_g,
+                                  "pool": budget_g}), file=sys.stderr)
+
                 # Heavy ladder ở cùng liều pass: các tháp lemma kiểu reja đều
                 # đổ về collapse/proj — chứng minh CẦU dễ hơn chứng minh goal
                 # (đầu mút nhỏ → cap chặt hơn), đo được trên hard3_0271.
