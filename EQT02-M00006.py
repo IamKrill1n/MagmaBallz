@@ -176,6 +176,8 @@ SOLO_ENDGAME_MARGIN = 120.0
 # xuất, nên chúng tăng theo cấp số nhân.
 ENDGAME_START_SLACK = 26
 ENDGAME_SLACK_STEP = 6
+# Số lần hết giờ liên tiếp ở CÙNG một tầng trước khi nới trần dù chưa cạn.
+ENDGAME_PATIENCE = 3
 ENDGAME_FIRST_SLICE = 240.0
 
 
@@ -2683,14 +2685,16 @@ def _cp_saturation_attempt(
                 if pairs:
                     src, dst = pairs[0]
         new_lemmas: list[dict[str, Any]] = []
+        gap_dl = deadline
         for var_overlap in (False, True):
+            gap_dl = min(deadline, time.monotonic() + gap_time)
             new_lemmas = derive_gap_lemmas(
                 eq1,
                 pool,
                 src,
                 dst,
                 max_new=min(slice_size, lemma_budget - len(pool)),
-                deadline=min(deadline, time.monotonic() + gap_time),
+                deadline=gap_dl,
                 raw_pair_cap=raw_pair_cap,
                 term_slack=term_slack,
                 allow_var_overlap=var_overlap,
@@ -2700,11 +2704,15 @@ def _cp_saturation_attempt(
             if new_lemmas:
                 break  # var-overlap only when the ordinary stream dries up
         if not new_lemmas:
-            # CẠN: không sinh được bổ đề mới nào ở nắp hiện tại -> điểm bất
-            # động. Ở lại thêm là chứng minh được vô ích; đây CHÍNH LÀ lúc
-            # duy nhất đáng nâng trần kích thước.
+            # Rỗng có HAI nghĩa hoàn toàn khác nhau, và lẫn chúng là đọc sai
+            # bằng chứng: (a) CẠN THẬT — nắp kích thước đã chặn, đây là điểm
+            # bất động và là lúc duy nhất đáng nâng trần; (b) HẾT LÁT — lát
+            # thời gian của chính lệnh sinh đã cạn trước khi nó tìm ra gì,
+            # tức chưa biết gì cả. Đo được 20/08: order5_0014 báo "cạn" ở đúng
+            # giây 30 rồi lại đúng giây 121 — cạn thật thì phải cạn ở cùng
+            # một vòng bất kể hạn.
             if stop_reason is not None:
-                stop_reason.append("dry")
+                stop_reason.append("budget" if deadline_expired(gap_dl) else "dry")
             return None
         pool.extend(new_lemmas)
     return None
@@ -4773,6 +4781,7 @@ def run_solo() -> int:
             # loãng tìm kiếm: thêm ứng viên đắt trong khi ứng viên rẻ chưa xét
             # hết. Chỉ điểm bất động mới là bằng chứng đủ để nâng.
             slack_g, rounds_g, budget_g, slice_g = ENDGAME_START_SLACK, 120, 3000, ENDGAME_FIRST_SLICE
+            budget_stalls = 0
             while True:
                 if time.monotonic() + 90.0 >= hard_deadline:
                     break
@@ -4823,7 +4832,20 @@ def run_solo() -> int:
                 elif reason == "rounds":
                     rounds_g = min(int(rounds_g * 1.5), 50_000)
                 else:
-                    slice_g *= 1.4          # chỉ hết giờ: cho tầng này thêm thời gian
+                    # Chỉ hết giờ -> chưa có bằng chứng gì, cho tầng này thêm
+                    # thời gian. NHƯNG kiên nhẫn phải có giới hạn: đo được là
+                    # bài khó ở slack 26 hết giờ chứ không bao giờ cạn, nên
+                    # nâng-chỉ-khi-cạn sẽ kẹt ở 26 vĩnh viễn — đúng cái trần
+                    # mình vừa bỏ. Sau ENDGAME_PATIENCE lần hết giờ liên tiếp
+                    # ở cùng một tầng, coi như đã đủ dè dặt và nới.
+                    slice_g *= 1.4
+                    budget_stalls += 1
+                    if budget_stalls >= ENDGAME_PATIENCE:
+                        slack_g += ENDGAME_SLACK_STEP
+                        budget_stalls = 0
+                        reason = "budget_x%d" % ENDGAME_PATIENCE
+                if reason != "budget":
+                    budget_stalls = 0
                 print(json.dumps({"route": "endgame:escalate", "vì": reason,
                                   "slack": slack_g, "rounds": rounds_g,
                                   "pool": budget_g}), file=sys.stderr)
