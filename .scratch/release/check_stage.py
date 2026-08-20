@@ -17,6 +17,21 @@ BASELINE = 2434          # điểm đã chứng nhận trên runtime chính ch�
 BASELINE_TAG = "sweep chính chủ 20/08, không LLM"
 
 
+def stage_alive(name: str) -> bool:
+    """Có tiến trình thật đang chạy chặng này không. Không có nó thì một log dở
+    dang từ lượt đã chết sẽ bị báo là 'đang chạy' — tín hiệu sai nguy hiểm hơn
+    không có tín hiệu."""
+    import subprocess
+    pat = {"verify":"verify_additive.py", "marathon":"run_marathon.py",
+           "sweep":"scoreboard.py", "sieve":"forge_p2_sieve.py",
+           "harvest":"harvest.py", "census":"route_census.py",
+           "label":"label_doubt.py"}.get(name, name)
+    try:
+        return subprocess.run(["pgrep","-f",pat], capture_output=True).returncode == 0
+    except Exception:
+        return False
+
+
 def read(p):
     try: return p.read_text(errors="ignore")
     except Exception: return ""
@@ -127,7 +142,10 @@ def main():
         if want not in ("all", name): continue
         try: verdict, detail = fn()
         except Exception as exc: verdict, detail = "HỎNG", f"phép kiểm lỗi: {exc!r}"
-        mark = {"ĐẠT":"✅","HỎNG":"❌","NGỜ":"⚠️","ĐANG CHẠY":"⏳","CHƯA CHẠY":"·"}[verdict]
+        if verdict == "ĐANG CHẠY" and not stage_alive(name):
+            verdict = "DỞ DANG"      # log có nhưng không tiến trình nào sống
+        mark = {"ĐẠT":"✅","HỎNG":"❌","NGỜ":"⚠️","ĐANG CHẠY":"⏳",
+                "DỞ DANG":"◐","CHƯA CHẠY":"·"}[verdict]
         lines.append(f"| {mark} {name} | {verdict} | {detail} |")
         if verdict == "HỎNG": blockers.append(f"{name}: {detail}")
         if want == name: print(f"{mark} {name}: {verdict} — {detail}")
