@@ -15,7 +15,7 @@ Nó cưỡng chế bốn thứ, theo đúng thứ tự:
                       ĐÁNG TIN hay KHÔNG. Người đọc kết quả không cần nhớ gì.
 """
 from __future__ import annotations
-import argparse, json, os, pathlib, shutil, subprocess, sys, tempfile, time
+import argparse, contextlib, json, os, pathlib, shutil, subprocess, sys, tempfile, time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import lab
@@ -28,6 +28,8 @@ def main() -> int:
     ap.add_argument("--name", required=True)
     ap.add_argument("--result", required=True, help="file kết quả; .prov.json ghi cạnh nó")
     ap.add_argument("--wait", type=float, default=0.0, help="giây chờ khóa; 0 = từ chối ngay")
+    ap.add_argument("--reap-after", type=float, default=0.0,
+                help="giết container ee-solver sống quá N giây (0 = tắt)")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="chạy dù máy có đối thủ (chỉ dùng cho việc KHÔNG phải đo)")
     ap.add_argument("cmd", nargs=argparse.REMAINDER)
@@ -57,7 +59,9 @@ def main() -> int:
     prov = result.with_suffix(result.suffix + ".prov.json")
     t0 = time.time()
     try:
-        with lab.Exclusive(args.name, wait_seconds=args.wait), lab.LoadWatch() as watch:
+        reaper = (lab.ContainerReaper(args.reap_after) if args.reap_after > 0
+                  else contextlib.nullcontext())
+        with lab.Exclusive(args.name, wait_seconds=args.wait), lab.LoadWatch() as watch, reaper:
             head = lab.stamp(tên=args.name, luồng=lab.plan_workers(),
                              sandbox="docker", hạn_lean=120, lệnh=" ".join(cmd)[:200])
             print(f"[lab] chạy {args.name}: {lab.plan_workers()} luồng, "

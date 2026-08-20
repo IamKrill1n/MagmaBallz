@@ -78,7 +78,7 @@ gate verify
 if ! done_marathon; then
   log "chặng 2: Marathon 99 bài"
   mkdir -p "$S/subs/m6marathon"; cp "$S/subs/m6final/solver.py" "$S/subs/m6marathon/solver.py"
-  $MEASURE --name marathon --result "$S/marathon_100.log" --wait 7200 \
+  $MEASURE --name marathon --result "$S/marathon_100.log" --wait 7200 --reap-after 900 \
       -- "$PY_BIN" scripts/run_marathon.py --solver "$S/subs/m6marathon" \
          --manifest "$S/marathon_100.jsonl" > "$S/marathon_100.log" 2>&1
 fi
@@ -86,7 +86,10 @@ gate marathon
 
 if ! done_sweep; then
   log "chặng 3: sweep chứng nhận 2469 bài, trong container, $W luồng"
-  $MEASURE --name sweep --result "$S/results/final_cert.jsonl" --wait 7200 \
+  # --reap-after: harness đặt hạn 600s/bài nhưng KHÔNG giết được container khi
+  # solver bên trong không tự dừng — đo được một container sống 3 tiếng làm cả
+  # lượt sweep đứng im ở 4/2469. Thu hồi sau 600+180s biên.
+  $MEASURE --name sweep --result "$S/results/final_cert.jsonl" --wait 7200 --reap-after 780 \
       -- "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
          --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
          --timeout 600 --workers "$W" --no-llm --tag final_cert > "$S/final_cert.log" 2>&1

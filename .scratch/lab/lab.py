@@ -180,3 +180,66 @@ def stamp(**extra) -> dict:
             "đối_thủ_đầu": competing({os.getpid()}, os.getpgrp()),
             "container_đầu": docker_containers(),
             "build": build_commit(), **extra}
+
+
+class ContainerReaper:
+    """Giết container ee-solver sống quá hạn.
+
+    Đo được 21/08: harness đặt hạn 600 s mỗi bài, nhưng khi solver bên trong
+    container không tự dừng thì container SỐNG TIẾP — quan sát được một cái
+    chạy 3 tiếng, và cả lượt sweep đứng im chờ nó: 4/2469 bài sau 3 giờ. Lệnh
+    docker phía host bị giết không kéo theo container.
+
+    Đây là chốt chặn phía mình, không đụng mã ban tổ chức: quá hạn cộng biên
+    thì giết thẳng, để phép đo đi tiếp thay vì treo vô hạn.
+    """
+
+    def __init__(self, max_age_seconds: float, period: float = 30.0):
+        self.max_age, self.period = max_age_seconds, period
+        self.killed = 0
+        self._stop = threading.Event()
+        self._t = threading.Thread(target=self._run, daemon=True)
+
+    def _ages(self):
+        try:
+            r = subprocess.run(
+                ["docker", "ps", "--filter", "name=ee-solver",
+                 "--format", "{{.Names}}\t{{.RunningFor}}"],
+                capture_output=True, text=True, timeout=20)
+        except Exception:
+            return []
+        out = []
+        for line in r.stdout.splitlines():
+            if "\t" not in line:
+                continue
+            name, ago = line.split("\t", 1)
+            secs = 0.0
+            low = ago.lower()
+            for unit, mult in (("second", 1), ("minute", 60), ("hour", 3600), ("day", 86400)):
+                if unit in low:
+                    num = "".join(ch for ch in low.split(unit)[0] if ch.isdigit())
+                    secs = float(num or 1) * mult
+                    break
+            out.append((name, secs))
+        return out
+
+    def _run(self):
+        while not self._stop.wait(self.period):
+            for name, age in self._ages():
+                if age > self.max_age:
+                    try:
+                        subprocess.run(["docker", "kill", name],
+                                       capture_output=True, timeout=30)
+                        self.killed += 1
+                        print(f"[lab] thu hồi container quá hạn: {name} ({age:.0f}s)",
+                              flush=True)
+                    except Exception:
+                        pass
+
+    def __enter__(self):
+        self._t.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        return False
