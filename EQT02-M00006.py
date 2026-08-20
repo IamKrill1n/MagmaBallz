@@ -1958,6 +1958,7 @@ def find_rewrite_chain(
     *,
     max_depth: int = REWRITE_CHAIN_MAX_DEPTH,
     lemmas: tuple[dict[str, Any], ...] = (),
+    deadline: float | None = None,
 ) -> tuple[list[str], str] | None:
     """Bidirectional (meet-in-the-middle) chain search.
 
@@ -1999,9 +2000,17 @@ def find_rewrite_chain(
         return routes_f + [f"back:{r}" for r in reversed(routes_b)], expr
 
     for step in range(max(fwd_depth, bwd_depth)):
+        # Hạn phải được tôn trọng NGAY TRONG khâu nở. Thiếu nó, một lượt nở
+        # duy nhất ở độ sâu lớn với pool lớn chạy vượt mọi lát ngân sách —
+        # đo được 20/08 khi mở trần độ sâu. Ở Marathon, nơi 100 bài chia chung
+        # một ngân sách, đó là ăn cắp thời gian của các bài khác.
+        if deadline is not None and deadline_expired(deadline):
+            return None
         if step < fwd_depth and frontier_f:
             next_f: list[Term] = []
             for term in frontier_f:
+                if deadline is not None and deadline_expired(deadline):
+                    return None
                 for new_term, proof, route in rewrite_steps_from_term(eq1, term, lemmas=lemmas):
                     if new_term in fwd:
                         continue
@@ -2013,6 +2022,8 @@ def find_rewrite_chain(
         if step < bwd_depth and frontier_b:
             next_b: list[Term] = []
             for term in frontier_b:
+                if deadline is not None and deadline_expired(deadline):
+                    return None
                 for new_term, proof, route in rewrite_steps_from_term(eq1, term, lemmas=lemmas):
                     if new_term in bwd:
                         continue
@@ -2033,6 +2044,7 @@ def proof_between_terms_guided(
     max_depth: int = GUIDED_CHAIN_MAX_DEPTH,
     closure_time_budget: float | None = GUIDED_CHAIN_CLOSURE_TIME_BUDGET,
     lemmas: tuple[dict[str, Any], ...] = (),
+    deadline: float | None = None,
 ) -> tuple[str, str] | None:
     if src == dst:
         return "rfl", "guided:rfl"
@@ -2043,7 +2055,8 @@ def proof_between_terms_guided(
         return proof, route
 
     edge_eq = {"lhs": src, "rhs": dst, "variables": variables}
-    chain = find_rewrite_chain(eq1, edge_eq, max_depth=max_depth, lemmas=lemmas)
+    chain = find_rewrite_chain(eq1, edge_eq, max_depth=max_depth, lemmas=lemmas,
+                               deadline=deadline)
     if chain is not None:
         routes, proof_expr = chain
         return proof_expr, "guided:rewrite_chain:" + ",".join(routes)
@@ -2636,6 +2649,7 @@ def _cp_saturation_attempt(
     rule_order: str = "insertion",
     work_budget: int | None = None,
     stop_reason: list[str] | None = None,
+    chain_depth: int = GUIDED_CHAIN_MAX_DEPTH,
 ) -> tuple[str, str, list[dict[str, Any]]] | None:
     """One saturation attempt with its own pool. Returns
     (tag, proof_expr, cited_lemmas) — certificate assembly is the caller's job.
@@ -2661,7 +2675,8 @@ def _cp_saturation_attempt(
 
     for _round in range(rounds + 1):
         step = proof_between_terms_guided(
-            eq1, eq2["variables"], eq2["lhs"], eq2["rhs"], lemmas=tuple(pool)
+            eq1, eq2["variables"], eq2["lhs"], eq2["rhs"], lemmas=tuple(pool),
+            max_depth=chain_depth, deadline=deadline,
         )
         if step is not None:
             proof, _hop_route = step
@@ -4781,6 +4796,12 @@ def run_solo() -> int:
             # loãng tìm kiếm: thêm ứng viên đắt trong khi ứng viên rẻ chưa xét
             # hết. Chỉ điểm bất động mới là bằng chứng đủ để nâng.
             slack_g, rounds_g, budget_g, slice_g = ENDGAME_START_SLACK, 120, 3000, ENDGAME_FIRST_SLICE
+            # Độ sâu chuỗi là núm thứ NĂM, trước đây bị ghim cứng ở 3 và không
+            # ai nới — cùng loại trần đã loại vĩnh viễn 13 bài ở slack 8. Nhờ
+            # tìm kiếm hai chiều, bước 3->4 chỉ tốn gấp đôi (xuôi 2 + ngược 2),
+            # nên rất đáng mở. Nới chậm hơn slack vì từ 5 trở đi mới đắt thật.
+            depth_g = GUIDED_CHAIN_MAX_DEPTH
+            slack_raises = 0
             budget_stalls = 0
             while True:
                 if time.monotonic() + 90.0 >= hard_deadline:
@@ -4803,6 +4824,7 @@ def run_solo() -> int:
                         raw_pair_cap=600 * slack_g,
                         gap_time=15.0,
                         stop_reason=stop_reasons,
+                        chain_depth=depth_g,
                     )
                     if result_g is None:
                         continue
@@ -4827,6 +4849,9 @@ def run_solo() -> int:
                 reason = (stop_reasons[-1] if stop_reasons else "budget")
                 if reason == "dry":
                     slack_g += ENDGAME_SLACK_STEP          # tuyến tính, không trần
+                    slack_raises += 1
+                    if slack_raises % 2 == 0:              # cứ hai nấc slack thì sâu thêm một
+                        depth_g += 1
                 elif reason == "pool_full":
                     budget_g = min(int(budget_g * 1.6), 2_000_000)
                 elif reason == "rounds":
@@ -4847,8 +4872,9 @@ def run_solo() -> int:
                 if reason != "budget":
                     budget_stalls = 0
                 print(json.dumps({"route": "endgame:escalate", "vì": reason,
-                                  "slack": slack_g, "rounds": rounds_g,
-                                  "pool": budget_g}), file=sys.stderr)
+                                  "slack": slack_g, "depth": depth_g,
+                                  "rounds": rounds_g, "pool": budget_g}),
+                      file=sys.stderr)
 
                 # Heavy ladder ở cùng liều pass: các tháp lemma kiểu reja đều
                 # đổ về collapse/proj — chứng minh CẦU dễ hơn chứng minh goal
