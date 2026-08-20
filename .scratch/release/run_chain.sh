@@ -90,6 +90,11 @@ if ! done_sweep; then
   # ee-solver (2 CPU, 2GB, không mạng, non-root, chỉ đọc) đúng như ban tổ chức
   # chấm, chứ không phải trên máy trần. Ngân sách 600s mỗi bài.
   # Khói 6 bài trước: docker hỏng thì bỏ lượt chứ không đốt nhiều giờ vô ích.
+  # Gốc artifact riêng cho lượt sweep này: judge đặt tên thư mục theo băm
+  # (bài + đáp án), nên dùng lại gốc cũ là kế thừa trạng thái build của lượt
+  # trước — đã đo được nó biến `accepted` thành `incorrect`.
+  export JUDGE_ARTIFACT_DIR="/private/tmp/mb-sweep-artifacts-$(date +%s)"
+  mkdir -p "$JUDGE_ARTIFACT_DIR"
   export SB_SANDBOX_MODE=docker
   log "  khói docker 6 bài"
   if ! timeout 40m "$PY_BIN" "$S/scoreboard.py" --solvers m6final --corpora hard1 \
@@ -102,6 +107,7 @@ if ! done_sweep; then
     --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
     --timeout 600 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
   unset SB_SANDBOX_MODE
+  rm -rf "$JUDGE_ARTIFACT_DIR"; unset JUDGE_ARTIFACT_DIR
   fi
 fi
 gate sweep

@@ -96,7 +96,14 @@ bài**, container chậm hơn ~2,5 lần.
    without emitting a valid judge dependency report". Đây là lỗi ĐỌC SAI KẾT
    QUẢ — nguy hiểm vì nó khiến ta tưởng vừa làm hỏng thứ vốn đang tốt, rồi đi
    sửa nhầm chỗ. Dính ba lần trong một ngày.
-7. **Nhãn trong corpus KHÔNG đáng tin** (người đóng góp tự gán). Judge chấm
+7. **Mỗi lượt chấm phải có THƯ MỤC ARTIFACT RIÊNG.** `judge/verify.py` đặt tên
+   thư mục là `{mã_bài}.{băm(đáp_án)[:12]}`, nên hai lượt chấm cùng bài + cùng
+   mã dùng chung y hệt một chỗ và kế thừa trạng thái build cũ. Đo được: cùng
+   một certificate cho `accepted` lần đầu rồi `incorrect` ở lượt sau, ba lần
+   trong một ngày, mỗi lần đều làm tôi tưởng solver có bug. Đặt
+   `JUDGE_ARTIFACT_DIR` sang thư mục tạm riêng cho mỗi lượt (judge_lock làm tự
+   động; sweep đặt trong run_chain.sh).
+8. **Nhãn trong corpus KHÔNG đáng tin** (người đóng góp tự gán). Judge chấm
    theo chứng minh, không theo nhãn. Đừng để nhãn ngăn mình thử hướng ngược lại.
 
 ## 5. Khung bốn cần gạt — dùng để quyết định đầu tư

@@ -63,7 +63,22 @@ def judged(problem: dict, verdict: str, code: str, *, wait: float = 900.0,
             if time.time() > deadline:
                 lock.unlink(missing_ok=True); continue
             time.sleep(1.0)
+    # THƯ MỤC ARTIFACT RIÊNG CHO TỪNG LƯỢT. judge đặt tên thư mục là
+    # {mã_bài}.{băm(đáp_án)[:12]}, nên hai lượt chấm cùng bài + cùng mã dùng
+    # chung y hệt một chỗ và kế thừa trạng thái build cũ — đo được: cùng một
+    # certificate cho `accepted` khi chạy riêng lần đầu và `incorrect` ở lượt
+    # sau. Framework cho phép đổi gốc bằng JUDGE_ARTIFACT_DIR; dùng thư mục
+    # tạm riêng rồi dọn, để mỗi phán quyết dựng từ con số không.
+    import shutil, tempfile
+    art_root = tempfile.mkdtemp(prefix="mb-art-", dir="/private/tmp")
+    old_root = os.environ.get("JUDGE_ARTIFACT_DIR")
+    os.environ["JUDGE_ARTIFACT_DIR"] = art_root
     try:
         return verify_answer(problem, json.dumps({"verdict": verdict, "code": code}))
     finally:
+        if old_root is None:
+            os.environ.pop("JUDGE_ARTIFACT_DIR", None)
+        else:
+            os.environ["JUDGE_ARTIFACT_DIR"] = old_root
+        shutil.rmtree(art_root, ignore_errors=True)
         lock.unlink(missing_ok=True)
