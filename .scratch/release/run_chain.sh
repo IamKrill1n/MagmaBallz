@@ -43,7 +43,15 @@ gate() {
   case "$v" in *"HỎNG"*) log "  ⛔ CHẶN NỘP — $1 hỏng, xem STATUS.md" ;; esac
 }
 
-done_verify()   { grep -q "VERIFY ADDITIVE DONE" "$S/verify_additive.log" 2>/dev/null; }
+# verify chỉ được coi là XONG khi nó ĐẠT: 6 bài đều accepted. Chạy xong mà
+# hỏng thì phải thử lại ở lượt sau — vì nguyên nhân hỏng thường là nhiễm
+# (chạy chen ngang, thư mục artifact dùng chung), không phải solver sai. Lượt
+# sau máy sạch hơn thì nó tự qua; nếu hỏng thật thì STATUS.md kêu mãi cho
+# người thấy, chứ không âm thầm coi như đã kiểm.
+done_verify() {
+  [ -f "$S/verify_additive.ledger.jsonl" ] || return 1
+  [ "$(grep -c '"judge": "accepted"' "$S/verify_additive.ledger.jsonl" 2>/dev/null)" -ge 6 ]
+}
 done_marathon() { grep -qiE "score|accuracy|solved" "$S/marathon_100.log" 2>/dev/null; }
 done_sweep()    { [ -f "$S/results/final_cert.jsonl" ] && [ "$(wc -l < "$S/results/final_cert.jsonl")" -ge 2469 ]; }
 done_sieve()    { grep -q "DONE:" "$S/sieve3.log" 2>/dev/null; }
@@ -87,6 +95,8 @@ if git fetch sair --quiet 2>/dev/null; then
   fi
 fi
 if ! done_verify; then
+  # sổ cái cũ chứa kết quả của lượt hỏng -> xoá để chạy lại sạch
+  [ -f "$S/verify_additive.ledger.jsonl" ] && mv "$S/verify_additive.ledger.jsonl" "$S/verify_additive.ledger.prev.jsonl"
   log "chặng 1: verify_additive"; run_stage 2h "$PY_BIN" "$S/verify_additive.py" >> "$S/verify_additive.log" 2>&1
 fi
 gate verify
