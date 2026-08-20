@@ -88,7 +88,7 @@ if ! done_sweep; then
   log "chặng 3: sweep chứng nhận 2469 bài"
   run_stage 8h "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
     --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
-    --timeout 120 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
+    --timeout 600 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
 fi
 gate sweep
 if ! done_sieve; then

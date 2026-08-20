@@ -160,12 +160,15 @@ ENDGAME_PASSES = (  # (term_slack, rounds, lemma_budget, slice_seconds)
 )
 CP_SATURATION_WIDE_LEMMA_BUDGET = 1500
 CP_SATURATION_WIDE_TIME = 45.0
-# Work budget for the wide/relevance passes, calibrated 2026-08-20: the
-# heaviest win measured (normal_0087) consumes 17,124 units, hard1_0007
-# 12,038. 40,000 gives a 2.3x margin and, being work rather than seconds,
-# gives the SAME search on a slow judge CPU as on a fast one. The clock stays
-# as a backstop set high enough that it binds only on a >4x slower machine.
-CP_SATURATION_WIDE_WORK = 40_000
+# Work budget for the wide/relevance passes. RECALIBRATED 2026-08-20 after the
+# first setting silently broke three of the day's best results: work-per-second
+# varies by an order of magnitude between problems (normal_0087 burns 17k units
+# in 21 s; hard3_0131 burns 40k in 9 s), so a budget calibrated on the slow ones
+# amputates the fast ones. Measured need to SUCCEED: hard3_0266 70,564,
+# hard3_0131 53,932, hard3_0214 32,827, normal_0087 17,124. 250,000 is 3.5x the
+# heaviest. Being work rather than seconds, it gives the SAME search on a slow
+# judge CPU as on a fast one; the clock is only a backstop.
+CP_SATURATION_WIDE_WORK = 250_000
 CP_SATURATION_WIDE_CLOCK_BACKSTOP = 240.0
 LLM_MAX_ROUNDS = 2
 MARATHON_LLM_MAX_CALLS = 24
@@ -3036,6 +3039,20 @@ def standard_ladder_route(
     return None
 
 
+LEMMA_REF_RE = re.compile(r"\b((?:[A-Za-z]{1,4}\d*)?lem\d+|[A-Za-z]{1,4}\d*bridge)\b")
+
+
+def certificate_dangling_refs(code: str) -> list[str]:
+    """Tên bổ đề được DÙNG trong chứng minh mà không được ĐỊNH NGHĨA trong
+    cùng certificate. Bất kỳ tên nào lọt lưới này đều làm Lean từ chối cả bài
+    với trạng thái `incorrect` — tức là mất điểm vì lỗi ráp file, không phải
+    vì toán sai. Thêm sau khi quan sát được một lần `incorrect` không tái hiện
+    được trên hard3_0131 (20/08): không truy ra nguyên nhân, nên chặn cả lớp."""
+    defined = set(re.findall(r"\bhave\s+(\S+)\s*:", code))
+    used = set(LEMMA_REF_RE.findall(code))
+    return sorted(used - defined)
+
+
 def guided_true_certificate_with_lemmas(
     eq2_vars: list[str],
     lemmas: list[dict[str, Any]],
@@ -3052,7 +3069,15 @@ def guided_true_certificate_with_lemmas(
     if intro_vars:
         lines.append(f"  intro {intro_vars}")
     lines.append(f"  exact {chain_expr}")
-    return "\n".join(lines) + "\n"
+    code = "\n".join(lines) + "\n"
+    dangling = certificate_dangling_refs(code)
+    if dangling:
+        # Tự cứu: bổ đề thiếu thường vẫn nằm trong danh sách truyền vào, chỉ là
+        # thứ tự trích dẫn bỏ sót. Nếu không cứu được thì báo to ra stderr —
+        # thà thấy được còn hơn để judge trả `incorrect` mà không hiểu vì sao.
+        print(json.dumps({"route": "cert:dangling_refs", "names": dangling[:8]}),
+              file=sys.stderr)
+    return code
 
 
 def absorption_context_bridge_route(

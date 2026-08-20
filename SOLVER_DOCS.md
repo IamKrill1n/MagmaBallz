@@ -408,8 +408,20 @@ and per rewrite-step expansion — the two inner loops. `work_units()` exposes i
 becomes a backstop (`CP_SATURATION_WIDE_CLOCK_BACKSTOP = 240 s`) that only
 binds on a >4× slower machine.
 
-**Calibration.** Heaviest measured win: `normal_0087` at 17,124 units;
-`hard1_0007` at 12,038. `CP_SATURATION_WIDE_WORK = 40_000` gives 2.3× margin.
+**Calibration — and the recalibration that had to follow.** The first setting
+(40,000, from `normal_0087` at 17,124 units and `hard1_0007` at 12,038) SILENTLY
+BROKE hard3_0131/0214/0266, the three cases no solver had ever settled. Cause:
+work-per-second varies by an order of magnitude between problems — `normal_0087`
+burns ~800 units/s, `hard3_0131` burns ~4,400 — so a budget calibrated on slow
+problems amputates fast ones. Measured work needed to SUCCEED: hard3_0266
+70,564, hard3_0131 53,932, hard3_0214 32,827, normal_0087 17,124.
+`CP_SATURATION_WIDE_WORK = 250_000` is 3.5× the heaviest; all seven checkpoint
+problems re-verified judge-accepted at that setting.
+
+Consequence for measurement: hard cases now take up to ~260 s in
+`solve_problem`, so a 120 s sweep harness under-reports them. The certification
+sweep timeout was raised to 600 s — Solo grants 3600 s, and measuring with a
+shorter ruler than the contest uses produces a falsely low number.
 Applied to the wide and relevance passes — the ones where the marginal cases
 live; classic and beam are fast enough that their margins are already large.
 Solo grants 3600 s against a ~160 s worst case, so spending the margin costs
