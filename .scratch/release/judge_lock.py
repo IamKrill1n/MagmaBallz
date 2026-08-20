@@ -21,8 +21,30 @@ LOCK_ROOT.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, "/Users/nhatminh/dev/active/MagmaBallz")
 
 
-def judged(problem: dict, verdict: str, code: str, *, wait: float = 900.0):
+SWEEP_MARKER = LOCK_ROOT / "SWEEP_RUNNING"
+
+
+def sweep_active() -> bool:
+    """Sweep chứng nhận có đang chạy không. Mọi lệnh chấm tay phải NHƯỜNG nó:
+    Lean dùng chung thư mục build, nên một lệnh chấm chen ngang có thể làm hỏng
+    phán quyết của bài KHÁC đang chấm song song. Đo được 20/8: 23 bài nền chỉ
+    tốn 3-40s bỗng `incorrect` và chạm trần 600s, trong khi chạy riêng thì
+    chúng `accepted` trong 0.0s."""
+    import subprocess
+    try:
+        return subprocess.run(["pgrep", "-f", "scoreboard.py"],
+                              capture_output=True).returncode == 0
+    except Exception:
+        return False
+
+
+def judged(problem: dict, verdict: str, code: str, *, wait: float = 900.0,
+           yield_to_sweep: bool = True):
     from judge.verify import verify_answer
+    if yield_to_sweep:
+        waited = 0.0
+        while sweep_active() and waited < 7200:
+            time.sleep(15.0); waited += 15.0
     key = hashlib.sha1(f"{problem.get('id')}|{code}".encode()).hexdigest()[:16]
     lock = LOCK_ROOT / key
     deadline = time.time() + wait
