@@ -2533,7 +2533,15 @@ def _cited_lemmas(pool: list[dict[str, Any]], proofs: list[str]) -> list[dict[st
         if name in cited or name not in by_name:
             continue
         cited.add(name)
-        frontier.extend(parent for parent in by_name[name]["cites"] if parent != "h")
+        lemma = by_name[name]
+        frontier.extend(parent for parent in lemma["cites"] if parent != "h")
+        # Đóng bao theo VĂN BẢN chứng minh, không chỉ theo siêu dữ liệu `cites`.
+        # Nếu proof của một bổ đề nhắc `lem7` mà `cites` bỏ sót, certificate sẽ
+        # có tham chiếu treo và Lean từ chối CẢ BÀI với trạng thái `incorrect` —
+        # thua vì lỗi ráp file chứ không phải vì toán. Rủi ro tăng theo độ sâu
+        # chứng minh, mà nay đã có bài trích 64 bổ đề. Chỉ THÊM bổ đề vào
+        # certificate, không bao giờ bớt, nên vá này an toàn tuyệt đối.
+        frontier.extend(re.findall(r"\blem\d+\b", lemma.get("proof", "")))
     return [lemma for lemma in pool if lemma["name"] in cited]
 
 
