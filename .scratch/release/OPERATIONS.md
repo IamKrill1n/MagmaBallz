@@ -58,6 +58,25 @@ launchctl unload ~/Library/LaunchAgents/com.magmaballz.chain.plist   # gỡ khi 
 Chặng: verify → Marathon → sweep chứng nhận → sieve Forge → harvest ML →
 census route → label_doubt.
 
+## 3b. Sweep phải chạy trên HỆ THỐNG THẬT
+
+Chỉ đạo của chủ dự án (20/08): phép đo chứng nhận **không được là mô phỏng**.
+Trước đó sweep chạy solver trên máy trần vì `pipeline/config.json` mặc định
+`sandbox.mode = "none"` — tức là đo một thứ khác với thứ ban tổ chức sẽ chấm.
+
+Bắt buộc từ nay:
+
+- `SB_SANDBOX_MODE=docker` — solver chạy **trong container `ee-solver`**:
+  2 CPU, 2 GB RAM, không mạng, non-root, hệ tệp chỉ đọc.
+- Ngân sách **600 giây mỗi bài** (cấu hình thật của ban tổ chức là 3600s;
+  600 là mức chủ dự án chấp nhận cho một lượt đo).
+- Thời gian chạy dài **không phải mối lo** — đo đúng quan trọng hơn đo nhanh.
+- Có bước khói 6 bài trong container trước khi đốt cả lượt.
+
+Ảnh docker dựng bằng `scripts/` của ban tổ chức; kiểm bằng `docker images |
+grep ee-solver`. Đã đối chiếu 100 bài host-với-container: **khớp verdict từng
+bài**, container chậm hơn ~2,5 lần.
+
 ## 4. Nguyên tắc vận hành — vi phạm là trả giá bằng số liệu sai
 
 1. **Không đo và không đánh cùng lúc.** Tải máy đã từng làm lệch một sweep +4

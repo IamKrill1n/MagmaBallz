@@ -86,9 +86,23 @@ fi
 gate marathon
 if ! done_sweep; then
   log "chặng 3: sweep chứng nhận 2469 bài"
-  run_stage 8h "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
+  # SWEEP CHẠY TRÊN HỆ THỐNG THẬT, không mô phỏng: solver chạy TRONG container
+  # ee-solver (2 CPU, 2GB, không mạng, non-root, chỉ đọc) đúng như ban tổ chức
+  # chấm, chứ không phải trên máy trần. Ngân sách 600s mỗi bài.
+  # Khói 6 bài trước: docker hỏng thì bỏ lượt chứ không đốt nhiều giờ vô ích.
+  export SB_SANDBOX_MODE=docker
+  log "  khói docker 6 bài"
+  if ! timeout 40m "$PY_BIN" "$S/scoreboard.py" --solvers m6final --corpora hard1 \
+        --sample 6 --timeout 600 --workers 2 --no-llm --tag docker_smoke \
+        > "$S/docker_smoke.log" 2>&1; then
+    log "  !! khói docker HỎNG — bỏ lượt sweep, xem docker_smoke.log"
+    unset SB_SANDBOX_MODE
+  else
+  run_stage 24h "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
     --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
     --timeout 600 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
+  unset SB_SANDBOX_MODE
+  fi
 fi
 gate sweep
 # LUẬT ƯU TIÊN: các chặng Tầng 3-5 CHỈ chạy khi Tầng 1-2 xong. Nếu không,
