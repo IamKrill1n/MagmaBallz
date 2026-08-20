@@ -640,8 +640,16 @@ stdin  →  read problem JSON
 **Endgame TRUE grind (2026-08-20, "the Birkhoff bet") — UNBOUNDED iterative
 deepening.** After the LLM rounds, instead of idling into the fallback, the
 remaining Solo budget goes to `endgame_passes()`, an infinite generator whose
-caps grow without ceiling (slack ×1.35, rounds ×1.5, lemma budget ×1.6, slice
-×1.5 per rung, starting at slack 26 / 120 rounds / 3000 lemmas / 240 s). The
+caps grow without ceiling. Slack grows LINEARLY (+6 per rung from 26); rounds
+(×1.5), lemma budget (×1.6) and slice (×1.4) grow geometrically.
+
+The split is measured, not stylistic. Widening slack SATURATES: on hard3_0131,
+going from slack 60 to 200 costs 14% more work while the largest term in the
+pool stays at 26 — it buys more candidates at the same shallow depth, not
+depth. Rounds and pool size are the dimensions that actually buy derivation
+depth, so those are the ones worth multiplying. Slack still grows without a
+ceiling, because a ceiling is exactly what permanently excluded 13 cases at
+slack 8. The
 caller stops on the clock, never on a list.
 
 Why no ceiling: the upper tiers are deliberately incomplete — structural caps

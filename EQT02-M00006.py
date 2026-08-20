@@ -167,8 +167,15 @@ SOLO_ENDGAME_MARGIN = 120.0
 # loại VĨNH VIỄN, nên theo Birkhoff cái duy nhất còn chặn mình là thời gian —
 # đúng như nó phải thế. Đào sâu dần giữ cho việc bỏ trần vẫn CÔNG BẰNG: không
 # bao giờ mắc kẹt mãi trong một tầng khổng lồ.
+# Slack tăng TUYẾN TÍNH (+6/nấc), không trần. Đo được 20/08: nới slack bị bão
+# hòa — từ 60 lên 200 tốn thêm 14% công mà hạng tử to nhất trong pool vẫn y
+# nguyên 26, tức chỉ sinh thêm ứng viên CÙNG ĐỘ NÔNG. Nên tăng slack theo cấp
+# số nhân là đốt ngân sách; tăng đều mới ổn định. Nhưng vẫn KHÔNG có trần, vì
+# trần là thứ đã loại vĩnh viễn 13 bài ở slack 8.
+# Ngược lại, số VÒNG và cỡ POOL mới là hai chiều thật sự mua chiều sâu dẫn
+# xuất, nên chúng tăng theo cấp số nhân.
 ENDGAME_START_SLACK = 26
-ENDGAME_GROWTH = 1.35
+ENDGAME_SLACK_STEP = 6
 ENDGAME_FIRST_SLICE = 240.0
 
 
@@ -181,10 +188,10 @@ def endgame_passes():
     slice_s = ENDGAME_FIRST_SLICE
     while True:
         yield int(slack), int(rounds), int(budget), slice_s
-        slack *= ENDGAME_GROWTH
-        rounds = min(int(rounds * 1.5), 20000)
-        budget = min(int(budget * 1.6), 400000)
-        slice_s *= 1.5
+        slack += ENDGAME_SLACK_STEP          # tuyến tính, không trần
+        rounds = min(int(rounds * 1.5), 50000)
+        budget = min(int(budget * 1.6), 2000000)
+        slice_s *= 1.4
 CP_SATURATION_WIDE_LEMMA_BUDGET = 1500
 CP_SATURATION_WIDE_TIME = 45.0
 # Work budget for the wide/relevance passes. RECALIBRATED 2026-08-20 after the
