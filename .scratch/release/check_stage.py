@@ -33,7 +33,7 @@ def jsonl(p):
 
 
 def chk_verify():
-    rows = jsonl(S/"verify_additive.log")
+    rows = jsonl(S/"verify_additive.ledger.jsonl") or jsonl(S/"verify_additive.log")
     if not rows: return "CHƯA CHẠY", "chưa có dữ liệu"
     keep = [r for r in rows if r.get("nhóm") == "GIỮ"]
     back = [r for r in rows if r.get("nhóm") == "VỀ"]
