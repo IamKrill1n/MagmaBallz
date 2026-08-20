@@ -29,6 +29,18 @@ status() {
 
 log() { echo "[$(date '+%m-%d %H:%M')] $*" | tee -a "$S/chain.log"; }
 
+# Khóa: launchd gọi lặp lại, chỉ cho phép MỘT lượt chạy tại một thời điểm.
+# mkdir là thao tác nguyên tử trên mọi hệ tệp -> không cần flock.
+LOCKDIR="$S/.chain.lock"
+if ! mkdir "$LOCKDIR" 2>/dev/null; then
+  if [ -f "$LOCKDIR/pid" ] && kill -0 "$(cat "$LOCKDIR/pid")" 2>/dev/null; then
+    exit 0                      # lượt trước còn sống -> im lặng thoát
+  fi
+  rm -rf "$LOCKDIR"; mkdir "$LOCKDIR" 2>/dev/null || exit 0   # khóa mồ côi sau khi mất điện
+fi
+echo $$ > "$LOCKDIR/pid"
+trap 'rm -rf "$LOCKDIR"' EXIT INT TERM
+
 log "=== dây chuyền khởi động/tiếp tục ==="
 if ! done_verify; then
   log "chặng 1: verify_additive"; python3 "$S/verify_additive.py" >> "$S/verify_additive.log" 2>&1 || true

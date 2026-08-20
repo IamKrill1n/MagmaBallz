@@ -1,5 +1,31 @@
 # Khởi động lại sau khi máy ngủ / tắt / mất điện
 
+## TỰ ĐỘNG — không cần nhớ gì
+
+Đã cài dịch vụ hệ thống `com.magmaballz.chain`:
+
+- chạy **khi đăng nhập** (sống qua khởi động lại máy)
+- gọi lại **mỗi 10 phút** (nên tự tiếp tục sau khi máy ngủ dậy)
+- có **khóa nguyên tử**: gọi chồng thì thoát ngay, không bao giờ chạy hai lượt
+- khóa mồ côi sau mất điện được tự dọn ở lần gọi kế tiếp
+- chạy ở mức ưu tiên thấp (`Nice 10`, `LowPriorityIO`) nên không giành máy với bạn
+
+Kiểm tra:
+
+```bash
+launchctl list | grep magmaballz          # đang được quản lý chưa
+bash .scratch/release/run_chain.sh status # chặng nào xong, chặng nào chưa
+tail -f .scratch/release/../../../private/tmp/.../chain.log   # hoặc xem chain.log
+```
+
+Gỡ khi xong việc:
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.magmaballz.chain.plist
+```
+
+## Thủ công (nếu cần)
+
 Một lệnh duy nhất, chạy lại bao nhiêu lần cũng được:
 
 ```bash
