@@ -119,6 +119,13 @@ if ! done_sweep; then
   export JUDGE_ARTIFACT_DIR="/private/tmp/mb-sweep-artifacts-$(date +%s)"
   mkdir -p "$JUDGE_ARTIFACT_DIR"
   export SB_SANDBOX_MODE=docker
+  # HAI luồng, không phải ba. judge/verify.py biến `subprocess.TimeoutExpired`
+  # thành trạng thái `incorrect` (mã LEAN_TIMEOUT) với hạn 120s. Ba luồng ở chế
+  # độ docker = 3 container x 2 CPU + 3 tiến trình Lean trên máy 10 lõi: Lean bị
+  # bỏ đói, vượt 120s, và certificate ĐÚNG bị ghi là SAI. Đo được 20/08: 20/225
+  # bài trượt kiểu đó, và đúng những certificate ấy `accepted` khi máy rảnh.
+  # Không nâng LEAN_TIMEOUT_SECONDS: ban tổ chức chấm ở 120s, nâng lên là tự
+  # cho điểm lạc quan.
   log "  khói docker 6 bài"
   if ! timeout 40m "$PY_BIN" "$S/scoreboard.py" --solvers m6final --corpora hard1 \
         --sample 6 --timeout 600 --workers 2 --no-llm --tag docker_smoke \
@@ -128,7 +135,7 @@ if ! done_sweep; then
   else
   run_stage 24h "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
     --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
-    --timeout 600 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
+    --timeout 600 --workers 2 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
   unset SB_SANDBOX_MODE
   rm -rf "$JUDGE_ARTIFACT_DIR"; unset JUDGE_ARTIFACT_DIR
   fi

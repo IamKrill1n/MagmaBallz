@@ -3,3 +3,5 @@ Terminated: 15
 /Users/nhatminh/dev/active/MagmaBallz/.scratch/release/run_chain.sh: line 66: syntax error near unexpected token `fi'
 /Users/nhatminh/dev/active/MagmaBallz/.scratch/release/run_chain.sh: line 66: `  fi'
 /Users/nhatminh/dev/active/MagmaBallz/.scratch/release/run_chain.sh: line 98: c: command not found
+/Users/nhatminh/dev/active/MagmaBallz/.scratch/release/run_chain.sh: line 113: syntax error near unexpected token `then'
+/Users/nhatminh/dev/active/MagmaBallz/.scratch/release/run_chain.sh: line 113: `eep; then'
