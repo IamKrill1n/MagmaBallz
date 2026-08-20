@@ -17,6 +17,11 @@ unset OPENAI_API_KEY OPENROUTER_API_KEY
 # dò SDK — lệnh này TREO VÔ HẠN dưới launchd (đo được: kẹt 3'39 ở 0% CPU và
 # chặn cả dây chuyền). Đặt tường minh, không để nó tự dò.
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+# judge gọi `lake env` mỗi lần verify để lấy LEAN_PATH, timeout 30s — dưới
+# launchd/khi máy bận thì lệnh đó QUÁ GIỜ và cả chặng chết. Framework có sẵn
+# cửa thoát: JUDGE_LEAN_PATH nạp sẵn thì nó bỏ qua lake hoàn toàn.
+[ -f "$REPO/.scratch/release/lean_path.txt" ] && \
+  export JUDGE_LEAN_PATH="$(cat "$REPO/.scratch/release/lean_path.txt")"
 export SDKROOT="${SDKROOT:-$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)}"
 export PATH="$HOME/.elan/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
 
