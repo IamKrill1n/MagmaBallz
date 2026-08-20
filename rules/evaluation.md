@@ -109,6 +109,8 @@ A problem is solved when the judge returns `accepted`.
 
 ## Proof Policy
 
+Proofs are verified with **Lean 4.32.0** and the matching **Mathlib 4.32.0** release.
+
 Submitted proofs are checked against a dependency policy:
 
 - **Allowed trusted axioms**: `propext`, `Quot.sound`, `Classical.choice`
