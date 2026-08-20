@@ -114,6 +114,37 @@ thâu tóm sau khi có census.
 **Bảo hiểm:** Forge đầy đủ (không bản thu gọn) + ML (harvest → phép thử tuyến
 tính → GBDT nếu thắng → nhúng vào khóa sắp xếp).
 
+## 7b. ĐÃ THỬ VÀ THẤT BẠI — đừng đâm đầu lại
+
+Đây là phần đắt nhất của sổ này: mỗi dòng là công sức đã tiêu và kết quả âm.
+Một session mới KHÔNG được làm lại những thứ này mà không có lý do mới.
+
+**Kỹ thuật đã đo và bị loại**
+
+| Đã thử | Kết quả | Bằng chứng |
+|---|---|---|
+| Lấy mẫu bảng giả ngẫu nhiên theo hash cho FALSE | 46.000 ứng viên / 46 bài khó → **0 witness** | `.scratch/generalizing-solo-solver/prototypes/countermodel-portfolio-results.md` |
+| Lane "product models" của backtracker | **0/34** mục tiêu | `$SCRATCH/bt_test3.log` |
+| Sinh thân tactic Lean chuyên biệt | loại thẳng | `issues/03-choose-proof-search-portfolio.md` |
+| LLM Gemma làm tầng gợi ý | 0/5, vỡ JSON liên tục | `$SCRATCH/gemma_pilot.log` |
+| Chặn đối xứng "used-values" ngây thơ | **lỗi tính đầy đủ**, mất 9 witness n=4 | commit `3088e68` |
+| Dosage thấp (`m6dose`) | hụt 8/100 bài order5 | `$SCRATCH/dose_gate.log` |
+| Chọn-luật-theo-liên-quan làm **thay thế** | +3 bài nhưng **−3 bài** | commit `6b3969b` |
+| Model vô hạn **tuyến tính** trên ℤ | 3 bài kháng: mọi model thỏa H đều thỏa goal → **0** | phiên 20/08 |
+
+**Bài/lớp bài đã cạn mọi cách**
+
+- `hard2_0027`, `hard2_0125`: saturation 4 cấu hình + deep attack + anneal bậc
+  8–12 + tuyến tính vô hạn — tất cả trống. Kết luận: **lỗ hổng TẦM VỚI**, cần
+  năng lực mới (Knuth–Bendix / model hữu hạn bậc 13–30), không phải cố hơn.
+- `hard3_0314`, `evaluation_hard_0196`, `evaluation_order5_0014/0016/0028/0042/0152`:
+  trượt qua ≥3 cấu hình tấn công độc lập.
+- **Tường Equation 168**: `evaluation_extra_hard` giải 161/161 bài không-168
+  nhưng chỉ 8/39 bài 168. Là tường **năng lực**, không phải ngân sách — gấp 10
+  lần thời gian không đổi được gì, hai kiến trúc solver độc lập cùng trượt đúng
+  tập đó. Tra `teorth/equational_theories` trước khi tự phát minh lại.
+- **Máy vét cầu**: chỉ ăn 1/14 bài khó. **Ladder đơn thuần**: 1/18.
+
 ## 8. Gói nộp
 
 ```bash
