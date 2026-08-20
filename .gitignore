@@ -76,3 +76,8 @@ playground/
 scripts/playground_server.py
 scripts/run_job.py
 scripts/build_equation_index.py
+
+# Sổ cái resume của các tiến trình dài — tái tạo được, không cần lịch sử
+.scratch/frontier-forge/checked_v1.jsonl
+.scratch/ml/train_rows.jsonl
+.scratch/ml/harvested_ids.txt
