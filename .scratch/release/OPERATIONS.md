@@ -70,7 +70,14 @@ census route → label_doubt.
    Trong một ngày đã có NĂM lỗi cùng họ "chạy mà không làm gì, trông như đang
    làm": build ghim cũ, thiếu `cd`, đường dẫn `.env.judge`, `xcodebuild` treo
    dưới launchd, `python3` phân giải sai dưới launchd.
-6. **Nhãn trong corpus KHÔNG đáng tin** (người đóng góp tự gán). Judge chấm
+6. **KHÔNG BAO GIỜ gọi `verify_answer` trần — dùng `judge_lock.judged`.**
+   Judge tạo thư mục artifact theo băm (bài + mã), nên hai lượt chấm **cùng một
+   bài** cùng lúc giẫm lên nhau và trả kết quả rác: đã đo được `incorrect` cho
+   certificate mà chạy riêng thì `accepted`, và lỗi hạ tầng "Lean finished
+   without emitting a valid judge dependency report". Đây là lỗi ĐỌC SAI KẾT
+   QUẢ — nguy hiểm vì nó khiến ta tưởng vừa làm hỏng thứ vốn đang tốt, rồi đi
+   sửa nhầm chỗ. Dính ba lần trong một ngày.
+7. **Nhãn trong corpus KHÔNG đáng tin** (người đóng góp tự gán). Judge chấm
    theo chứng minh, không theo nhãn. Đừng để nhãn ngăn mình thử hướng ngược lại.
 
 ## 5. Khung bốn cần gạt — dùng để quyết định đầu tư

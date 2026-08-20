@@ -11,3 +11,11 @@
 [08-20 07:35] chặng 1: verify_additive
 [08-20 08:56] === dây chuyền khởi động/tiếp tục ===
 [08-20 08:56] chặng 1: verify_additive
+[08-20 09:09]   cổng verify: · verify: CHƯA CHẠY — chưa có dữ liệu
+[08-20 09:09] chặng 2: Marathon 99 bài (lần đầu)
+[08-20 09:09] === dây chuyền khởi động/tiếp tục ===
+[08-20 09:09] chặng 1: verify_additive
+[08-20 09:49]   cổng verify: ❌ verify: HỎNG — giữ 3/3, đòi lại 2/3 — CÓ HỒI QUY, không được nộp build này, xem lại thiết kế cộng-thêm
+[08-20 09:49]   ⛔ CHẶN NỘP — verify hỏng, xem STATUS.md
+[08-20 09:49]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%)
+[08-20 09:49] chặng 3: sweep chứng nhận 2469 bài
