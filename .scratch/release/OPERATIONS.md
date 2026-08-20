@@ -17,11 +17,26 @@ dây chuyền tự chạy lại được, xem mục 3.
 
 ## 2. Trạng thái ngay lúc này
 
-Chạy lệnh này, đừng đoán:
+Hai lệnh, đừng đoán:
 
 ```bash
-bash .scratch/release/run_chain.sh status
+bash .scratch/release/run_chain.sh status      # chặng nào xong
+python3 .scratch/release/check_stage.py all    # kết quả có HỢP LÝ không
 ```
+
+Lệnh thứ hai quan trọng hơn và ghi ra `.scratch/release/STATUS.md`. Nó là **cổng
+chất lượng tự động** — thay cho việc một con người ngồi nhìn từng kết quả và hỏi
+"cái này có đúng không". Dây chuyền tự gọi nó sau mỗi chặng.
+
+Nó phân biệt được năm trạng thái: ĐẠT / HỎNG / NGỜ / ĐANG CHẠY / CHƯA CHẠY, và
+**HỎNG nghĩa là CHẶN NỘP BÀI**, không phải "để sau xem". Hai chặng có quyền chặn:
+
+- `verify` HỎNG → build hiện tại có hồi quy, thiết kế cộng-thêm bị vi phạm
+- `sweep` HỎNG → điểm thấp hơn nền 2.434 đã chứng nhận
+
+Ví dụ những thứ nó bắt được mà mã thoát không bắt được: Marathon "chạy xong"
+nhưng log toàn lỗi đường dẫn; harvest sinh ra 0 nhãn dương; sieve chế đề mà
+frontier = 0 (đề quá dễ).
 
 Sổ nhật ký: `$SCRATCH/chain.log`. Kết quả từng chặng nằm trong `$SCRATCH/` và
 `.scratch/ml/`, `.scratch/frontier-forge/`.

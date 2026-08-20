@@ -29,6 +29,15 @@ PY_BIN="/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
 # giờ chặn dây chuyền. Lần gọi sau của launchd sẽ thử lại chặng dở.
 run_stage() { timeout "$1" "${@:2}"; rc=$?; [ $rc -eq 124 ] && log "  !! chặng quá giờ ${1}, sẽ thử lại lượt sau"; return 0; }
 
+# CỔNG CHẤT LƯỢNG: sau mỗi chặng, hỏi "kết quả có hợp lý không" chứ không hỏi
+# "có chạy không". Kết luận ghi vào STATUS.md để người/session sau đọc được.
+gate() {
+  local v
+  v=$("$PY_BIN" "$REPO/.scratch/release/check_stage.py" "$1" 2>&1 | head -1)
+  log "  cổng $1: $v"
+  case "$v" in *"HỎNG"*) log "  ⛔ CHẶN NỘP — $1 hỏng, xem STATUS.md" ;; esac
+}
+
 done_verify()   { grep -q "VERIFY ADDITIVE DONE" "$S/verify_additive.log" 2>/dev/null; }
 done_marathon() { grep -qiE "score|accuracy|solved" "$S/marathon_100.log" 2>/dev/null; }
 done_sweep()    { [ -f "$S/results/final_cert.jsonl" ] && [ "$(wc -l < "$S/results/final_cert.jsonl")" -ge 2469 ]; }
@@ -62,31 +71,39 @@ log "=== dây chuyền khởi động/tiếp tục ==="
 if ! done_verify; then
   log "chặng 1: verify_additive"; run_stage 2h "$PY_BIN" "$S/verify_additive.py" >> "$S/verify_additive.log" 2>&1
 fi
+gate verify
 if ! done_marathon; then
   log "chặng 2: Marathon 99 bài (lần đầu)"
   mkdir -p "$S/subs/m6marathon"; cp "$S/subs/m6final/solver.py" "$S/subs/m6marathon/solver.py"
   run_stage 3h "$PY_BIN" scripts/run_marathon.py --solver "$S/subs/m6marathon" \
       --manifest "$S/marathon_100.jsonl" > "$S/marathon_100.log" 2>&1
 fi
+gate marathon
 if ! done_sweep; then
   log "chặng 3: sweep chứng nhận 2469 bài"
   run_stage 8h "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
     --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
     --timeout 120 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
 fi
+gate sweep
 if ! done_sieve; then
   log "chặng 4: sieve Forge (có sổ cái, tự resume)"
   run_stage 4h "$PY_BIN" "$REPO/.scratch/frontier-forge/forge_p2_sieve.py" > "$S/sieve3.log" 2>&1
 fi
+gate sieve
 if ! done_harvest; then
   log "chặng 5: harvest ML (có sổ cái, tự resume)"
   run_stage 2h "$PY_BIN" "$REPO/.scratch/ml/harvest.py" > "$REPO/.scratch/ml/harvest.log" 2>&1
 fi
+gate harvest
 if ! done_census; then
   log "chặng 6: census route"; run_stage 3h "$PY_BIN" "$S/route_census.py" > "$S/route_census.log" 2>&1
 fi
+gate census
 if ! done_label; then
   log "chặng 7: label_doubt"; run_stage 3h "$PY_BIN" "$S/label_doubt.py" >> "$S/label_doubt.log" 2>&1
 fi
-log "=== dây chuyền hoàn tất ==="
+gate label
+"$PY_BIN" "$REPO/.scratch/release/check_stage.py" all > /dev/null 2>&1
+log "=== dây chuyền hoàn tất — xem .scratch/release/STATUS.md ==="
 status
