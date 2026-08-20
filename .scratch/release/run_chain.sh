@@ -12,6 +12,23 @@ S=/private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-46
 cd "$REPO"; source "$REPO/.env.judge" 2>/dev/null || true
 unset OPENAI_API_KEY OPENROUTER_API_KEY
 
+# launchd khởi chạy với môi trường TỐI THIỂU, khác hẳn terminal. Lean gọi
+# trình biên dịch C, và nếu thiếu DEVELOPER_DIR thì nó rơi vào `xcodebuild`
+# dò SDK — lệnh này TREO VÔ HẠN dưới launchd (đo được: kẹt 3'39 ở 0% CPU và
+# chặn cả dây chuyền). Đặt tường minh, không để nó tự dò.
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+export SDKROOT="${SDKROOT:-$(xcrun --sdk macosx --show-sdk-path 2>/dev/null || true)}"
+export PATH="$HOME/.elan/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$PATH"
+
+# launchd phân giải python3 sang Python HỆ THỐNG, thiếu openai/sympy mà
+# pipeline cần -> ghim đúng trình thông dịch tương tác.
+PY_BIN="/Library/Frameworks/Python.framework/Versions/3.11/bin/python3"
+[ -x "$PY_BIN" ] || PY_BIN="$(command -v python3)"
+
+# Mọi chặng chạy dưới `timeout`: một chặng treo chỉ mất chặng đó, không bao
+# giờ chặn dây chuyền. Lần gọi sau của launchd sẽ thử lại chặng dở.
+run_stage() { timeout "$1" "${@:2}"; rc=$?; [ $rc -eq 124 ] && log "  !! chặng quá giờ ${1}, sẽ thử lại lượt sau"; return 0; }
+
 done_verify()   { grep -q "VERIFY ADDITIVE DONE" "$S/verify_additive.log" 2>/dev/null; }
 done_marathon() { grep -qiE "score|accuracy|solved" "$S/marathon_100.log" 2>/dev/null; }
 done_sweep()    { [ -f "$S/results/final_cert.jsonl" ] && [ "$(wc -l < "$S/results/final_cert.jsonl")" -ge 2469 ]; }
@@ -43,33 +60,33 @@ trap 'rm -rf "$LOCKDIR"' EXIT INT TERM
 
 log "=== dây chuyền khởi động/tiếp tục ==="
 if ! done_verify; then
-  log "chặng 1: verify_additive"; python3 "$S/verify_additive.py" >> "$S/verify_additive.log" 2>&1 || true
+  log "chặng 1: verify_additive"; run_stage 2h "$PY_BIN" "$S/verify_additive.py" >> "$S/verify_additive.log" 2>&1
 fi
 if ! done_marathon; then
   log "chặng 2: Marathon 99 bài (lần đầu)"
   mkdir -p "$S/subs/m6marathon"; cp "$S/subs/m6final/solver.py" "$S/subs/m6marathon/solver.py"
-  python3 scripts/run_marathon.py --solver "$S/subs/m6marathon" \
-      --manifest "$S/marathon_100.jsonl" > "$S/marathon_100.log" 2>&1 || true
+  run_stage 3h "$PY_BIN" scripts/run_marathon.py --solver "$S/subs/m6marathon" \
+      --manifest "$S/marathon_100.jsonl" > "$S/marathon_100.log" 2>&1
 fi
 if ! done_sweep; then
   log "chặng 3: sweep chứng nhận 2469 bài"
-  python3 "$S/scoreboard.py" --solvers m6final \
+  run_stage 8h "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
     --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
-    --timeout 120 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1 || true
+    --timeout 120 --workers 3 --no-llm --tag final_cert > "$S/final_cert.log" 2>&1
 fi
 if ! done_sieve; then
   log "chặng 4: sieve Forge (có sổ cái, tự resume)"
-  python3 "$REPO/.scratch/frontier-forge/forge_p2_sieve.py" > "$S/sieve3.log" 2>&1 || true
+  run_stage 4h "$PY_BIN" "$REPO/.scratch/frontier-forge/forge_p2_sieve.py" > "$S/sieve3.log" 2>&1
 fi
 if ! done_harvest; then
   log "chặng 5: harvest ML (có sổ cái, tự resume)"
-  python3 "$REPO/.scratch/ml/harvest.py" > "$REPO/.scratch/ml/harvest.log" 2>&1 || true
+  run_stage 2h "$PY_BIN" "$REPO/.scratch/ml/harvest.py" > "$REPO/.scratch/ml/harvest.log" 2>&1
 fi
 if ! done_census; then
-  log "chặng 6: census route"; python3 "$S/route_census.py" > "$S/route_census.log" 2>&1 || true
+  log "chặng 6: census route"; run_stage 3h "$PY_BIN" "$S/route_census.py" > "$S/route_census.log" 2>&1
 fi
 if ! done_label; then
-  log "chặng 7: label_doubt"; python3 "$S/label_doubt.py" >> "$S/label_doubt.log" 2>&1 || true
+  log "chặng 7: label_doubt"; run_stage 3h "$PY_BIN" "$S/label_doubt.py" >> "$S/label_doubt.log" 2>&1
 fi
 log "=== dây chuyền hoàn tất ==="
 status

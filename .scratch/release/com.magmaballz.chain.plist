@@ -8,6 +8,12 @@
     <string>/bin/bash</string>
     <string>/Users/nhatminh/dev/active/MagmaBallz/.scratch/release/run_chain.sh</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>DEVELOPER_DIR</key><string>/Applications/Xcode.app/Contents/Developer</string>
+    <key>PATH</key><string>/Users/nhatminh/.elan/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin</string>
+    <key>HOME</key><string>/Users/nhatminh</string>
+  </dict>
   <key>RunAtLoad</key><true/>
   <key>StartInterval</key><integer>600</integer>
   <key>WorkingDirectory</key><string>/Users/nhatminh/dev/active/MagmaBallz</string>
