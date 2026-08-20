@@ -153,11 +153,38 @@ RULE_SLICE_MIN = 120
 # budget goes to escalating proof search, not to idling into the fallback.
 SOLO_TIME_LIMIT_SECONDS = float(os.environ.get("MAGMA_SOLO_TIME_LIMIT", "3600"))
 SOLO_ENDGAME_MARGIN = 120.0
-ENDGAME_PASSES = (  # (term_slack, rounds, lemma_budget, slice_seconds)
-    (26, 120, 3000, 300.0),
-    (32, 240, 6000, 600.0),
-    (40, 400, 12000, float("inf")),  # pass cuối ăn toàn bộ thời gian còn lại
-)
+# ENDGAME: ĐÀO SÂU DẦN KHÔNG CÓ TRẦN.
+#
+# Các tầng phía trên cố tình bị chặn bởi nắp cấu trúc (kích thước hạng tử, độ
+# dài chuỗi, cỡ pool) — nhờ vậy chúng nhanh, và chúng bắt hầu hết bài. Nhưng
+# nắp cấu trúc nghĩa là engine chỉ vét cạn một KHÔNG GIAN CON: khi cạn, chạy
+# thêm bao lâu cũng vô ích vì đã tới điểm bất động. Đo được: 13 bài trượt sau
+# 900 s ở slack 8 rồi ngã trong 0,2 s ở slack 20.
+#
+# Ở endgame thì mọi mẹo thu hẹp đã dùng hết và chi phí cơ hội bằng không —
+# không còn việc gì tốt hơn để làm với số giây còn lại. Nên bỏ trần: nắp cứ
+# nới mãi (×1.35 mỗi vòng) cho tới khi đồng hồ chết. Không chứng minh nào bị
+# loại VĨNH VIỄN, nên theo Birkhoff cái duy nhất còn chặn mình là thời gian —
+# đúng như nó phải thế. Đào sâu dần giữ cho việc bỏ trần vẫn CÔNG BẰNG: không
+# bao giờ mắc kẹt mãi trong một tầng khổng lồ.
+ENDGAME_START_SLACK = 26
+ENDGAME_GROWTH = 1.35
+ENDGAME_FIRST_SLICE = 240.0
+
+
+def endgame_passes():
+    """Sinh vô hạn (term_slack, rounds, lemma_budget, slice_seconds), nắp nới
+    dần không có trần. Người gọi dừng theo đồng hồ, không theo danh sách."""
+    slack = ENDGAME_START_SLACK
+    rounds = 120
+    budget = 3000
+    slice_s = ENDGAME_FIRST_SLICE
+    while True:
+        yield int(slack), int(rounds), int(budget), slice_s
+        slack *= ENDGAME_GROWTH
+        rounds = min(int(rounds * 1.5), 20000)
+        budget = min(int(budget * 1.6), 400000)
+        slice_s *= 1.5
 CP_SATURATION_WIDE_LEMMA_BUDGET = 1500
 CP_SATURATION_WIDE_TIME = 45.0
 # Work budget for the wide/relevance passes. RECALIBRATED 2026-08-20 after the
@@ -4718,7 +4745,7 @@ def run_solo() -> int:
         eq2_g = parse_equation(str(problem["equation2"]))
         hard_deadline = t_start + SOLO_TIME_LIMIT_SECONDS - SOLO_ENDGAME_MARGIN
         if not is_reflexive_problem(problem):
-            for slack_g, rounds_g, budget_g, slice_g in ENDGAME_PASSES:
+            for slack_g, rounds_g, budget_g, slice_g in endgame_passes():
                 if time.monotonic() + 90.0 >= hard_deadline:
                     break
                 pass_deadline = min(hard_deadline, time.monotonic() + slice_g)

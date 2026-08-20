@@ -637,10 +637,22 @@ stdin  →  read problem JSON
 
 **LLM rounds:** controlled by `MAGMA_SOLO_LLM_ROUNDS` env variable (default: 2).
 
-**Endgame TRUE grind (2026-08-20, "the Birkhoff bet").** After the LLM rounds,
-instead of idling into the fallback, the remaining Solo budget goes to an
-escalating saturation ladder — `ENDGAME_PASSES`: (slack 26, 120 rounds, 3000
-lemmas, 300 s) → (32, 240, 6000, 600 s) → (40, 400, 12000, rest). Measured
+**Endgame TRUE grind (2026-08-20, "the Birkhoff bet") — UNBOUNDED iterative
+deepening.** After the LLM rounds, instead of idling into the fallback, the
+remaining Solo budget goes to `endgame_passes()`, an infinite generator whose
+caps grow without ceiling (slack ×1.35, rounds ×1.5, lemma budget ×1.6, slice
+×1.5 per rung, starting at slack 26 / 120 rounds / 3000 lemmas / 240 s). The
+caller stops on the clock, never on a list.
+
+Why no ceiling: the upper tiers are deliberately incomplete — structural caps
+on term size, chain length and pool size make them fast and they catch almost
+everything, but a capped engine exhausts a SUBSPACE, and once it is dry more
+time buys literally nothing (measured: 13 cases missed after 900 s at slack 8
+and fell in 0.2 s at slack 20). At endgame every narrowing trick is spent and
+the opportunity cost of grinding is zero, so the cap should come off. Iterative
+deepening is what keeps an uncapped search fair — no rung can trap it forever,
+and no proof is permanently excluded, so by Birkhoff the only remaining bound
+is the clock, which is correct. Measured
 rationale on the official runtime, 2469 labeled problems: when every tier and
 LLM round is dry, 91% of problems are TRUE (32/35), and every findable FALSE
 witness arrived within 60 s (1247/1247, 98% within 10 s). TRUE is
