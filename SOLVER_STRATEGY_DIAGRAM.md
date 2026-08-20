@@ -190,7 +190,7 @@ sequenceDiagram
     participant L as LLM (strategist)
     participant J as Judge (Lean)
 
-    Note over S: Stages 1–5 — audit and cheap tools;<br/>the LLM has not been used yet
+    Note over S: Stages 1–5 — audit and cheap tools#59;<br/>the LLM has not been used yet
     S->>S: implication_semantics (semantic audit)
     S->>S: rigidity scout, model finder n=4..5,<br/>superposition with standard lemmas
 
@@ -207,9 +207,9 @@ sequenceDiagram
             alt action = midpoint / lemma_chain / candidate_bundle
                 S->>S: mechanically prove H implies M
                 alt proof succeeds
-                    S->>S: add M to the blackboard;<br/>attack Goal using H + M
+                    S->>S: add M to the blackboard#59;<br/>attack Goal using H + M
                 else proof fails
-                    S->>S: silently discard it;<br/>record failure signature to prevent repetition
+                    S->>S: silently discard it#59;<br/>record failure signature to prevent repetition
                 end
             else action = tool_call / false_model_family
                 S->>S: run the tool with LLM-selected parameters<br/>(interleaved with expensive FALSE routes: SAT, CP-SAT, poly_ce, etc.)
@@ -226,7 +226,7 @@ sequenceDiagram
 
         S->>J: submit a certificate when a candidate exists
         J-->>S: verdict (accepted / incorrect / etc.)
-        Note over S,J: rejection = feedback; retry within budget<br/>(source of 252 rejected SAIR submissions)
+        Note over S,J: rejection = feedback#59; retry within budget<br/>(source of 252 rejected SAIR submissions)
     end
 ```
 
