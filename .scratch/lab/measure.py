@@ -99,12 +99,16 @@ def main() -> int:
         record["kết_luận"] = "ĐÁNG TIN"
     elif not v["đáng_tin"]:
         lý_do = []
-        if v["tải_đỉnh"] > v["ngưỡng"]:
-            lý_do.append(f"tải đỉnh {v['tải_đỉnh']} > {v['ngưỡng']}")
+        if v["tỉ_lệ_vượt_tải"] > lab.DIRTY_FRACTION_LIMIT:
+            lý_do.append(f"{v['mẫu_vượt_tải']}/{v['số_mẫu']} mẫu "
+                         f"({v['tỉ_lệ_vượt_tải']:.1%}) vượt tải {v['ngưỡng']}")
+        if v["tải_đỉnh"] > v["ngưỡng"] * lab.SEVERE_SPIKE_RATIO:
+            lý_do.append(f"cơn tải cực nặng, đỉnh {v['tải_đỉnh']}")
         if v["đối_thủ_đỉnh"]:
             lý_do.append(f"{v['đối_thủ_đỉnh']} tiến trình tranh chấp")
-        if v["số_mẫu_nguy_cấp"]:
-            lý_do.append(f"{v['số_mẫu_nguy_cấp']} mẫu áp lực bộ nhớ NGUY CẤP")
+        if v["tỉ_lệ_nguy_cấp"] > lab.DIRTY_FRACTION_LIMIT:
+            lý_do.append(f"{v['số_mẫu_nguy_cấp']}/{v['số_mẫu']} mẫu "
+                         f"({v['tỉ_lệ_nguy_cấp']:.1%}) áp lực bộ nhớ NGUY CẤP")
         swap_phình = v["swap_đỉnh_MB"] - v["swap_đầu_MB"]
         if swap_phình >= lab.SWAP_GROWTH_LIMIT_MB:
             lý_do.append(f"swap phình {swap_phình:.0f} MB")
@@ -114,7 +118,7 @@ def main() -> int:
     prov.parent.mkdir(parents=True, exist_ok=True)
     prov.write_text(json.dumps(record, ensure_ascii=False, indent=1))
     print(f"[lab] {args.name}: {record['kết_luận']} | tải đỉnh {v['tải_đỉnh']}/"
-          f"{v['ngưỡng']} | bộ nhớ đỉnh {v['áp_lực_bộ_nhớ_đỉnh']} | "
+          f"{v['ngưỡng']} ({v['mẫu_vượt_tải']}/{v['số_mẫu']} mẫu vượt) | bộ nhớ đỉnh {v['áp_lực_bộ_nhớ_đỉnh']} | "
           f"swap {v['swap_đầu_MB']:.0f}->{v['swap_đỉnh_MB']:.0f} MB | dấu ghi tại {prov}")
     return rc
 

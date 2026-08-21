@@ -36,6 +36,13 @@ LOAD_SAFE_RATIO = 0.85        # tải1/lõi vượt mức này -> coi là tranh 
 # Swap phình quá mức này giữa lượt đo nghĩa là máy đã tráo trang: Lean bị bỏ
 # đói y hệt lúc quá tải luồng, và mọi `incorrect` sinh ra đều đáng ngờ.
 SWAP_GROWTH_LIMIT_MB = 2048.0
+# Phán "đáng tin" theo TỈ LỆ mẫu bẩn, không theo đỉnh. Một lượt 11 tiếng có
+# ~2000 mẫu; nếu một cơn tải thoáng qua (Spotlight, backup, người dùng mở
+# app) đủ kết án cả lượt thì cái dấu kêu oan quá dễ và thành vô dụng — không
+# ai còn tin nó, đúng cái bệnh nó sinh ra để chữa. Nhưng một cơn CỰC nặng
+# thì vẫn kết án, dù ngắn: lúc đó Lean đã bị bỏ đói thật.
+DIRTY_FRACTION_LIMIT = 0.02   # quá 2% số mẫu vượt ngưỡng -> không đáng tin
+SEVERE_SPIKE_RATIO = 1.5      # đỉnh vượt 1,5 lần ngưỡng -> không đáng tin ngay
 
 RIVALS = ("scoreboard.py", "run_marathon.py", "verify_additive.py", "harvest.py",
           "forge_p2_sieve.py", "route_census.py", "label_doubt.py", "recalib_check.py",
@@ -303,6 +310,7 @@ class LoadWatch:
         self.period, self.peak, self.samples = period, 0.0, 0
         self.own_pgid = own_pgid if own_pgid is not None else os.getpgrp()
         self.max_rivals = 0
+        self.over_limit = 0               # số mẫu tải vượt ngưỡng
         self.mem_peak = 1                 # mức áp lực bộ nhớ cao nhất gặp phải
         self.mem_critical = 0             # số mẫu ở mức nguy cấp
         self.swap0 = swap_used_mb()
@@ -311,8 +319,12 @@ class LoadWatch:
         self._t = threading.Thread(target=self._run, daemon=True)
 
     def _run(self):
+        limit = cores() * LOAD_SAFE_RATIO
         while not self._stop.wait(self.period):
-            self.peak = max(self.peak, load1())
+            l1 = load1()
+            self.peak = max(self.peak, l1)
+            if l1 > limit:
+                self.over_limit += 1
             self.max_rivals = max(self.max_rivals,
                                   len(competing({os.getpid()}, self.own_pgid)))
             lvl = mem_pressure()
@@ -336,13 +348,24 @@ class LoadWatch:
 
     def verdict(self) -> dict:
         limit = cores() * LOAD_SAFE_RATIO
+        n = max(1, self.samples)
+        tỉ_lệ_tải = self.over_limit / n
+        tỉ_lệ_nhớ = self.mem_critical / n
         swap_growth = self.swap_peak - self.swap0
-        clean = (self.peak <= limit) and (self.max_rivals == 0) \
-            and self.mem_critical == 0 and swap_growth < SWAP_GROWTH_LIMIT_MB
+        clean = (
+            tỉ_lệ_tải <= DIRTY_FRACTION_LIMIT
+            and self.peak <= limit * SEVERE_SPIKE_RATIO
+            and tỉ_lệ_nhớ <= DIRTY_FRACTION_LIMIT
+            and self.max_rivals == 0
+            and swap_growth < SWAP_GROWTH_LIMIT_MB
+        )
         return {"tải_đỉnh": round(self.peak, 2), "ngưỡng": round(limit, 2),
+                "mẫu_vượt_tải": self.over_limit,
+                "tỉ_lệ_vượt_tải": round(tỉ_lệ_tải, 4),
                 "đối_thủ_đỉnh": self.max_rivals, "số_mẫu": self.samples,
                 "áp_lực_bộ_nhớ_đỉnh": self.mem_peak,
                 "số_mẫu_nguy_cấp": self.mem_critical,
+                "tỉ_lệ_nguy_cấp": round(tỉ_lệ_nhớ, 4),
                 "swap_đầu_MB": round(self.swap0, 1),
                 "swap_đỉnh_MB": round(self.swap_peak, 1),
                 "đáng_tin": clean}
