@@ -131,6 +131,34 @@ mã ban tổ chức:
   `DEFAULT_PROOF_POLICY` vào. Muốn chấm tay thì phải bơm y như vậy, nếu không
   sẽ thấy `incomplete_proof/DISALLOWED_AXIOMS` giả trên chứng chỉ hoàn toàn tốt.
 
+## 3d. SOLVER BỊ GIẾT VÌ HẾT BỘ NHỚ TRONG HỘP CÁT (đo 22/08)
+
+Phát hiện quan trọng nhất từ trước tới nay về vận hành thi đấu, và nó KHÔNG
+phải hiện tượng của phép đo.
+
+Hộp cát ban tổ chức chạy `--memory=2048m`. Trên `evaluation_order5_0016`, bộ
+nhớ container leo đều 29 MB -> 1,998 GiB (99,90%) trong 95 giây, rồi tiến
+trình biến mất ở giây 125: không stderr, không đáp án, `judge_calls=0`. Từ
+bên ngoài, cái chết này **không phân biệt được với "giải không ra"**.
+
+Cả 11 bài trượt của lượt sweep 21/08 đều mang đúng dấu vết đó. Cùng bài chạy
+trên máy trần thì solver sống đủ 600 giây và endgame chạy bình thường — khác
+biệt duy nhất là trần bộ nhớ.
+
+Ở giải thật mỗi bài có 3600 giây; solver sẽ chết ở giây 125 và mất trắng.
+
+**Thủ phạm:** không phải pool bổ đề (pool có nắp `lemma_budget`). Là 12 hàm
+`@lru_cache(maxsize=None)` khóa theo hạng tử — ở slack 26 số hạng tử phân
+biệt bùng nổ và mỗi hạng tử bị giữ sống vĩnh viễn trong tới 12 từ điển.
+
+**Đã vá** (commit 58058ab): đọc giới hạn thật từ cgroup, quá 50% thì xả cache
+memo, xả xong vẫn quá 75% thì dừng lượt bão hòa với lý do `"memory"`. Sau khi
+vá, bộ nhớ dao động răng cưa 350 MB – 1 GB và solver chạy hết ngân sách.
+
+**Bài học tổng quát:** một giới hạn tài nguyên của hộp cát biểu hiện y hệt
+một thất bại thuật toán. Trước khi kết luận "động cơ không đủ mạnh", phải đo
+xem tiến trình có SỐNG hết ngân sách không.
+
 ## 4. Nguyên tắc vận hành — vi phạm là trả giá bằng số liệu sai
 
 1. **Không đo và không đánh cùng lúc.** Tải máy đã từng làm lệch một sweep +4
