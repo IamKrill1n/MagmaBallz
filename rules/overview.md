@@ -93,7 +93,7 @@ Stage 2 registration is **open to everyone** — participation is not restricted
 
 ## Community Feedback
 
-Rules, scoring details, and evaluation procedures are still being refined and will be shaped by community input. Community contributions are welcome.
+Community feedback and contributions are welcome, and we improve the competition based on them.
 
 Join the SAIR Foundation Zulip community for discussion and collaboration:
 
