@@ -1,6 +1,6 @@
 # Stage 2 Evaluation Setup
 
-> The **[Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec)** is authoritative for the evaluation environment: the official host, the sandbox limits and pinned image digest, the pinned models and sampling parameters, and leaderboard eligibility. This page documents the same setup alongside the judging contract, which is defined by the judge code and its harness in this repository. Questions and suggestions are welcome on the [SAIR Foundation Zulip](https://zulip.sair.foundation/).
+> Official host and sandbox spec: **[Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec)**. Questions on the [SAIR Foundation Zulip](https://zulip.sair.foundation/).
 
 This page specifies how Stage 2 submissions are evaluated: submission format, solver environment, budget, scoring, proof policy, and the evaluation model.
 
@@ -111,7 +111,7 @@ Leaderboard eligibility requires that the submission is a single self-contained 
 
 ## Proof Policy
 
-Proofs are verified with **Lean 4.32.0** and the matching **Mathlib 4.32.0** release.
+Proofs are verified with **Lean 4.32.2** and the matching **Mathlib 4.32.2** release.
 
 Submitted proofs are checked against a dependency policy:
 
@@ -139,7 +139,7 @@ Secrets and API keys are never exposed to the solver; all model access is mediat
 | Seed | `0` (deterministic sampling, where the provider supports it) |
 | Max output tokens | 65 536 per call |
 
-The official host, sandbox limits (CPU-only `python:3.11-slim` container, 2 vCPU / 2048 MB / no network / read-only filesystem), and the pinned image digest are listed in the [Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec).
+Host and sandbox spec: [Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec).
 
 ## Evaluation Problem Sets
 
