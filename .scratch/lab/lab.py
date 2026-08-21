@@ -88,8 +88,26 @@ def competing(exclude_pids: set[int] | None = None,
                 continue
             if exclude_pgid is not None and _pgid(pid) == exclude_pgid:
                 continue
+            if _is_shell_wrapper(pid):
+                continue
             found.append(f"{pat}:{pid}")
     return found
+
+
+def _is_shell_wrapper(pid: int) -> bool:
+    """Tiến trình vỏ chỉ NHẮC tên kịch bản trong dòng lệnh, không chạy nó.
+
+    Đo 22/08: vòng chờ `until ! pgrep -f "scoreboard.py ..."` khiến chính
+    tiến trình bash đó mang chuỗi "scoreboard.py" trong argv, nên bộ dò tính
+    nó là đối thủ và đóng dấu KHÔNG ĐÁNG TIN cho một lượt đo hoàn toàn sạch.
+    Cái dấu báo động giả thì cũng vô dụng như cái dấu im lặng."""
+    try:
+        r = subprocess.run(["ps", "-o", "comm=", "-p", str(pid)],
+                           capture_output=True, text=True, timeout=10)
+    except Exception:
+        return False
+    comm = r.stdout.strip().rsplit("/", 1)[-1]
+    return comm in {"bash", "sh", "zsh", "pgrep", "grep", "ps", "tail", "sleep"}
 
 
 def plan_workers(cores_per_worker: int = CORES_PER_WORKER) -> int:
