@@ -88,9 +88,11 @@ python3 -m pipeline.runner \
 
 - **OS**: macOS (Apple Silicon / Intel) or Linux (x86_64). Windows
   users should run under WSL 2 — the setup targets POSIX shells.
-- **Disk**: ~3 GB free (Lean toolchain + Mathlib olean cache — this
-  repo is a self-contained lake package depending only on Mathlib; no
-  `equational_theories` clone required).
+- **Disk**: ~12 GB free — measured at Lean 4.32.2: the toolchain is
+  ~2.6 GB and `.lake/` (dominated by the Mathlib olean cache) is
+  ~7.5 GB, plus transient space while `lake exe cache get` unpacks.
+  This repo is a self-contained lake package depending only on
+  Mathlib; no `equational_theories` clone required.
 - **RAM**: 8 GB minimum, 16 GB recommended.
 - **Network**: Required for initial setup only.
 - **Python**: 3.8+ (with `openai` for pipeline LLM calls).
@@ -116,7 +118,7 @@ If you prefer to set things up step by step instead of using `setup.sh`:
 3. **Fetch Mathlib and build the judge modules**:
    ```bash
    lake update                  # pin Mathlib per lakefile.lean
-   lake exe cache get           # ~2 GB of pre-compiled Mathlib oleans
+   lake exe cache get           # ~2 GB download, ~6.5 GB unpacked
    lake build JudgeMagma.Magma JudgeDecide.DecideBang \
               JudgeFinOp.MemoFinOp JudgeSupport.Inspect
    ```
@@ -811,15 +813,15 @@ The canonical completion gate is `python3 scripts/run_harness.py` — determinis
 | Suite | Current count | Source of truth | Covers |
 |---|---|---|---|
 | Judge cases | 68 | `tests/harness_manifest.json` | Accepted / malformed / unparsed / incomplete_proof / incorrect on curated fixtures (incl. FALSE_CERT_TOO_LARGE; accepted FALSE certificates cover finite tables and infinite carriers — `Nat` and a submission-defined inductive tree type) |
-| Judge internals | 32 | `run_judge_internal_cases` in `scripts/run_harness.py` | Unit-level invariants on verify.py helpers (equation normalization, byte-length cap, path stripping, render template stability, JudgeConfig budget-field plumbing for the three judge caps) |
+| Judge internals | 33 | `run_judge_internal_cases` in `scripts/run_harness.py` | Unit-level invariants on verify.py helpers (equation normalization, byte-length cap, path stripping, render template stability, JudgeConfig budget-field plumbing for the three judge caps, dependency-report parsing: two reports are unioned and a suppressed second report is rejected) |
 | Banned tokens | 24 | `run_banned_token_cases` in `scripts/run_harness.py` | Placeholder-detector word-boundary + substring matrix for every entry in `BANNED_PROOF_TOKENS` |
 | Repeatability | 4 | `repeatability_cases` in the same manifest | Selected cases run 3× and must project byte-identical results |
-| Pipeline regressions | 55 | Inlined in `scripts/run_harness.py` | Single-file `PROMPT` extraction (all bundled demos), stray `prompt.txt` is ignored, AST extractor hostile inputs (scope, type, first-wins, AnnAssign, NUL / invalid UTF-8), sandbox argv shape (none / docker / unknown), host-vs-container env selection, stderr drained into bounded ring buffer (so contestant tracebacks land in a `solver_stderr` log entry instead of being silently dropped, without re-introducing the kernel-pipe deadlock), 500 KB `solver.py` intake cap, single-file layout (helper / payload / subdir / symlink rejected), stdout line cap, wall-clock deadline clamping LLM + Lean timeouts, docker-cleanup-in-finally static check, doc-drift guard, public-allowlist demo count, `_call_llm` falls back to DeepSeek-style `reasoning_content` (streaming + non-streaming) when `content` is empty and surfaces `truncated: True` when `finish_reason=length` left no final answer |
-| Verify branches | 3 | `run_verify_branch_cases` in `scripts/run_harness.py` | LEAN_TIMEOUT via mocked `subprocess.run`; FALSE_CERT_TOO_LARGE rejection respects `JudgeConfig.max_false_cert_bytes` (cap=10 KB rejects 15 KB; cap=20 KB admits the same payload) |
-| Public challenger | 79 | `tests/challenger_manifest.json :: public_attack_cases` | Bypass attempts (banned placeholder / axiom / declaration smuggling, stdout injection) plus positive-control regressions for previously-false-negative proofs |
+| Pipeline regressions | 56 | Inlined in `scripts/run_harness.py` | Single-file `PROMPT` extraction (all bundled demos), stray `prompt.txt` is ignored, AST extractor hostile inputs (scope, type, first-wins, AnnAssign, NUL / invalid UTF-8), sandbox argv shape (none / docker / unknown), host-vs-container env selection, stderr drained into bounded ring buffer (so contestant tracebacks land in a `solver_stderr` log entry instead of being silently dropped, without re-introducing the kernel-pipe deadlock), 500 KB `solver.py` intake cap, single-file layout (helper / payload / subdir / symlink rejected), stdout line cap, wall-clock deadline clamping LLM + Lean timeouts, docker-cleanup-in-finally static check, doc-drift guard, public-allowlist demo count, `_call_llm` falls back to DeepSeek-style `reasoning_content` (streaming + non-streaming) when `content` is empty and surfaces `truncated: True` when `finish_reason=length` left no final answer, demo solvers classify Lean diagnostics case-insensitively (Lean 4.32 capitalized `type mismatch` → `Type mismatch` and switched identifier quoting to backticks, which silently downgraded every match to `unknown`) |
+| Verify branches | 4 | `run_verify_branch_cases` in `scripts/run_harness.py` | LEAN_TIMEOUT via mocked `subprocess.run`; FALSE_CERT_TOO_LARGE rejection respects `JudgeConfig.max_false_cert_bytes` (cap=10 KB rejects 15 KB; cap=20 KB admits the same payload); a LEAN_REJECTED `message` carries no Lean linter noise (`linter.defProp` fires on the judge's own `def submission : Goal` shape and is suppressed at the invocation) |
+| Public challenger | 91 | `tests/challenger_manifest.json :: public_attack_cases` | Bypass attempts (banned placeholder / axiom / declaration smuggling, stdout injection, typeclass-instance axiom laundering, `notation` parser hijacking of the judge's own `Goal` token, `run_cmd` / `run_elab` kernel-check evasion, `@[init]` report suppression) plus positive-control regressions for previously-false-negative proofs |
 | Infra challenger | 4 | same manifest, `infra_attack_cases` | Organizer-side malformed problems must raise `JudgeConfigurationError`, never map to a contestant verdict |
 
-Current repo baseline: **269 green checks** across the suites above (the harness also runs submit-CLI and loader smoke tests, plus a README self-check; the JSON summary lists every `passed_*_count` field separately). The README self-check (`run_readme_consistency_check`) reads the live `summary` map after every suite has run and compares each cell here to the matching `passed_*_count` — so adding a regression auto-bumps the canonical numbers, and any drift here fails the gate. Any nonzero exit blocks completion — do not weaken a test to get green.
+Current repo baseline: **284 green checks** across the suites above (the harness also runs submit-CLI and loader smoke tests, plus a README self-check; the JSON summary lists every `passed_*_count` field separately). The README self-check (`run_readme_consistency_check`) reads the live `summary` map after every suite has run and compares each cell here to the matching `passed_*_count` — so adding a regression auto-bumps the canonical numbers, and any drift here fails the gate. Any nonzero exit blocks completion — do not weaken a test to get green.
 
 Reading the JSON summary the harness prints:
 

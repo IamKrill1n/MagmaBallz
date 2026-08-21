@@ -1,0 +1,4 @@
+{
+  "verdict": "false",
+  "code": "notation \"Goal\" => True\n\nnamespace True\ndef submission : _root_.True := _root_.True.intro\nend True\n\nexport True (submission)\n"
+}

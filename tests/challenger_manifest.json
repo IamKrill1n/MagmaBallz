@@ -579,6 +579,90 @@
       "expected_status": "accepted",
       "expected_error_code": "ACCEPTED",
       "notes": "Was R8 false negative on false-cert path with multi-have decomposition."
+    },
+    {
+      "name": "instance_launder_axiom_false_branch",
+      "problem_path": "tests/fixtures/problems/p_true_basic.json",
+      "answer_path": "tests/challenger/answers/instance_launder_axiom_false_branch.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "DISALLOWED_AXIOMS"
+    },
+    {
+      "name": "instance_launder_axiom_submission_namespace",
+      "problem_path": "tests/fixtures/problems/p_false_witness.json",
+      "answer_path": "tests/challenger/answers/instance_launder_axiom_submission_namespace.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "DISALLOWED_AXIOMS"
+    },
+    {
+      "name": "instance_launder_axiom_core_namespace",
+      "problem_path": "tests/fixtures/problems/p_true_decl_policy.json",
+      "answer_path": "tests/challenger/answers/instance_launder_axiom_core_namespace.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "DISALLOWED_AXIOMS"
+    },
+    {
+      "name": "instance_launder_native_decide",
+      "problem_path": "tests/fixtures/problems/p_false_witness.json",
+      "answer_path": "tests/challenger/answers/instance_launder_native_decide.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "DISALLOWED_AXIOMS"
+    },
+    {
+      "name": "instance_launder_via_nonempty_choice",
+      "problem_path": "tests/fixtures/problems/p_false_witness.json",
+      "answer_path": "tests/challenger/answers/instance_launder_via_nonempty_choice.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "DISALLOWED_AXIOMS"
+    },
+    {
+      "name": "parser_hijack_notation_goal_token",
+      "problem_path": "tests/fixtures/problems/p_true_basic.json",
+      "answer_path": "tests/challenger/answers/parser_hijack_notation_goal_token.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "BANNED_PLACEHOLDER"
+    },
+    {
+      "name": "parser_hijack_notation_export_alias",
+      "problem_path": "tests/fixtures/problems/p_true_decl_policy.json",
+      "answer_path": "tests/challenger/answers/parser_hijack_notation_export_alias.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "BANNED_PLACEHOLDER"
+    },
+    {
+      "name": "parser_hijack_notation_verdict_flip",
+      "problem_path": "tests/fixtures/problems/p_true_basic_with_policy.json",
+      "answer_path": "tests/challenger/answers/parser_hijack_notation_verdict_flip.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "BANNED_PLACEHOLDER"
+    },
+    {
+      "name": "parser_hijack_notation3_variant",
+      "problem_path": "tests/fixtures/problems/p_true_basic.json",
+      "answer_path": "tests/challenger/answers/parser_hijack_notation3_variant.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "BANNED_PLACEHOLDER"
+    },
+    {
+      "name": "run_cmd_skip_kernel_typecheck",
+      "problem_path": "tests/fixtures/problems/p_true_basic.json",
+      "answer_path": "tests/challenger/answers/run_cmd_skip_kernel_typecheck.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "BANNED_PLACEHOLDER"
+    },
+    {
+      "name": "run_elab_skip_kernel_typecheck",
+      "problem_path": "tests/fixtures/problems/p_true_basic.json",
+      "answer_path": "tests/challenger/answers/run_elab_skip_kernel_typecheck.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "BANNED_PLACEHOLDER"
+    },
+    {
+      "name": "init_attribute_report_suppression",
+      "problem_path": "tests/fixtures/problems/p_true_decl_policy.json",
+      "answer_path": "tests/challenger/answers/init_attribute_report_suppression.answer.json",
+      "expected_status": "incomplete_proof",
+      "expected_error_code": "BANNED_PLACEHOLDER"
     }
   ],
   "infra_attack_cases": [

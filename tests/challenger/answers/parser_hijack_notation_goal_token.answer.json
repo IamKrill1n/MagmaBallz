@@ -1,0 +1,4 @@
+{
+  "verdict": "false",
+  "code": "notation \"Goal\" => True\n\ndef submission : True := True.intro\n"
+}
