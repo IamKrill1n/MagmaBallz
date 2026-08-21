@@ -106,6 +106,31 @@ Bắt buộc từ nay:
 grep ee-solver`. Đã đối chiếu 100 bài host-với-container: **khớp verdict từng
 bài**, container chậm hơn ~2,5 lần.
 
+## 3c. SỰ THẬT VỀ CÁC CON SỐ CHẤM (đo ngày 21/08, đừng đoán lại)
+
+Ba con số này từng bị tôi hiểu sai và suýt dẫn tới sửa nhầm chỗ. Đã truy tận
+mã ban tổ chức:
+
+- **Hạn Lean trên đường Solo là 300 giây, không phải 120.** `judge/verify.py`
+  có hằng `LEAN_TIMEOUT_SECONDS = 120`, nhưng đó chỉ là mặc định cho lời gọi
+  judge TRỰC TIẾP. Trên đường pipeline, `proxy.py:985` truyền hạn tường minh
+  `min(config.judge.lean_timeout_seconds, thời_gian_còn_lại)` với
+  `pipeline/config.json` ghi **300**; chú thích của chính họ nói *"gets the
+  300 s the contestant was promised, never more."* Biến môi trường
+  `LEAN_TIMEOUT_SECONDS` bị bỏ qua hoàn toàn ở nhánh này.
+  Hệ quả cần nhớ: bài tiêu gần hết ngân sách trước khi chấm sẽ để judge ÍT
+  giây hơn 300 — hạn là `min`, không phải hằng.
+
+- **Phong bì đáp án phải đúng `{verdict, code}`, không thừa khóa nào.** Thừa
+  một khóa (ví dụ `id`) là `malformed`/`ANSWER_SCHEMA_ERROR`. Dict nội bộ của
+  solver có khóa `id`; nó bị lược khi phát ra stdout.
+
+- **Gọi `verify_answer` tay sẽ BÁC MỌI CHỨNG CHỈ** nếu bài không mang
+  `proof_policy`: `ProofPolicy()` mặc định có `allowed_axioms=()` rỗng, nên
+  cả `propext` cũng bị coi là tiên đề cấm. Đường thật được `proxy.py:112` bơm
+  `DEFAULT_PROOF_POLICY` vào. Muốn chấm tay thì phải bơm y như vậy, nếu không
+  sẽ thấy `incomplete_proof/DISALLOWED_AXIOMS` giả trên chứng chỉ hoàn toàn tốt.
+
 ## 4. Nguyên tắc vận hành — vi phạm là trả giá bằng số liệu sai
 
 1. **Không đo và không đánh cùng lúc.** Tải máy đã từng làm lệch một sweep +4

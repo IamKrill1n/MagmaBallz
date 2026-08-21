@@ -89,7 +89,11 @@ if ! done_sweep; then
   # --reap-after: harness đặt hạn 600s/bài nhưng KHÔNG giết được container khi
   # solver bên trong không tự dừng — đo được một container sống 3 tiếng làm cả
   # lượt sweep đứng im ở 4/2469. Thu hồi sau 600+180s biên.
+  # --solver-dir: chép build repo vào thư mục nộp bài RỒI khai mã băm ra dấu.
+  # Sandbox gắn thư mục nộp bài, không phải file repo; ngày 21/08 cả 20 thư
+  # mục nộp bài đều là bản cũ, phóng sweep lúc đó là đo nhầm build lặng lẽ.
   $MEASURE --name sweep --result "$S/results/final_cert.jsonl" --wait 7200 --reap-after 780 \
+      --solver-dir "$S/subs/m6final" \
       -- "$PY_BIN" "$S/scoreboard.py" --solvers m6final \
          --corpora normal,hard1,hard2,hard3,evaluation_normal,evaluation_hard,evaluation_extra_hard,evaluation_order5 \
          --timeout 600 --workers "$W" --no-llm --tag final_cert > "$S/final_cert.log" 2>&1

@@ -52,3 +52,8 @@
   [ ] harvest
   [ ] census
   [ ] label
+[08-21 00:39] === dây chuyền: 1 luồng (tính từ số lõi), build 9b579ce ===
+[08-21 00:39] chặng 1: verify_additive
+[08-21 01:51]   cổng verify: ❌ verify: HỎNG — giữ 1/3, đòi lại 2/3 — CÓ HỒI QUY, không được nộp build này, xem lại thiết kế cộng-thêm
+[08-21 01:51]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%)
+[08-21 01:51] chặng 3: sweep chứng nhận 2469 bài, trong container, 1 luồng

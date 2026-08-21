@@ -11,9 +11,10 @@ Nó cưỡng chế bốn thứ, theo đúng thứ tự:
   2. ĐỘC QUYỀN      — giữ khóa máy suốt lượt; ai khác xin cũng bị từ chối;
                       và caffeinate buộc vào vòng đời lượt chạy nên máy
                       KHÔNG THỂ ngủ giữa chừng (thứ đã giết lượt 1529 bài).
-  3. Cấu hình CHUẨN — sandbox docker, hạn Lean 120s (giá trị thật của ban tổ
-                      chức, không bao giờ nâng cho dễ), LEAN_PATH nạp sẵn,
-                      thư mục artifact riêng cho từng lượt.
+  3. Cấu hình CHUẨN — sandbox docker, LEAN_PATH nạp sẵn, thư mục artifact
+                      riêng cho từng lượt, và hạn Lean được ĐỌC RA từ mã ban
+                      tổ chức rồi đóng vào dấu (300 s trên đường Solo) thay vì
+                      bịa một con số rồi khai như thật.
   4. TỰ KHAI BÁO    — ghi <file kết quả>.prov.json: môi trường lúc đầu, tải
                       đỉnh, đối thủ đỉnh, áp lực bộ nhớ đỉnh, swap phình bao
                       nhiêu, và kết luận ĐÁNG TIN hay KHÔNG. Người đọc kết
@@ -35,6 +36,9 @@ def main() -> int:
     ap.add_argument("--wait", type=float, default=0.0, help="giây chờ khóa; 0 = từ chối ngay")
     ap.add_argument("--reap-after", type=float, default=0.0,
                 help="giết container ee-solver sống quá N giây (0 = tắt)")
+    ap.add_argument("--solver-dir", default=None,
+                    help="chép EQT02-M00006.py của repo vào <dir>/solver.py rồi "
+                         "khai mã băm ra dấu — chặn việc đo nhầm build cũ")
     ap.add_argument("--allow-dirty", action="store_true",
                     help="chạy dù máy có đối thủ (chỉ dùng cho việc KHÔNG phải đo)")
     ap.add_argument("cmd", nargs=argparse.REMAINDER)
@@ -52,11 +56,20 @@ def main() -> int:
     # máy đã xác nhận sạch -> mọi thứ còn sót lại đều là rác của lượt bị giết
     lab.sweep_stale()
 
+    sync = lab.sync_solver(args.solver_dir) if args.solver_dir else {}
+    if sync:
+        print(f"[lab] đồng bộ build vào {args.solver_dir}: "
+              f"sha={sync['solver_sha']} {sync['solver_byte']} byte")
+
     art_root = tempfile.mkdtemp(prefix="mb-lab-art-", dir="/private/tmp")
     env = dict(os.environ)
     env.pop("OPENAI_API_KEY", None); env.pop("OPENROUTER_API_KEY", None)
     env["SB_SANDBOX_MODE"] = "docker"          # đúng hộp ban tổ chức
-    env["LEAN_TIMEOUT_SECONDS"] = "120"        # giá trị thật của họ, KHÔNG nâng
+    # Chỉ có tác dụng với lời gọi judge TRỰC TIẾP (harness, challenger); trên
+    # đường pipeline proxy truyền hạn tường minh từ config.json nên biến này
+    # bị bỏ qua. Đặt bằng đúng giá trị pipeline để hai đường không lệch nhau.
+    hạn = lab.lean_timeout_thật()
+    env["LEAN_TIMEOUT_SECONDS"] = str(hạn["hạn_lean_pipeline"] or 300)
     env["JUDGE_ARTIFACT_DIR"] = art_root       # sạch từng lượt
     lp = REPO / ".scratch/release/lean_path.txt"
     if lp.exists():
@@ -72,7 +85,8 @@ def main() -> int:
         with lab.Exclusive(args.name, wait_seconds=args.wait), lab.Caffeine(), \
                 lab.LoadWatch() as watch, reaper:
             head = lab.stamp(tên=args.name, luồng=lab.plan_workers(),
-                             sandbox="docker", hạn_lean=120, lệnh=" ".join(cmd)[:200])
+                             sandbox="docker", **hạn,
+                             lệnh=" ".join(cmd)[:200], **sync)
             print(f"[lab] chạy {args.name}: {lab.plan_workers()} luồng, "
                   f"build {head['build']}, máy sạch, chặn ngủ đang bật")
             rc = subprocess.run(cmd, cwd=str(REPO), env=env).returncode

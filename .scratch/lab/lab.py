@@ -175,6 +175,60 @@ def sweep_stale(verbose: bool = True) -> dict:
     return out
 
 
+def lean_timeout_thật() -> dict:
+    """Hạn Lean THẬT trên đường chấm Solo, đọc từ mã ban tổ chức.
+
+    Đây là chỗ tôi từng tự lừa mình: measure.py ép LEAN_TIMEOUT_SECONDS=120
+    rồi đóng dấu "hạn_lean=120". Nhưng proxy truyền hạn XUỐNG judge bằng
+    tham số tường minh lấy từ pipeline/config.json (300 s), và judge chỉ đọc
+    biến môi trường ở nhánh config=None — nhánh bị bỏ qua. Nên biến môi
+    trường ấy VÔ HIỆU trên đường pipeline, còn cái dấu thì khai sai suốt.
+
+    Chú thích của chính ban tổ chức ở proxy.py:985 nói rõ:
+    "gets the 300 s the contestant was promised, never more."
+    Hạn cuối là min(config, thời gian còn lại của bài) — nên bài tiêu gần
+    hết ngân sách trước khi chấm sẽ để judge ít giây hơn hẳn."""
+    out = {"hạn_lean_pipeline": None, "hạn_lean_judge_mặc_định": None}
+    try:
+        cfg = json.loads((REPO / "pipeline/config.json").read_text())
+        out["hạn_lean_pipeline"] = int(cfg["judge"]["lean_timeout_seconds"])
+    except Exception:
+        pass
+    try:
+        for line in (REPO / "judge/verify.py").read_text().splitlines():
+            if line.startswith("LEAN_TIMEOUT_SECONDS"):
+                out["hạn_lean_judge_mặc_định"] = int(line.split("=")[1].strip())
+                break
+    except Exception:
+        pass
+    return out
+
+
+def file_sha(path) -> str:
+    import hashlib
+    try:
+        return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()[:12]
+    except Exception:
+        return "?"
+
+
+def sync_solver(sub_dir) -> dict:
+    """Đồng bộ build trong repo vào thư mục nộp bài RỒI khai băm ra dấu.
+
+    Sandbox gắn thư mục nộp bài (-v <dir>:/solver:ro), nên phép đo chạy
+    solver.py trong ĐÓ, không phải file trong repo. Ngày 21/08 kiểm ra thì
+    cả 20 thư mục nộp bài đều là bản cũ — phóng sweep lúc đó là đo nhầm
+    build mà không có gì báo. Nay việc chép là bắt buộc và mã băm nằm trong
+    prov.json, nên câu 'lượt này đo build nào' không còn phải nhớ."""
+    sub_dir = pathlib.Path(sub_dir)
+    sub_dir.mkdir(parents=True, exist_ok=True)
+    src = REPO / "EQT02-M00006.py"
+    dst = sub_dir / "solver.py"
+    shutil.copy2(src, dst)
+    return {"solver_sha": file_sha(dst), "solver_byte": dst.stat().st_size,
+            "solver_từ": str(src), "solver_tới": str(dst)}
+
+
 class Caffeine:
     """Chặn máy ngủ suốt lượt đo, buộc vào vòng đời của chính tiến trình này.
 
