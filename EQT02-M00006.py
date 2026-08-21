@@ -961,37 +961,68 @@ def structured_family_tables(max_n: int = STRUCTURED_MAX_N):
 EXTENDED_AFFINE_SIZES = (11, 13, 16, 17, 19, 23, 25)
 
 
+def _affine_form(term, a, b, c, n):
+    """Rút một hạng tử thành dạng tuyến tính dưới phép toán affine
+    x◇y = (a*x + b*y + c) mod n.  Trả về (dict biến->hệ số, hằng số), tất cả
+    mod n.  Chi phí O(kích thước hạng tử) — KHÔNG duyệt phép gán nào.
+    Đây là điều làm tầng này khả thi ở bậc lớn và nhiều biến: bản duyệt cũ
+    tốn n^v phép gán mỗi bảng (đo 21/08: 176 s cho một bài 6 biến)."""
+    stack = [(term, False)]
+    out = []
+    while stack:
+        node, expanded = stack.pop()
+        if node[0] == "var":
+            out.append(({node[1]: 1}, 0))
+            continue
+        if not expanded:
+            stack.append((node, True))
+            stack.append((node[1], False))
+            stack.append((node[2], False))
+            continue
+        # ngăn xếp LIFO: nhánh phải được đẩy vào trước nên nhánh TRÁI ra khỏi
+        # `out` trước — đảo thứ tự này là hoán vị a<->b (bắt được 21/08 bằng
+        # phép đối chiếu với duyệt cạn: 4830/61160 trường hợp lệch)
+        lc, lk = out.pop()
+        rc, rk = out.pop()
+        coeffs = {}
+        for v, w in lc.items():
+            coeffs[v] = (coeffs.get(v, 0) + a * w) % n
+        for v, w in rc.items():
+            coeffs[v] = (coeffs.get(v, 0) + b * w) % n
+        coeffs = {v: w for v, w in coeffs.items() if w}
+        out.append((coeffs, (a * lk + b * rk + c) % n))
+    return out[0]
+
+
+def _affine_holds(eq, a, b, c, n):
+    """Phương trình đúng với MỌI phép gán <=> hai dạng tuyến tính trùng nhau.
+    Chính xác cả hai chiều: nếu hai dạng lệch nhau ở hệ số hay hằng số thì
+    tồn tại phép gán làm hai vế khác nhau."""
+    lc, lk = _affine_form(eq["lhs"], a, b, c, n)
+    rc, rk = _affine_form(eq["rhs"], a, b, c, n)
+    return lc == rc and lk == rk
+
+
 def extended_affine_scan(eq1, eq2, deadline=None):
-    """Affine op = (a*i + b*j + c) mod n for n past the old finOpTable digit
-    ceiling (legal now via the list-literal certificate). Deterministic
-    fail-fast probes make the full coefficient scan cheap; the exhaustive
-    check runs only on probe survivors. Returns (n, table, route) | None."""
-    vs = eq1["variables"]
-    def ev(term, env, table, n):
-        if term[0] == "var":
-            return env[term[1]]
-        return table[ev(term[1], env, table, n)][ev(term[2], env, table, n)]
+    """Phép toán affine (a*i + b*j + c) mod n cho bậc vượt trần chữ-số cũ của
+    finOpTable (hợp lệ nhờ chứng chỉ dạng list-literal).  Kiểm bằng đại số
+    tuyến tính ký hiệu thay vì duyệt cạn: eq1 phải đúng với mọi phép gán,
+    eq2 phải sai với ít nhất một.  Trả về (n, table, route) | None."""
     for n in EXTENDED_AFFINE_SIZES:
-        probes = [
-            tuple((i * k + s) % n for k, s in ((3, 1), (7, 2), (5, 0)))[: max(1, len(vs))]
-            for i in range(12)
-        ]
+        if deadline is not None and deadline_expired(deadline):
+            return None
         for a in range(n):
             for b in range(n):
-                if deadline is not None and time.monotonic() >= deadline:
+                if deadline is not None and deadline_expired(deadline):
                     return None
                 for c in (0, 1):
-                    table = [[(a * x + b * y + c) % n for y in range(n)] for x in range(n)]
-                    ok = True
-                    for p in probes:
-                        env = dict(zip(vs, list(p) + [p[0]] * (len(vs) - len(p))))
-                        if ev(eq1["lhs"], env, table, n) != ev(eq1["rhs"], env, table, n):
-                            ok = False
-                            break
-                    if not ok:
+                    if not _affine_holds(eq1, a, b, c, n):
                         continue
-                    if table_is_counterexample(eq1, eq2, table):
-                        return n, table, f"false:affine_ext:z{n}:{a},{b},{c}"
+                    if _affine_holds(eq2, a, b, c, n):
+                        continue
+                    table = [[(a * x + b * y + c) % n for y in range(n)]
+                             for x in range(n)]
+                    return n, table, f"false:affine_ext:z{n}:{a},{b},{c}"
     return None
 
 
