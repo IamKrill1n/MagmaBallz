@@ -105,9 +105,14 @@ A problem is solved when the judge returns `accepted`.
 
 ## Scoring
 
-A problem is solved when the deterministic Lean judge returns `accepted`. There is no partial credit, no probabilistic scoring, and no LLM-as-judge; higher solved counts are better.
+Scoring follows Stage 1. The evaluation set is split into four categories — **Normal**, **Hard**, **Extra Hard**, and **Order 5** — and every problem carries equal weight:
 
-Leaderboard eligibility requires that the submission is a single self-contained `solver.py` (≤ 500 KB) evaluated with the official SAIR Stage 2 runner, with verdicts coming only from the deterministic judge. See the [Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec) for the full eligibility list.
+- `accepted` → **1 point**
+- rejected or timed out → **0 points**
+
+No partial credit, no probabilistic scoring, no LLM-as-judge.
+
+Leaderboard eligibility requires a single self-contained `solver.py` (≤ 500 KB) evaluated with the official SAIR Stage 2 runner — full list in the [Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec).
 
 ## Proof Policy
 
@@ -143,12 +148,13 @@ Host and sandbox spec: [Official Evaluation Spec](https://playground.sair.founda
 
 ## Evaluation Problem Sets
 
-The organizer runs offline evaluation on a private Stage 2 evaluation set, **separate** from any public problem set in this repository.
+The organizer runs offline evaluation on a private set spanning the four categories above. **No Stage 2 evaluation problem is reused from Stage 1 or from any publicly available selected problem set.**
 
 For development, participants can use:
 
-- Problems from the Equational Theories Project and the Stage 1 public subsets.
 - The public sets bundled here: `examples/problems/sample_{20,200}.json` and the four SAIR sets (`normal`, `hard1`, `hard2`, `hard3`).
+- Problems from the Equational Theories Project.
+- The Stage 1 evaluation problems — [SAIRfoundation/equational-theories-selected-problems](https://huggingface.co/datasets/SAIRfoundation/equational-theories-selected-problems) — for reference on difficulty and shape only; none of them appear in the Stage 2 evaluation set.
 
 ## Official Repository
 
