@@ -20,7 +20,7 @@ Thiết kế này không dựa vào ai nhớ luật. Ba tính chất được C�
                     không đáng tin — không phụ thuộc việc ai đó nhớ nhìn.
 """
 from __future__ import annotations
-import json, os, pathlib, subprocess, threading, time
+import contextlib, glob, json, os, pathlib, shutil, subprocess, threading, time
 
 LAB = pathlib.Path("/private/tmp/magmaballz-lab")
 LAB.mkdir(parents=True, exist_ok=True)
@@ -33,6 +33,9 @@ REPO = pathlib.Path("/Users/nhatminh/dev/active/MagmaBallz")
 CORES_PER_WORKER = 6
 CORES_RESERVED = 2            # chừa cho hệ điều hành và người dùng
 LOAD_SAFE_RATIO = 0.85        # tải1/lõi vượt mức này -> coi là tranh chấp
+# Swap phình quá mức này giữa lượt đo nghĩa là máy đã tráo trang: Lean bị bỏ
+# đói y hệt lúc quá tải luồng, và mọi `incorrect` sinh ra đều đáng ngờ.
+SWAP_GROWTH_LIMIT_MB = 2048.0
 
 RIVALS = ("scoreboard.py", "run_marathon.py", "verify_additive.py", "harvest.py",
           "forge_p2_sieve.py", "route_census.py", "label_doubt.py", "recalib_check.py",
@@ -105,6 +108,104 @@ def docker_containers() -> int:
         return 0
 
 
+def mem_pressure() -> int:
+    """Mức áp lực bộ nhớ theo chính macOS: 1 bình thường, 2 cảnh báo, 4 nguy cấp.
+
+    Đây là tín hiệu đúng chứ không phải "còn bao nhiêu MB trống": macOS giữ
+    RAM gần đầy theo thiết kế, nên số MB trống thấp là bình thường, còn mức
+    áp lực mới là lúc nó bắt đầu nén và tráo trang ra đĩa."""
+    try:
+        r = subprocess.run(["sysctl", "-n", "kern.memorystatus_vm_pressure_level"],
+                           capture_output=True, text=True, timeout=10)
+        return int(r.stdout.strip() or 1)
+    except Exception:
+        return 1
+
+
+def swap_used_mb() -> float:
+    """MB swap đang dùng. Swap phình lên giữa lượt đo là dấu hiệu máy đang
+    tráo trang — chính là thứ bỏ đói Lean và làm nó vượt hạn 120 s, rồi
+    judge ghi certificate ĐÚNG thành SAI."""
+    try:
+        r = subprocess.run(["sysctl", "-n", "vm.swapusage"],
+                           capture_output=True, text=True, timeout=10)
+        for tok in r.stdout.replace("=", " ").split():
+            if tok.endswith("M") and tok[0].isdigit():
+                return float(tok[:-1])
+    except Exception:
+        pass
+    return 0.0
+
+
+def sweep_stale(verbose: bool = True) -> dict:
+    """Dọn rác của những lượt trước BỊ GIẾT.
+
+    measure.py chỉ xóa thư mục artifact khi thoát bình thường; lượt bị Ctrl-C
+    hay kill -9 để lại nguyên. Container ee-solver cũng sống sót khi lệnh
+    docker phía host chết. Cả hai đều tích lại rồi ăn đĩa và RAM của lượt sau.
+
+    Chỉ gọi SAU khi đã xác nhận máy sạch: lúc đó mọi thứ còn sót đều là rác
+    theo định nghĩa, không phải của ai đang chạy."""
+    out = {"thư_mục_rác": 0, "container_rác": 0}
+    for d in glob.glob("/private/tmp/mb-lab-art-*"):
+        # phải xử cả file lẫn thư mục: rmtree lặng lẽ bỏ qua file, nên bản
+        # chỉ-rmtree vừa để sót rác vừa BÁO LÀ ĐÃ DỌN — đúng cái kiểu tự khai
+        # sai mà cả lớp hạ tầng này sinh ra để chặn
+        try:
+            if os.path.isdir(d):
+                shutil.rmtree(d, ignore_errors=True)
+            else:
+                os.unlink(d)
+            out["thư_mục_rác"] += 1
+        except Exception:
+            pass
+    try:
+        r = subprocess.run(["docker", "ps", "-aq", "--filter", "name=ee-solver"],
+                           capture_output=True, text=True, timeout=30)
+        names = [x for x in r.stdout.split() if x]
+        if names:
+            subprocess.run(["docker", "rm", "-f", *names],
+                           capture_output=True, timeout=120)
+            out["container_rác"] = len(names)
+    except Exception:
+        pass
+    if verbose and (out["thư_mục_rác"] or out["container_rác"]):
+        print(f"[lab] dọn rác lượt trước: {out['thư_mục_rác']} thư mục artifact, "
+              f"{out['container_rác']} container", flush=True)
+    return out
+
+
+class Caffeine:
+    """Chặn máy ngủ suốt lượt đo, buộc vào vòng đời của chính tiến trình này.
+
+    Ngày 20/08 mất trắng một lượt 1529 bài vì máy ngủ bốn lần khi chạy pin,
+    đẻ ra 6 thất bại hard3 GIẢ. Lần đó tôi quên bật caffeinate. Nên nó không
+    còn là thứ phải nhớ nữa: `-w <pid>` khiến caffeinate tự chết theo phép đo,
+    không bao giờ sống sót thành tiến trình mồ côi ghim máy thức mãi.
+
+    Bản thân caffeinate tốn 0,0% CPU nên không hề chen vào phép đo."""
+
+    def __init__(self, pid: int | None = None):
+        self.pid = pid or os.getpid()
+        self.proc = None
+
+    def __enter__(self):
+        try:
+            self.proc = subprocess.Popen(
+                ["caffeinate", "-dims", "-w", str(self.pid)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as exc:
+            print(f"[lab] CẢNH BÁO: không bật được caffeinate ({exc}) — "
+                  "máy có thể ngủ và làm hỏng lượt đo", flush=True)
+        return self
+
+    def __exit__(self, *exc):
+        if self.proc is not None:
+            with contextlib.suppress(Exception):
+                self.proc.terminate()
+        return False
+
+
 class Exclusive:
     """Khóa máy độc quyền — điểm khác biệt với 'cố gắng đừng chạy chồng' là
     không giữ được khóa thì phép đo KHÔNG chạy chút nào."""
@@ -148,6 +249,10 @@ class LoadWatch:
         self.period, self.peak, self.samples = period, 0.0, 0
         self.own_pgid = own_pgid if own_pgid is not None else os.getpgrp()
         self.max_rivals = 0
+        self.mem_peak = 1                 # mức áp lực bộ nhớ cao nhất gặp phải
+        self.mem_critical = 0             # số mẫu ở mức nguy cấp
+        self.swap0 = swap_used_mb()
+        self.swap_peak = self.swap0
         self._stop = threading.Event()
         self._t = threading.Thread(target=self._run, daemon=True)
 
@@ -156,6 +261,15 @@ class LoadWatch:
             self.peak = max(self.peak, load1())
             self.max_rivals = max(self.max_rivals,
                                   len(competing({os.getpid()}, self.own_pgid)))
+            lvl = mem_pressure()
+            self.mem_peak = max(self.mem_peak, lvl)
+            if lvl >= 4:
+                self.mem_critical += 1
+                if self.mem_critical in (1, 5, 20):
+                    print(f"[lab] CẢNH BÁO: áp lực bộ nhớ NGUY CẤP "
+                          f"(mẫu thứ {self.mem_critical}) — kết quả trong khoảng "
+                          "này sẽ bị đánh dấu không đáng tin", flush=True)
+            self.swap_peak = max(self.swap_peak, swap_used_mb())
             self.samples += 1
 
     def __enter__(self):
@@ -168,9 +282,15 @@ class LoadWatch:
 
     def verdict(self) -> dict:
         limit = cores() * LOAD_SAFE_RATIO
-        clean = (self.peak <= limit) and (self.max_rivals == 0)
+        swap_growth = self.swap_peak - self.swap0
+        clean = (self.peak <= limit) and (self.max_rivals == 0) \
+            and self.mem_critical == 0 and swap_growth < SWAP_GROWTH_LIMIT_MB
         return {"tải_đỉnh": round(self.peak, 2), "ngưỡng": round(limit, 2),
                 "đối_thủ_đỉnh": self.max_rivals, "số_mẫu": self.samples,
+                "áp_lực_bộ_nhớ_đỉnh": self.mem_peak,
+                "số_mẫu_nguy_cấp": self.mem_critical,
+                "swap_đầu_MB": round(self.swap0, 1),
+                "swap_đỉnh_MB": round(self.swap_peak, 1),
                 "đáng_tin": clean}
 
 
@@ -179,6 +299,7 @@ def stamp(**extra) -> dict:
             "lõi": cores(), "tải_đầu": round(load1(), 2),
             "đối_thủ_đầu": competing({os.getpid()}, os.getpgrp()),
             "container_đầu": docker_containers(),
+            "áp_lực_bộ_nhớ_đầu": mem_pressure(), "swap_đầu": round(swap_used_mb(), 1),
             "build": build_commit(), **extra}
 
 
