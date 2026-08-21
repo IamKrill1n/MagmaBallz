@@ -13,6 +13,7 @@ proxies. Unsupported cases are skipped rather than answered speculatively.
 
 from __future__ import annotations
 
+import gc
 import json
 import importlib
 import os
@@ -712,6 +713,97 @@ def parse_equation(text: str) -> dict[str, Any]:
         "rhs_text": rhs_text,
         "text": text.strip(),
     }
+
+
+# ---------------------------------------------------------------------------
+# CHỐT CHẶN BỘ NHỚ
+#
+# Đo ngày 22/08 trong hộp cát THẬT của ban tổ chức (docker, --memory=2048m):
+# trên evaluation_order5_0016 bộ nhớ container leo đều 29 MB -> 1,998 GiB
+# trong 95 giây rồi tiến trình bị GIẾT ở giây 125. Không stderr, không đáp án,
+# không lời gọi judge. Nhìn từ ngoài không phân biệt được với "giải không ra".
+# Cả 11 bài trượt của lượt sweep 21/08 đều mang đúng dấu vết đó:
+# judge_calls=0 và bỏ cuộc sớm hơn hẳn ngân sách.
+#
+# Đây là thất bại THẬT trong thi đấu, không phải hiện tượng của phép đo: ở
+# giải thật mỗi bài có 3600 giây, và solver sẽ chết ở giây 125, mất trắng bài.
+#
+# Thủ phạm không phải pool bổ đề — pool bị chặn ở lemma_budget. Thủ phạm là 12
+# hàm @lru_cache(maxsize=None) khóa theo hạng tử: ở slack 26 số hạng tử phân
+# biệt bùng nổ, và mỗi hạng tử bị giữ sống vĩnh viễn trong tới 12 từ điển.
+#
+# Chốt này KHÔNG đổi hành vi ở vùng đang chạy tốt: nó chỉ kích hoạt khi đã
+# vượt ngưỡng, tức vùng mà hành vi hiện tại là CHẾT.
+MEMORY_RELIEF_FRACTION = 0.50   # xả cache
+MEMORY_STOP_FRACTION = 0.75     # dừng lượt bão hòa, báo lý do "memory"
+_MEM_LIMIT: list[int | None] = []
+
+
+def sandbox_memory_limit() -> int | None:
+    """Giới hạn bộ nhớ thật của hộp cát, đọc từ cgroup. None nếu không có
+    giới hạn (chạy trên máy trần) — lúc đó chốt chặn im lặng, không đổi gì."""
+    if _MEM_LIMIT:
+        return _MEM_LIMIT[0]
+    lim = None
+    for path in ("/sys/fs/cgroup/memory.max",
+                 "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
+        try:
+            with open(path) as fh:
+                raw = fh.read().strip()
+            if raw and raw != "max":
+                val = int(raw)
+                # cgroup không giới hạn hay ghi một số khổng lồ
+                if 0 < val < (1 << 46):
+                    lim = val
+                    break
+        except Exception:
+            continue
+    _MEM_LIMIT.append(lim)
+    return lim
+
+
+def memory_fraction() -> float:
+    """Tỉ lệ bộ nhớ đã dùng trên giới hạn hộp cát. 0.0 khi không đo được."""
+    lim = sandbox_memory_limit()
+    if not lim:
+        return 0.0
+    try:
+        with open("/sys/fs/cgroup/memory.current") as fh:
+            return int(fh.read().strip()) / lim
+    except Exception:
+        pass
+    try:
+        with open("/proc/self/statm") as fh:
+            pages = int(fh.read().split()[1])
+        return pages * 4096 / lim
+    except Exception:
+        return 0.0
+
+
+def relieve_memory() -> float:
+    """Xả toàn bộ cache memo hóa rồi trả về tỉ lệ bộ nhớ mới.
+
+    Xả cache chỉ tốn thời gian tính lại, không mất tính đúng đắn — mọi hàm
+    được memo ở đây đều thuần túy."""
+    for obj in list(globals().values()):
+        clear = getattr(obj, "cache_clear", None)
+        if callable(clear):
+            try:
+                clear()
+            except Exception:
+                pass
+    gc.collect()
+    return memory_fraction()
+
+
+def memory_exhausted() -> bool:
+    """True khi phải DỪNG. Thử xả cache trước; chỉ khi xả xong vẫn quá ngưỡng
+    thì mới thật sự hết chỗ."""
+    frac = memory_fraction()
+    if frac < MEMORY_RELIEF_FRACTION:
+        return False
+    frac = relieve_memory()
+    return frac >= MEMORY_STOP_FRACTION
 
 
 @lru_cache(maxsize=None)
@@ -2533,6 +2625,8 @@ def derive_gap_lemmas(
     candidates: list[dict[str, Any]] = []
     raw_count = 0
     for rule_a, name_a in iter_rules:
+        if memory_exhausted():
+            break          # thà trả về ít bổ đề còn hơn bị hạt nhân giết
         if deadline_expired(deadline) or raw_count >= raw_pair_cap:
             break
         parent_used = 0
@@ -2699,8 +2793,13 @@ def _cp_saturation_attempt(
     pool: list[dict[str, Any]] = []
     work_start = _WORK[0]
 
+    mem_hit = [False]
+
     def out_of_budget() -> bool:
         if work_budget is not None and _WORK[0] - work_start >= work_budget:
+            return True
+        if memory_exhausted():
+            mem_hit[0] = True
             return True
         return deadline_expired(deadline)
 
@@ -2719,8 +2818,10 @@ def _cp_saturation_attempt(
         if _round >= rounds or out_of_budget() or len(pool) >= lemma_budget:
             if stop_reason is not None:
                 stop_reason.append(
-                    "rounds" if _round >= rounds
-                    else ("pool_full" if len(pool) >= lemma_budget else "budget"))
+                    "memory" if mem_hit[0]
+                    else ("rounds" if _round >= rounds
+                          else ("pool_full" if len(pool) >= lemma_budget
+                                else "budget")))
             return None
         src, dst = eq2["lhs"], eq2["rhs"]
         cap_kwargs: dict[str, Any] = {}
