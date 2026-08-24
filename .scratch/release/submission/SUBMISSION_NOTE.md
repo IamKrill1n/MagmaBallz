@@ -6,10 +6,12 @@ they contain, and the methodology used to generate them."* and
 `rules/overview.md` §"human-interpretable artifact": non-human-readable data
 sets are permitted provided the note gives a reproducible methodology.
 
-The solver is a single Python file with no compressed or binary payloads. It
-does embed one generated data set, described in full below, plus several small
-hand-written constant tables that are self-evident from their names. Everything
-here is reproducible by a third party from the public inputs named.
+The solver is a single Python file. It embeds four generated data sets — the
+`WITNESS_TABLES` harvest (plain literals) and three zlib+base64 payloads
+(`ETP_TABLE_BANK_B64`, `ETP_ORACLE_B64`, `ETP_EQUATIONS_B64`, all §1c) — plus
+several small hand-written constant tables that are self-evident from their
+names. Everything here is reproducible by a third party from the public
+inputs named.
 
 ---
 
@@ -83,6 +85,48 @@ groupoid laws whose targets hold in every *natural* central groupoid; only a
 non-natural witness separates them. It is one table, found by one search, and
 reproducible by anyone running the same `A² = J` search.
 
+### 1c. Methodology — `ET00` and the Austin infinite certificate
+
+Both come from the open-source **Equational Theories Project**
+(github.com/teorth/equational_theories), whose equation numbering the
+competition corpus uses verbatim.
+
+- `ET00` is a single order-6 operation table taken from the project's
+  `All4x4Tables` refutation store (tables originally produced by brute-force
+  C search, Mace4, Z3, and Vampire runs, all public). It was re-verified
+  locally with `table_is_counterexample` before inclusion, exactly like every
+  harvested table in section 1a.
+- `ETP_TABLE_BANK_B64` is the project's `All4x4Tables` refutation store
+  (tables originally produced by public brute-force C / Mace4 / Z3 / Vampire
+  runs) merged with its `FinitePoly` quadratic magmas expanded to explicit
+  tables, deduplicated (1454 tables, orders 2–65) and compressed with
+  zlib+base64. Anyone can regenerate it from the public ETP repository by
+  extracting the same directories; each table is re-verified against the
+  concrete problem by `table_is_counterexample` before use.
+- `ETP_ORACLE_B64` + `ETP_EQUATIONS_B64` encode the project's published
+  entailment closure (`data/2024-11-10-outcomes.json` snapshot) reduced
+  losslessly to 1415 equivalence classes plus 4824 Hasse edges, and the
+  project's `data/equations.txt` (id → canonical text). The 190 pairs still
+  conjectured/unknown at snapshot date are carried as explicit exceptions
+  where the oracle abstains. The oracle is used **only to allocate search
+  budget** (a problem the closure proves TRUE gets a minimal
+  countermodel-search budget); it never emits, gates, or replaces a
+  certificate — every answer is still an independently generated Lean proof
+  or countermodel verified by the judge. Regeneration: download the named
+  public files, reduce mutual implications to classes, take the transitive
+  reduction.
+- `AUSTIN_1167_1763_CERT` is a complete Lean certificate for the implication
+  eq1167 ⇒ eq1763, which by the project's Austin-pair analysis holds in
+  **every finite magma** and fails only on infinite carriers — no operation
+  table of any order can refute it. The countermodel is the project's
+  `Equation1659` parity-ladder operation on `ℕ` with its arguments swapped
+  (the dualization chain 1659 ⇒ 2473 ⇏ 1852 dualizes to 1167 ⇏ 1763). The
+  Lean proof was rewritten from scratch against the judge's import and
+  dependency policy and numerically cross-checked on `[0,60)³` before being
+  verified by the judge. The certificate is selected by the alpha-canonical
+  *shape of the two equations* (not by problem id), and the model itself is
+  reproducible from the public ETP repository.
+
 ---
 
 ## 2. Small hand-written constant tables (no generation methodology needed)
@@ -103,7 +147,9 @@ and are visible in the source:
 
 ## 3. What the solver does **not** contain
 
-- No compressed or binary blobs, no base64 payloads, no pickled objects.
+- No compressed payloads beyond the three disclosed in §1c —
+  `ETP_TABLE_BANK_B64`, `ETP_ORACLE_B64`, `ETP_EQUATIONS_B64`; no pickled
+  objects, no opaque binaries.
 - No trained model weights.
 - No table of problem identifiers mapped to answers, and no lookup keyed by
   problem id. The solver never reads `eq1_id`/`eq2_id` except to detect the

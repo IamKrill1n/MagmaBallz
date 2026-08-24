@@ -356,8 +356,11 @@ Chủ đạo từ chủ dự án sau khi xem số liệu. Kết quả điều tr
   nộp đè, cửa sổ 26-31/08 mới xét bài toán chọn cạnh-cầu + nén statements.
 
 hard3_0271: cert chuỗi (engine-replay) đã accepted. hard3_0314: đường
-explicit 12 cạnh đã truy được từ outcomes (8 cạnh Vampire), chuỗi thuần
-tra cứu đang ghép — kết quả ghi ở đây khi có.
+explicit 12 cạnh đã truy được; bộ dịch Vampire ăn cạnh ngắn/vừa trong giây,
+cạnh siêu dài (2923=>2628, hàng chục bước hạng tử lớn) cần tối ưu còn thiếu:
+ĐỌC VỊ TRÍ UNIFY GHI SẴN trong comment bản ghi ("unify on (0).1.2 in 8...")
+để mỗi bước thành O(1) thay vì BFS — TODO rõ ràng của bộ công cụ offline,
+không chặn gì. DỪNG THEO QUYẾT ĐỊNH 3i.
 
 ## 7. Việc còn lại, theo thứ tự
 

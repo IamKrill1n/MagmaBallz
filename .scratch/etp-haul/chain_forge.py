@@ -81,15 +81,28 @@ def class_paths(src_cls, dst_cls, limit=6):
     return paths
 
 
-_STEP_FAILED: set[tuple[str, str]] = set()
+_CACHE_PATH = HERE / "step_cache.json"
+try:
+    _STEP_CACHE = json.load(open(_CACHE_PATH))
+except Exception:
+    _STEP_CACHE = {}
+
+
+def _cache_put(a, b, val):
+    _STEP_CACHE[a + "||" + b] = val
+    json.dump(_STEP_CACHE, open(_CACHE_PATH, "w"), ensure_ascii=False)
 
 
 def prove_step(a_text, b_text):
-    """Nhờ engine chứng minh A => B; trả về thân tactic (đã bỏ header) hoặc None."""
+    """Nhờ engine chứng minh A => B; trả về thân tactic (đã bỏ header) hoặc None.
+    Cache đĩa: sống sót qua việc tiến trình bị giết ngang."""
     if a_text == b_text:
         return None
-    if (a_text, b_text) in _STEP_FAILED:
-        return None
+    hit = _STEP_CACHE.get(a_text + "||" + b_text)
+    if hit is not None:
+        if not hit.get("ok"):
+            return None
+        return hit["body"], hit["route"] + ":cache"
     # eq id giả PHÂN BIỆT — thiếu chúng thì is_reflexive_problem so
     # None == None và route reflexive bắn `exact h` bừa cho mọi bước.
     problem = {"id": "step", "eq1_id": -1, "eq2_id": -2,
@@ -99,14 +112,15 @@ def prove_step(a_text, b_text):
     except Exception:
         return None
     if not out or out["answer"]["verdict"] != "true":
-        _STEP_FAILED.add((a_text, b_text))
+        _cache_put(a_text, b_text, {"ok": False})
         return None
     code = out["answer"]["code"]
     if not code.startswith(STEP_PREFIX):
-        _STEP_FAILED.add((a_text, b_text))
+        _cache_put(a_text, b_text, {"ok": False})
         return None  # khuôn lạ (reflexive/singleton...) — bỏ cho an toàn
-    body = code[len(STEP_PREFIX):]
-    return body.rstrip() + "\n", out["route"]
+    body = code[len(STEP_PREFIX):].rstrip() + "\n"
+    _cache_put(a_text, b_text, {"ok": True, "body": body, "route": out["route"]})
+    return body, out["route"]
 
 
 def forall_stmt(eq):
@@ -214,5 +228,52 @@ def main(ids):
             print("  không ghép được chuỗi nào")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and (len(sys.argv) < 2 or sys.argv[1] != "explicit"):
     main(sys.argv[1:])
+
+
+def forge_explicit(problem, id_path):
+    """Ghép chuỗi theo đường cạnh-explicit cho trước (danh sách mã ETP,
+    gồm cả hai đầu). Mỗi cạnh nhờ engine chứng minh; cache đĩa chống giết."""
+    texts = [EQ_TEXT[i - 1] for i in id_path]
+    assert texts[0] == problem["equation1"], "đầu đường không khớp E1"
+    assert texts[-1] == problem["equation2"], "cuối đường không khớp E2"
+    chain, stmts = [], []
+    for k in range(1, len(texts)):
+        a, b = texts[k - 1], texts[k]
+        t0 = time.time()
+        got = prove_step(a, b)
+        dt = time.time() - t0
+        if not got:
+            print(f"    cạnh {k}/{len(texts)-1} {id_path[k-1]}=>{id_path[k]}: "
+                  f"TRƯỢT ({dt:.0f}s) — engine không qua cạnh explicit này",
+                  flush=True)
+            return None
+        body, route = got
+        print(f"    cạnh {k}/{len(texts)-1} {id_path[k-1]}=>{id_path[k]}: "
+              f"{route} ({dt:.0f}s)", flush=True)
+        chain.append(body)
+        stmts.append(forall_stmt(solver.parse_equation(b)))
+    code = assemble(chain, stmts)
+    if solver.sanitize_lean_code(code, verdict="true") and \
+            len(code.encode()) <= solver.MAX_LEAN_CODE_BYTES:
+        return code
+    print("    chuỗi KHÔNG qua sanitize/size")
+    return None
+
+
+if len(sys.argv) > 2 and sys.argv[1] == "explicit":
+    import glob as _g
+    _probs = {}
+    for _p in _g.glob(str(REPO / "examples/problems/*.jsonl")):
+        for _l in open(_p, encoding="utf-8"):
+            _r = json.loads(_l)
+            _probs[_r["id"]] = _r
+    pid = sys.argv[2]
+    idp = [int(x) for x in sys.argv[3].split(",")]
+    code = forge_explicit(_probs[pid], idp)
+    if code:
+        out = HERE / "ports" / "chains" / f"{pid}.lean"
+        out.write_text(code, encoding="utf-8")
+        print(f"  GHÉP XONG -> {out} ({len(code.encode()):,}B)")
+    sys.exit(0)
