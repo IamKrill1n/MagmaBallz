@@ -83,6 +83,29 @@ groupoid laws whose targets hold in every *natural* central groupoid; only a
 non-natural witness separates them. It is one table, found by one search, and
 reproducible by anyone running the same `A² = J` search.
 
+### 1c. Methodology — `ET00` and the Austin infinite certificate
+
+Both come from the open-source **Equational Theories Project**
+(github.com/teorth/equational_theories), whose equation numbering the
+competition corpus uses verbatim.
+
+- `ET00` is a single order-6 operation table taken from the project's
+  `All4x4Tables` refutation store (tables originally produced by brute-force
+  C search, Mace4, Z3, and Vampire runs, all public). It was re-verified
+  locally with `table_is_counterexample` before inclusion, exactly like every
+  harvested table in section 1a.
+- `AUSTIN_1167_1763_CERT` is a complete Lean certificate for the implication
+  eq1167 ⇒ eq1763, which by the project's Austin-pair analysis holds in
+  **every finite magma** and fails only on infinite carriers — no operation
+  table of any order can refute it. The countermodel is the project's
+  `Equation1659` parity-ladder operation on `ℕ` with its arguments swapped
+  (the dualization chain 1659 ⇒ 2473 ⇏ 1852 dualizes to 1167 ⇏ 1763). The
+  Lean proof was rewritten from scratch against the judge's import and
+  dependency policy and numerically cross-checked on `[0,60)³` before being
+  verified by the judge. The certificate is selected by the alpha-canonical
+  *shape of the two equations* (not by problem id), and the model itself is
+  reproducible from the public ETP repository.
+
 ---
 
 ## 2. Small hand-written constant tables (no generation methodology needed)
