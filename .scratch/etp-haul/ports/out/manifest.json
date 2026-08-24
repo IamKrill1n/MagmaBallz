@@ -888,6 +888,450 @@
   "eq2": 4689
  },
  {
+  "file": "etp1661_goc__1661_1630.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1630
+ },
+ {
+  "file": "etp1661_goc__1661_1633.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1633
+ },
+ {
+  "file": "etp1661_goc__1661_1656.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1656
+ },
+ {
+  "file": "etp1661_goc__1661_1657.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1657
+ },
+ {
+  "file": "etp1661_goc__1661_1659.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1659
+ },
+ {
+  "file": "etp1661_goc__1661_1660.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1660
+ },
+ {
+  "file": "etp1661_goc__1661_1663.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1663
+ },
+ {
+  "file": "etp1661_goc__1661_1833.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1833
+ },
+ {
+  "file": "etp1661_goc__1661_1837.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1837
+ },
+ {
+  "file": "etp1661_goc__1661_1839.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1839
+ },
+ {
+  "file": "etp1661_goc__1661_1851.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1851
+ },
+ {
+  "file": "etp1661_goc__1661_1852.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1852
+ },
+ {
+  "file": "etp1661_goc__1661_1860.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1860
+ },
+ {
+  "file": "etp1661_goc__1661_1862.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1862
+ },
+ {
+  "file": "etp1661_goc__1661_1871.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1871
+ },
+ {
+  "file": "etp1661_goc__1661_1872.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1872
+ },
+ {
+  "file": "etp1661_goc__1661_1874.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 1874
+ },
+ {
+  "file": "etp1661_goc__1661_2443.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 2443
+ },
+ {
+  "file": "etp1661_goc__1661_2452.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 2452
+ },
+ {
+  "file": "etp1661_goc__1661_2463.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 2463
+ },
+ {
+  "file": "etp1661_goc__1661_2467.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 2467
+ },
+ {
+  "file": "etp1661_goc__1661_2473.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 2473
+ },
+ {
+  "file": "etp1661_goc__1661_2477.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 2477
+ },
+ {
+  "file": "etp1661_goc__1661_2489.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 2489
+ },
+ {
+  "file": "etp1661_goc__1661_3457.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 3457
+ },
+ {
+  "file": "etp1661_goc__1661_3460.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 3460
+ },
+ {
+  "file": "etp1661_goc__1661_3520.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 3520
+ },
+ {
+  "file": "etp1661_goc__1661_3521.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 3521
+ },
+ {
+  "file": "etp1661_goc__1661_3523.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 3523
+ },
+ {
+  "file": "etp1661_goc__1661_3524.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 3524
+ },
+ {
+  "file": "etp1661_goc__1661_3527.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 3527
+ },
+ {
+  "file": "etp1661_goc__1661_4268.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 4268
+ },
+ {
+  "file": "etp1661_goc__1661_4282.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 4282
+ },
+ {
+  "file": "etp1661_goc__1661_4314.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 4314
+ },
+ {
+  "file": "etp1661_goc__1661_4315.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 4315
+ },
+ {
+  "file": "etp1661_goc__1661_4339.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 4339
+ },
+ {
+  "file": "etp1661_goc__1661_4357.lean",
+  "model": "etp1661_goc",
+  "eq1": 1661,
+  "eq2": 4357
+ },
+ {
+  "file": "etp1661_dual1979__1979_1035.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1035
+ },
+ {
+  "file": "etp1661_dual1979__1979_1055.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1055
+ },
+ {
+  "file": "etp1661_dual1979__1979_1085.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1085
+ },
+ {
+  "file": "etp1661_dual1979__1979_1096.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1096
+ },
+ {
+  "file": "etp1661_dual1979__1979_1150.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1150
+ },
+ {
+  "file": "etp1661_dual1979__1979_1167.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1167
+ },
+ {
+  "file": "etp1661_dual1979__1979_1202.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1202
+ },
+ {
+  "file": "etp1661_dual1979__1979_1634.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1634
+ },
+ {
+  "file": "etp1661_dual1979__1979_1657.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1657
+ },
+ {
+  "file": "etp1661_dual1979__1979_1668.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1668
+ },
+ {
+  "file": "etp1661_dual1979__1979_1681.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1681
+ },
+ {
+  "file": "etp1661_dual1979__1979_1701.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1701
+ },
+ {
+  "file": "etp1661_dual1979__1979_1721.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1721
+ },
+ {
+  "file": "etp1661_dual1979__1979_1742.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1742
+ },
+ {
+  "file": "etp1661_dual1979__1979_1763.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1763
+ },
+ {
+  "file": "etp1661_dual1979__1979_1797.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1797
+ },
+ {
+  "file": "etp1661_dual1979__1979_1816.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1816
+ },
+ {
+  "file": "etp1661_dual1979__1979_1860.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1860
+ },
+ {
+  "file": "etp1661_dual1979__1979_1875.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1875
+ },
+ {
+  "file": "etp1661_dual1979__1979_1884.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1884
+ },
+ {
+  "file": "etp1661_dual1979__1979_1912.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1912
+ },
+ {
+  "file": "etp1661_dual1979__1979_1958.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 1958
+ },
+ {
+  "file": "etp1661_dual1979__1979_2000.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 2000
+ },
+ {
+  "file": "etp1661_dual1979__1979_2024.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 2024
+ },
+ {
+  "file": "etp1661_dual1979__1979_3877.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 3877
+ },
+ {
+  "file": "etp1661_dual1979__1979_3897.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 3897
+ },
+ {
+  "file": "etp1661_dual1979__1979_3952.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 3952
+ },
+ {
+  "file": "etp1661_dual1979__1979_3972.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 3972
+ },
+ {
+  "file": "etp1661_dual1979__1979_3989.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 3989
+ },
+ {
+  "file": "etp1661_dual1979__1979_4006.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 4006
+ },
+ {
+  "file": "etp1661_dual1979__1979_4040.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 4040
+ },
+ {
+  "file": "etp1661_dual1979__1979_4587.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 4587
+ },
+ {
+  "file": "etp1661_dual1979__1979_4606.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 4606
+ },
+ {
+  "file": "etp1661_dual1979__1979_4615.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 4615
+ },
+ {
+  "file": "etp1661_dual1979__1979_4645.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 4645
+ },
+ {
+  "file": "etp1661_dual1979__1979_4666.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 4666
+ },
+ {
+  "file": "etp1661_dual1979__1979_4689.lean",
+  "model": "etp1661_dual1979",
+  "eq1": 1979,
+  "eq2": 4689
+ },
+ {
   "file": "etp1701a_goc__1701_8.lean",
   "model": "etp1701a_goc",
   "eq1": 1701,

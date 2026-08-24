@@ -44,6 +44,8 @@ REG = {
     "etp1659_goc2473":  (op1659,       bench.NAT, 2473, render_nat),
     "etp1659_dual1167": (swap(op1659), bench.NAT, 1167, render_nat),
     "etp1659_dual2000": (swap(op1659), bench.NAT, 2000, render_nat),
+    "etp1661_goc":      (bench.op_1661, bench.NAT, 1661, render_nat),
+    "etp1661_dual1979": (swap(bench.op_1661), bench.NAT, 1979, render_nat),
     "etp1701a_goc":     (op1701,       bench.NAT, 1701, render_nat),
     "etp1701a_dual1839": (swap(op1701), bench.NAT, 1839, render_nat),
     "etp1117_goc":      (op1117,       bench.INT, 1117, render_int),
