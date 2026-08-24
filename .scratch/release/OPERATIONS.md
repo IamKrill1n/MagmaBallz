@@ -256,6 +256,38 @@ verify + sweep từ đầu TRÊN MÔI TRƯỜNG THẬT. Plist còn ghim JUDGE_LE
 theo toolchain 4.30 — vô hại vì run_chain.sh `source .env.judge` đè lại,
 nhưng nên cập nhật plist khi tiện.
 
+## 3f. NGÀY 24/08 chiều — kho bác ETP + xưởng cert vô hạn (khai thác bậc ≤ 4)
+
+Chiến lược: vũ trụ bậc ≤ 4 đã được ETP giải TRỌN — khai thác thành hai lane:
+
+1. **`ETP_TABLE_BANK`** (commit `32fe21e`): 1454 bảng bác (bậc 2–65, gồm cả
+   FinitePoly nở bảng), zlib+b64 ~32 KB trong solver (269 KB/500 KB). Corpus
+   công khai FALSE đã bão hòa bởi witness cũ → giá trị chính là ĐỀ RIÊNG:
+   bảng là chân lý độc lập bài, phủ cặp chưa từng thấy. Đã khai trong
+   SUBMISSION_NOTE (nhớ giữ mục 3 nhất quán khi thêm payload!).
+2. **Xưởng cert vô hạn** (`.scratch/etp-haul/`, commit `1378560`): 12 chiều
+   template từ 5 model ETP (1659, 1661, 1701_8, 1117, 1648b) × gốc/dual —
+   **281 cert phát sẵn** phủ 281/820 cặp Austin, tất cả kiểm số học. Corpus
+   chỉ có 1 bài Austin (hard2_0027, đã ăn) → lane này là bảo hiểm đề riêng
+   thuần túy. Mẹo rẻ đã học: (a) chiều dual mở ra CÙNG tổ hợp op ⇒ thân
+   chứng minh dùng lại nguyên văn (chỉ đảo M, có khi hoán tên y/z — ĐỪNG
+   hoán dòng intro); (b) giả thuyết dẫn xuất (1167/2473 với model 1659) cũng
+   dùng lại thân cũ; (c) 1661 thuần hóa bằng bất biến "C≡y (mod 2)".
+
+**Trình tự đêm 24/08 (sau khi sweep hiện tại xong — ETA ~21:30):**
+1. `python3 .scratch/etp-haul/emit_and_judge.py judge` — chấm 281 cert.
+2. `python3 .scratch/etp-haul/integrate_lane.py apply` — nhúng các chiều ĐẠT
+   vào solver (thay khối AUSTIN đơn lẻ bằng registry).
+3. Khói submit.py 2-3 bài; commit.
+4. Lưu final_cert.jsonl (baseline 4.32.2 build d968874) sang tên khác, nạp
+   lại chain → re-sweep đêm trên build cuối. Hạn chót có kết quả: sáng 26/08.
+
+**Chưa làm (ghi để khỏi quên):** model 1701_3253/4587 (8 cặp lẻ), 1437,
+3342; giả thuyết 2481/1133 (74 cặp, cần h1 dẫn xuất trên model 1661 — hoặc
+nối engine cp_saturation làm bước suy diễn nền⇒E1, thiết kế đã ghi ở 3e);
+họ greedy/noncomputable (1076: 38 cặp, 2531: 38) — không decide được, cần
+cách khác hẳn.
+
 ## 7. Việc còn lại, theo thứ tự
 
 **Chặn nộp bài:** xác nhận đội đã đăng ký trên nền tảng; xem form nộp đòi gì;
