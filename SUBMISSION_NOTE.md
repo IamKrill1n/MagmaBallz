@@ -6,10 +6,11 @@ they contain, and the methodology used to generate them."* and
 `rules/overview.md` §"human-interpretable artifact": non-human-readable data
 sets are permitted provided the note gives a reproducible methodology.
 
-The solver is a single Python file with no compressed or binary payloads. It
-does embed one generated data set, described in full below, plus several small
-hand-written constant tables that are self-evident from their names. Everything
-here is reproducible by a third party from the public inputs named.
+The solver is a single Python file. It embeds two generated data sets — the
+`WITNESS_TABLES` harvest (plain literals) and the zlib+base64-compressed
+`ETP_TABLE_BANK_B64` (§1c) — plus several small hand-written constant tables
+that are self-evident from their names. Everything here is reproducible by a
+third party from the public inputs named.
 
 ---
 
@@ -133,7 +134,8 @@ and are visible in the source:
 
 ## 3. What the solver does **not** contain
 
-- No compressed or binary blobs, no base64 payloads, no pickled objects.
+- No compressed payloads beyond the single disclosed `ETP_TABLE_BANK_B64`
+  (§1c); no pickled objects, no opaque binaries.
 - No trained model weights.
 - No table of problem identifiers mapped to answers, and no lookup keyed by
   problem id. The solver never reads `eq1_id`/`eq2_id` except to detect the
