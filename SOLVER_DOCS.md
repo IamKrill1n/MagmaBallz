@@ -308,6 +308,18 @@ bank is the (near-)complete refutation set for the order-≤4 equation
 universe, and tables are problem-independent facts — they cover unseen
 private problems just as well as public ones.
 
+### 1d. ETP Implication Oracle (budget allocation only)
+`etp_oracle_verdict(eq1, eq2)` — the ETP entailment closure over all 4694
+order-≤4 equations, stored as 1415 equivalence classes + 4824 Hasse edges
+(`ETP_ORACLE_B64`, ~26 KB) with the closure rebuilt lazily via bigint
+bitsets; equations map to ETP ids by alpha-canonical shape
+(`ETP_EQUATIONS_B64`). Returns True/False for any in-universe pair, None
+outside the universe or on the 190 snapshot-date exceptions. Validated:
+100% agreement on all 2269 order-≤4 corpus problems. Sole use today: when
+the oracle says TRUE, `solve_problem` caps the FALSE-search time budget at
+2 s (the table scans are sub-second) instead of letting it burn minutes —
+it never emits, gates, or reorders certificate generation.
+
 ### 2. Structured Family Tables
 Parameterized families generated programmatically:
 - Min/max semilattices on Zn
