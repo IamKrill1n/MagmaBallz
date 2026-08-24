@@ -296,6 +296,18 @@ Pre-defined small tables known to refute many equations:
 | CG9 | **Non-natural central groupoid of order 9** (Knuth: 0-1 matrix `A` with `A² = J`). Satisfies Equation 168 `x = (y ◇ x) ◇ (x ◇ z)` while falsifying its high-numbered pseudo-consequences — laws that hold in every *natural* central groupoid `(a,b) ◇ (c,d) = (b,c)` of any size, including infinite ones. Finite central groupoids exist only at orders n² (1, 4, 9, 16, …), so order ≤ 8 table search can never find this witness; it must be named. |
 | ET00 | Order-6 witness imported from the **Equational Theories Project** All4x4Tables refutation store, re-verified locally with `table_is_counterexample` before inclusion; judge-accepted on hard2_0125. Tried last, so all previously-solved cases keep their original witnesses. |
 
+### 1c. ETP Refutation-Table Bank
+`ETP_TABLE_BANK` — 1454 deduplicated operation tables (orders 2–65) imported
+from the Equational Theories Project `All4x4Tables` store plus its
+`FinitePoly` quadratic magmas expanded to tables, embedded zlib+base64
+(~32 KB). Scanned right after the named witness tables, smallest order
+first; every table is re-verified against the problem via
+`table_is_counterexample` before being emitted, so the bank can only cost
+time, never correctness. Route: `false:etp_bank:<n>:<idx>`. Rationale: the
+bank is the (near-)complete refutation set for the order-≤4 equation
+universe, and tables are problem-independent facts — they cover unseen
+private problems just as well as public ones.
+
 ### 2. Structured Family Tables
 Parameterized families generated programmatically:
 - Min/max semilattices on Zn

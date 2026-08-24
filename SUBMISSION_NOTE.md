@@ -94,6 +94,13 @@ competition corpus uses verbatim.
   C search, Mace4, Z3, and Vampire runs, all public). It was re-verified
   locally with `table_is_counterexample` before inclusion, exactly like every
   harvested table in section 1a.
+- `ETP_TABLE_BANK_B64` is the project's `All4x4Tables` refutation store
+  (tables originally produced by public brute-force C / Mace4 / Z3 / Vampire
+  runs) merged with its `FinitePoly` quadratic magmas expanded to explicit
+  tables, deduplicated (1454 tables, orders 2–65) and compressed with
+  zlib+base64. Anyone can regenerate it from the public ETP repository by
+  extracting the same directories; each table is re-verified against the
+  concrete problem by `table_is_counterexample` before use.
 - `AUSTIN_1167_1763_CERT` is a complete Lean certificate for the implication
   eq1167 ⇒ eq1763, which by the project's Austin-pair analysis holds in
   **every finite magma** and fails only on infinite carriers — no operation
