@@ -81,9 +81,14 @@ def class_paths(src_cls, dst_cls, limit=6):
     return paths
 
 
+_STEP_FAILED: set[tuple[str, str]] = set()
+
+
 def prove_step(a_text, b_text):
     """Nhờ engine chứng minh A => B; trả về thân tactic (đã bỏ header) hoặc None."""
     if a_text == b_text:
+        return None
+    if (a_text, b_text) in _STEP_FAILED:
         return None
     # eq id giả PHÂN BIỆT — thiếu chúng thì is_reflexive_problem so
     # None == None và route reflexive bắn `exact h` bừa cho mọi bước.
@@ -94,9 +99,11 @@ def prove_step(a_text, b_text):
     except Exception:
         return None
     if not out or out["answer"]["verdict"] != "true":
+        _STEP_FAILED.add((a_text, b_text))
         return None
     code = out["answer"]["code"]
     if not code.startswith(STEP_PREFIX):
+        _STEP_FAILED.add((a_text, b_text))
         return None  # khuôn lạ (reflexive/singleton...) — bỏ cho an toàn
     body = code[len(STEP_PREFIX):]
     return body.rstrip() + "\n", out["route"]
@@ -124,8 +131,8 @@ def assemble(chain_bodies, stmts):
 def forge(problem):
     eq1 = solver.parse_equation(problem["equation1"])
     eq2 = solver.parse_equation(problem["equation2"])
-    st = solver._ETP_ORACLE_STATE
     assert solver._etp_oracle_init()
+    st = solver._ETP_ORACLE_STATE
     i = st["canon2id"].get(solver.alpha_canonical_pair(eq1))
     j = st["canon2id"].get(solver.alpha_canonical_pair(eq2))
     if not i or not j:
@@ -135,51 +142,55 @@ def forge(problem):
     paths = class_paths(c1, c2)
     print(f"  lớp {c1} -> {c2}: {len(paths)} đường ngắn nhất, "
           f"dài {len(paths[0]) - 1 if paths else '-'} bước")
+    # biến thể phía nguồn: None = dùng E1 thẳng; hoặc hop nội-lớp sang dạng
+    # tương đương của giả thuyết trước khi nhảy.
+    src_variants = [None] + [
+        EQ_TEXT[m - 1] for m in MEMBERS[c1][:MAX_CANDIDATES_PER_CLASS]
+        if EQ_TEXT[m - 1] != problem["equation1"]]
     for pi, path in enumerate(paths):
-        # nút đầu ghim vào E1; lớp đích cho phép NHẢY NỘI-LỚP: tới một
-        # phương trình tương đương trước (E2 ưu tiên thử đầu), rồi bước
-        # nội-lớp về E2 — bước giữa hai luật tương đương thường dễ.
-        node_choices = [[problem["equation1"]]]
-        for c in path[1:-1]:
-            node_choices.append(
-                [EQ_TEXT[m - 1] for m in MEMBERS[c][:MAX_CANDIDATES_PER_CLASS]])
-        last_members = [problem["equation2"]] + [
-            EQ_TEXT[m - 1] for m in MEMBERS[path[-1]][:MAX_CANDIDATES_PER_CLASS]
-            if EQ_TEXT[m - 1] != problem["equation2"]]
-        node_choices.append(last_members)
-        node_choices.append([problem["equation2"]])
+        for si, sv in enumerate(src_variants):
+            node_choices = [[problem["equation1"]]]
+            if sv is not None:
+                node_choices.append([sv])
+            for c in path[1:-1]:
+                node_choices.append(
+                    [EQ_TEXT[m - 1] for m in MEMBERS[c][:MAX_CANDIDATES_PER_CLASS]])
+            last_members = [problem["equation2"]] + [
+                EQ_TEXT[m - 1] for m in MEMBERS[path[-1]][:MAX_CANDIDATES_PER_CLASS]
+                if EQ_TEXT[m - 1] != problem["equation2"]]
+            node_choices.append(last_members)
+            node_choices.append([problem["equation2"]])
 
-        # duyệt từng bước, tham lam theo ứng viên
-        chain, stmts, cur = [], [], problem["equation1"]
-        ok = True
-        for step_idx in range(1, len(node_choices)):
-            if cur in node_choices[step_idx]:
-                continue  # đã đứng đúng nút (vd E2 đạt sớm) — khỏi thêm bước
-            step_done = False
-            for cand in node_choices[step_idx]:
-                t0 = time.time()
-                got = prove_step(cur, cand)
-                dt = time.time() - t0
-                if got:
-                    body, route = got
-                    print(f"    đường {pi} bước {step_idx}: {route} ({dt:.0f}s)"
-                          f"  '{cand[:44]}...'")
-                    chain.append(body)
-                    stmts.append(forall_stmt(solver.parse_equation(cand)))
-                    cur = cand
-                    step_done = True
+            chain, stmts, cur = [], [], problem["equation1"]
+            ok = True
+            for step_idx in range(1, len(node_choices)):
+                if cur in node_choices[step_idx]:
+                    continue
+                step_done = False
+                for cand in node_choices[step_idx]:
+                    t0 = time.time()
+                    got = prove_step(cur, cand)
+                    dt = time.time() - t0
+                    if got:
+                        body, route = got
+                        print(f"    đường {pi}.{si} bước {step_idx}: {route} "
+                              f"({dt:.0f}s)  '{cand[:44]}...'", flush=True)
+                        chain.append(body)
+                        stmts.append(forall_stmt(solver.parse_equation(cand)))
+                        cur = cand
+                        step_done = True
+                        break
+                    print(f"    đường {pi}.{si} bước {step_idx}: TRƯỢT ứng viên "
+                          f"({dt:.0f}s) '{cand[:44]}'", flush=True)
+                if not step_done:
+                    ok = False
                     break
-                print(f"    đường {pi} bước {step_idx}: TRƯỢT ứng viên ({dt:.0f}s)"
-                      f" '{cand[:44]}'")
-            if not step_done:
-                ok = False
-                break
-        if ok:
-            code = assemble(chain, stmts)
-            if solver.sanitize_lean_code(code, verdict="true") and \
-                    len(code.encode()) <= solver.MAX_LEAN_CODE_BYTES:
-                return code
-            print("    chuỗi ghép KHÔNG qua sanitize/size — thử đường khác")
+            if ok:
+                code = assemble(chain, stmts)
+                if solver.sanitize_lean_code(code, verdict="true") and \
+                        len(code.encode()) <= solver.MAX_LEAN_CODE_BYTES:
+                    return code
+                print("    chuỗi ghép KHÔNG qua sanitize/size — thử tiếp")
     return None
 
 
