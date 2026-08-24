@@ -24,13 +24,24 @@ BANNED_PROOF_TOKENS = (
     "sorry", "admit", "sorryAx", "mkSorry",
     # Tracing / debug-write to stdout
     "dbg_trace", "dbgTrace",
-    # Metaprogram execution at elaboration time (arbitrary IO)
-    "run_tac", "initialize", "builtin_initialize",
+    # Metaprogram execution at elaboration time (arbitrary IO).
+    # ``run_cmd`` / ``run_elab`` are the same capability as ``run_tac`` at
+    # command level; ``@[init f]`` registers a module initializer that runs when
+    # Problem.lean does ``import Submission`` — i.e. before the judge's own
+    # commands — which is enough to forge the dependency report and exit.
+    "run_tac", "run_cmd", "run_elab", "initialize", "builtin_initialize", "@[init",
     # Elab-time command execution (#eval) and custom elaborators/macros
     "#eval", "#exit", "#reduce", "#synth", "#check_eval",
     "elab", "elab_rules", "macro", "macro_rules", "syntax",
+    # Parser extensions. These are persistent and travel through the .olean, and
+    # Problem.lean is PARSED after ``import Submission`` — so a submission that
+    # declares ``notation "Goal" => True`` changes what the judge's own
+    # ``theorem _judge_checked_<nonce> : Goal := submission`` means.
+    "notation", "notation3", "infix", "infixl", "infixr", "prefix", "postfix",
     # Unsafe declarations (can bypass type-checking)
     "unsafe", "implemented_by", "extern",
+    # Kernel type-checking must not be skipped for the submitted declaration.
+    "skipKernelTC",
     # Unsafe casts / IO primitives (bypass Lean's kernel guarantees)
     "unsafeCast", "unsafeIO", "unsafePerformIO",
 )
@@ -39,6 +50,14 @@ MAX_CODE_LENGTH = 50_000
 MAX_FALSE_CERT_BYTES = 10_000
 LEAN_TIMEOUT_SECONDS = 120
 MANIFEST_WARNING_SUBSTRING = "manifest out of date: git revision of dependency 'mathlib' changed"
+# Lean 4.32 added the default-on ``linter.defProp``, which fires on every
+# ``def <name> : <Prop>``. The judge's own documented submission shape is
+# ``def submission : Goal := …`` with ``Goal : Prop``, so the linter tells every
+# contestant to rewrite the exact shape this judge requires. It is suppressed at
+# the invocation rather than filtered out of the output, so that genuine linter
+# diagnostics a contestant may rely on (Mathlib's ``linter.unnecessarySimpa``
+# and friends) still reach them intact.
+LEAN_LINTER_FLAGS = ("-D", "linter.defProp=false")
 REPORT_PREFIX = "JUDGE_REPORT "
 
 
@@ -470,13 +489,14 @@ def _find_banned_token(code: str) -> str | None:
     """Scan for banned identifiers / commands.
 
     Lexer rules:
-      - Tokens starting with `#` or containing a trailing space are matched as a
-        non-word-boundary literal (Lean commands like `#eval`, `elab `).
+      - Tokens starting with `#` or `@`, or containing a trailing space, are
+        matched as a non-word-boundary literal (Lean commands like `#eval`,
+        `elab `, and attribute forms like `@[init`).
       - Identifier tokens use word boundaries so `sorry` matches `sorry` but not
         `sorryFreeProof`.
     """
     for token in BANNED_PROOF_TOKENS:
-        if token.startswith("#") or token.endswith(" "):
+        if token.startswith(("#", "@")) or token.endswith(" "):
             # Literal substring scan for Lean commands that aren't word-bounded
             if re.search(re.escape(token), code):
                 return token
@@ -535,27 +555,47 @@ def _equation_def(name: str, text: str) -> str:
 def _render_problem_source(nonce: str) -> str:
     """Generate Problem.lean — the judge-controlled project root.
 
-    Problem.lean asserts ``theorem problem : Goal := submission``, where
-    ``Goal`` is the verdict-specific abbrev from ``JudgeProblem`` and
+    Problem.lean asserts ``theorem _judge_checked_<nonce> : Goal := submission``,
+    where ``Goal`` is the verdict-specific abbrev from ``JudgeProblem`` and
     ``submission`` is the term exposed by the submitter's ``Submission.lean``.
+    The dependency policy is reported on that named binding as well as on
+    ``submission`` — see the comment in the body for why both are required.
 
     Splitting the theorem statement into a separate (judge-controlled) file
     is what lets the submitter stay out of type-header bookkeeping: any
     ``def submission : Goal := …`` (or a term whose type is definitionally
     equal to ``Goal``) will type-check.
     """
+    # The checked binding MUST be named, and the policy MUST be computed on it
+    # — not on ``submission`` alone.
+    #
+    # A polymorphic submission such as
+    #     class Cheat (P : Prop) where val : P
+    #     axiom cheatAx : Goal
+    #     instance : Cheat Goal := ⟨cheatAx⟩
+    #     def submission {P : Prop} [inst : Cheat P] : P := inst.val
+    # has an EMPTY axiom closure of its own: ``submission`` never mentions
+    # ``cheatAx``. The axiom only enters when instance resolution instantiates
+    # ``submission`` at this use site. Reporting on ``submission`` alone (the
+    # anonymous-``example`` shape this file used before) therefore laundered any
+    # axiom — including the ones ``native_decide`` adds — past every policy
+    # check, for either verdict and independently of the problem.
+    #
+    # Reporting on the named binding closes that: ``collectAxioms`` on it walks
+    # the instantiated term. Both reports are emitted and unioned, because the
+    # direct-declaration set of the submission root is still the informative one
+    # for the declaration allowlist. The nonce is part of the name so a
+    # submission cannot pre-declare it and shadow the check.
+    checked = f"_judge_checked_{nonce}"
     return (
         "import JudgeSupport.Inspect\n"
         "import JudgeProblem\n"
         "import Submission\n"
         "\n"
-        # ``example`` (anonymous) is enough — we never look the declaration
-        # up again; the ``#judge_report`` below reflects through ``submission``
-        # directly. Adopted from upstream in the merge — tidier than a named
-        # theorem that just binds once and is never referenced.
-        "example : Goal := submission\n"
+        f"theorem {checked} : Goal := submission\n"
         "\n"
         f'#judge_report submission "{nonce}"\n'
+        f'#judge_report {checked} "{nonce}"\n'
     )
 
 
@@ -565,7 +605,15 @@ def _artifact_dir(artifact_root: Path, problem: ProblemSpec, raw_answer: str) ->
 
 
 def _parse_report(stdout: str, nonce: str) -> dict[str, Any]:
-    last_match: dict[str, Any] | None = None
+    """Merge every nonce-matching dependency report into one policy input.
+
+    ``_render_problem_source`` emits two reports: one for ``submission`` and one
+    for the named binding that is actually kernel-checked. The policy is applied
+    to the UNION, so an axiom that only enters through instance resolution at
+    the use site cannot be laundered by reporting on the uninstantiated
+    ``submission`` alone.
+    """
+    matches: list[dict[str, Any]] = []
     for line in stdout.splitlines():
         if line.startswith(REPORT_PREFIX):
             try:
@@ -575,10 +623,36 @@ def _parse_report(stdout: str, nonce: str) -> dict[str, Any]:
             # ``data`` may be any JSON value (null, list, string, number, bool);
             # skip non-dict payloads rather than crash with AttributeError.
             if isinstance(data, dict) and data.get("nonce") == nonce:
-                last_match = data
-    if last_match is None:
+                matches.append(data)
+    if not matches:
         raise JudgeInfrastructureError("Lean finished without emitting a valid judge dependency report")
-    return last_match
+
+    # Both judge-emitted reports must be present. A submission that manages to
+    # run code at import time can print a forged report and terminate the
+    # process before the genuine ones are emitted; requiring both targets means
+    # suppression is detected instead of silently trusted. (The union below
+    # already makes *adding* a forged report useless — it can only widen the
+    # dependency set, never shrink it.)
+    targets = {m.get("target") for m in matches if isinstance(m.get("target"), str)}
+    expected_targets = {"submission", f"_judge_checked_{nonce}"}
+    if not expected_targets.issubset(targets):
+        missing = ", ".join(sorted(expected_targets - targets))
+        raise JudgeInfrastructureError(
+            f"judge dependency report incomplete — missing report for: {missing}"
+        )
+
+    def _union(field: str) -> list[str]:
+        seen: set[str] = set()
+        for match in matches:
+            values = match.get(field)
+            if isinstance(values, list):
+                seen.update(v for v in values if isinstance(v, str))
+        return sorted(seen)
+
+    merged = dict(matches[-1])
+    merged["axioms"] = _union("axioms")
+    merged["direct_declarations"] = _union("direct_declarations")
+    return merged
 
 
 def _decl_matches_prefix(name: str, prefixes: tuple[str, ...]) -> bool:
@@ -687,6 +761,7 @@ def verify_answer(problem: Any, raw_answer: str, config: JudgeConfig | None = No
             [
                 str(resolved_config.lean_bin),
                 f"--root={art_dir}",
+                *LEAN_LINTER_FLAGS,
                 "-o", str(submission_olean),
                 str(submission_path),
             ],
@@ -729,7 +804,7 @@ def verify_answer(problem: Any, raw_answer: str, config: JudgeConfig | None = No
     env_verify = _make_lean_env(resolved_config, [str(art_dir)])
     try:
         proc = subprocess.run(
-            [str(resolved_config.lean_bin), f"--root={art_dir}", str(problem_path)],
+            [str(resolved_config.lean_bin), f"--root={art_dir}", *LEAN_LINTER_FLAGS, str(problem_path)],
             env=env_verify,
             text=True,
             capture_output=True,

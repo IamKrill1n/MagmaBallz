@@ -1,6 +1,6 @@
 # Stage 2 Evaluation Setup
 
-> **We want your feedback.** The evaluation plan described below — including the model, configuration, scoring rules, and problem sets — is still being refined, and items marked **TBD** will be decided based on community input. Please share suggestions on the [SAIR Foundation Zulip](https://zulip.sair.foundation/).
+> Official host and sandbox spec: **[Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec)**. Questions on the [SAIR Foundation Zulip](https://zulip.sair.foundation/).
 
 This page specifies how Stage 2 submissions are evaluated: submission format, solver environment, budget, scoring, proof policy, and the evaluation model.
 
@@ -105,11 +105,18 @@ A problem is solved when the judge returns `accepted`.
 
 ## Scoring
 
-**TBD.** Final scoring rules (point assignment, aggregation across problems, and tiebreakers) are still being decided based on community feedback. The baseline intent is: a problem is solved when the judge returns `accepted`, and higher solved counts are better.
+Scoring follows Stage 1. The evaluation set is split into four categories — **Normal**, **Hard**, **Extra Hard**, and **Order 5** — and every problem carries equal weight:
+
+- `accepted` → **1 point**
+- rejected or timed out → **0 points**
+
+No partial credit, no probabilistic scoring, no LLM-as-judge.
+
+Leaderboard eligibility requires a single self-contained `solver.py` (≤ 500 KB) evaluated with the official SAIR Stage 2 runner — full list in the [Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec).
 
 ## Proof Policy
 
-Proofs are verified with **Lean 4.32.0** and the matching **Mathlib 4.32.0** release.
+Proofs are verified with **Lean 4.32.2** and the matching **Mathlib 4.32.2** release.
 
 Submitted proofs are checked against a dependency policy:
 
@@ -119,21 +126,35 @@ Submitted proofs are checked against a dependency policy:
 
 ## Evaluation Model
 
-**TBD.** The evaluation model — including the model family, provider, and routing — is still being decided. The current candidate under consideration is an open-weight model accessed via OpenRouter with a pinned provider route and deterministic settings (seeded, low temperature), but this is subject to community feedback.
+Solver LLM calls are served through the organizer proxy against a fixed, pinned configuration:
+
+| | |
+|---|---|
+| Models | `openai/gpt-oss-120b` (`reasoning_effort = low`), `google/gemma-4-31b-it` (reasoning disabled) |
+| Route | OpenRouter, upstream provider pinned to DeepInfra |
+| Fallback | disabled — no automatic provider switching |
+
+Secrets and API keys are never exposed to the solver; all model access is mediated by the proxy.
 
 ## Evaluation Configuration
 
-**TBD.** Final generation parameters (temperature, max output tokens, reasoning effort, seeding, provider fallback policy) will be published alongside the confirmed evaluation model. Whatever settings are finalized will be reflected in `pipeline/config.json` in the repository.
+| Parameter | Value |
+|-----------|-------|
+| Temperature | `0.0` |
+| Seed | `0` (deterministic sampling, where the provider supports it) |
+| Max output tokens | 65 536 per call |
+
+Host and sandbox spec: [Official Evaluation Spec](https://playground.sair.foundation/playground/mathematics-distillation-challenge-equational-theories-stage2/official-evaluation-spec).
 
 ## Evaluation Problem Sets
 
-**TBD.** The private Stage 2 evaluation set (size, composition, balance between true/false implications) is still being decided. The set is **separate** from any public problem sets.
+The organizer runs offline evaluation on a private set spanning the four categories above. **No Stage 2 evaluation problem is reused from Stage 1 or from any publicly available selected problem set.**
 
 For development, participants can use:
 
-- Problems from the Equational Theories Project and the Stage 1 public subsets.
-
-The organizer runs offline evaluation on the private evaluation set.
+- The public sets bundled here: `examples/problems/sample_{20,200}.json` and the four SAIR sets (`normal`, `hard1`, `hard2`, `hard3`).
+- Problems from the Equational Theories Project.
+- The Stage 1 evaluation problems — [SAIRfoundation/equational-theories-selected-problems](https://huggingface.co/datasets/SAIRfoundation/equational-theories-selected-problems) — for reference on difficulty and shape only; none of them appear in the Stage 2 evaluation set.
 
 ## Official Repository
 

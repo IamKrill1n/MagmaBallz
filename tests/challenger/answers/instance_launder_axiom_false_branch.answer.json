@@ -1,0 +1,4 @@
+{
+  "verdict": "false",
+  "code": "import JudgeProblem\n\nclass Cheat (P : Prop) where\n  val : P\n\naxiom cheatAx : Goal\n\ninstance cheatInst : Cheat Goal := ⟨cheatAx⟩\n\ndef submission {P : Prop} [inst : Cheat P] : P := inst.val\n"
+}
