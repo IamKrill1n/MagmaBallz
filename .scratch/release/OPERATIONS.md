@@ -335,6 +335,30 @@ ledger ghi từng dòng nên không mất dấu nào.
 Việc sáng 25/08: verify + marathon trên build cuối (đang chạy nối tiếp) →
 gói nộp `make_submission.sh` → chủ dự án xác nhận đăng ký/form/nộp đè.
 
+## 3i. SÁNG 25/08 — QUYẾT ĐỊNH: không ép "full bậc 4 tuyệt đối" vào solver
+
+Chủ đạo từ chủ dự án sau khi xem số liệu. Kết quả điều tra lane TRA CỨU TRUE
+(kho chứng minh cạnh ETP, `.scratch/etp-haul/`):
+
+- Kho 10.665 thân chứng minh phủ TRỌN 10.657 cạnh explicit; judge NHẬN
+  replay nguyên văn (cả `import Mathlib.Tactic.NthRewrite` — đã thử, accepted;
+  allowlist judge chứa sẵn tiền tố SimpleRewrites./NthRewrites./Subgraph.).
+- Bộ dịch Vampire (`vampire_translate.py`) chạy được: bỏ khung phản
+  chứng/skolem, tái dựng từng bước dương bằng replay chồng-lấp có đích, phát
+  term Eq.trans/congrArg — cert 1021=>47 judge ACCEPTED.
+- Máy ghép thuần tra cứu (`chain_from_db.py`): đường explicit + thân từ kho,
+  không engine.
+- SỐ QUYẾT ĐỊNH: nhúng họ rẻ chỉ phủ 43.2% cặp TRUE (63.4% nếu thêm
+  MagmaEgg) — trùng vùng engine tự giải được; 36.6% còn lại cần họ Vampire
+  ~300-500KB nén, KHÔNG vừa nắp 500KB (solver 350KB). Phần vừa nắp giá trị
+  biên thấp, phần giá trị cao không vừa nắp.
+- => KHÔNG tích hợp vào solver. Toàn bộ giữ làm CÔNG CỤ OFFLINE; nếu được
+  nộp đè, cửa sổ 26-31/08 mới xét bài toán chọn cạnh-cầu + nén statements.
+
+hard3_0271: cert chuỗi (engine-replay) đã accepted. hard3_0314: đường
+explicit 12 cạnh đã truy được từ outcomes (8 cạnh Vampire), chuỗi thuần
+tra cứu đang ghép — kết quả ghi ở đây khi có.
+
 ## 7. Việc còn lại, theo thứ tự
 
 **Chặn nộp bài:** xác nhận đội đã đăng ký trên nền tảng; xem form nộp đòi gì;
