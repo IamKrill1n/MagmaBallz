@@ -136,17 +136,25 @@ def forge(problem):
     print(f"  lớp {c1} -> {c2}: {len(paths)} đường ngắn nhất, "
           f"dài {len(paths[0]) - 1 if paths else '-'} bước")
     for pi, path in enumerate(paths):
-        # nút đầu/cuối ghim vào đúng phương trình của đề
+        # nút đầu ghim vào E1; lớp đích cho phép NHẢY NỘI-LỚP: tới một
+        # phương trình tương đương trước (E2 ưu tiên thử đầu), rồi bước
+        # nội-lớp về E2 — bước giữa hai luật tương đương thường dễ.
         node_choices = [[problem["equation1"]]]
         for c in path[1:-1]:
             node_choices.append(
                 [EQ_TEXT[m - 1] for m in MEMBERS[c][:MAX_CANDIDATES_PER_CLASS]])
+        last_members = [problem["equation2"]] + [
+            EQ_TEXT[m - 1] for m in MEMBERS[path[-1]][:MAX_CANDIDATES_PER_CLASS]
+            if EQ_TEXT[m - 1] != problem["equation2"]]
+        node_choices.append(last_members)
         node_choices.append([problem["equation2"]])
 
         # duyệt từng bước, tham lam theo ứng viên
         chain, stmts, cur = [], [], problem["equation1"]
         ok = True
         for step_idx in range(1, len(node_choices)):
+            if cur in node_choices[step_idx]:
+                continue  # đã đứng đúng nút (vd E2 đạt sớm) — khỏi thêm bước
             step_done = False
             for cand in node_choices[step_idx]:
                 t0 = time.time()

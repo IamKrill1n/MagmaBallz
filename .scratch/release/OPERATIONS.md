@@ -288,6 +288,29 @@ nối engine cp_saturation làm bước suy diễn nền⇒E1, thiết kế đã
 họ greedy/noncomputable (1076: 38 cặp, 2531: 38) — không decide được, cần
 cách khác hẳn.
 
+## 3g. ĐÊM 24-25/08 — registry 12 chiều + MÁY LẮP CHUỖI chạy được + delta thay sweep
+
+- **281/281 cert vô hạn judge accepted** → nhúng registry 12 chiều (commit
+  `464c67e`). Hai bug đêm đáng nhớ: token `Equation<số>` trong COMMENT
+  template bị chính BANNED_LEAN_RE chặn → lane câm lặng, bài Austin rơi
+  xuống saturation treo (bài học: sanitize chặn cả comment, đặt tên
+  `ETP-<số>`); khuôn 1648b `rw` sai dạng `x+2` vs `x+1+1`.
+- **Máy lắp chuỗi (tầng 3) chạy được thật**: `hard3_0271` — đường Hasse 2
+  bước, engine tự chứng minh từng bước (saturation 103s + 5s), chuỗi ghép
+  judge ACCEPTED. Bug đầu đời: bài con thiếu eq1_id/eq2_id → route
+  reflexive `exact h` bắn bừa (None == None). `chain_forge.py` đã có nhảy
+  nội-lớp; `hard3_0314` đang chạy. LƯU Ý: máy chuỗi CHƯA nằm trong solver
+  — cert 0271 là dấu năng lực, không vào điểm sweep; tích hợp in-solver
+  cần hai-pha ngân sách (thử nhanh mọi ứng viên trước) vì lượt đo 600s
+  không đủ cho các bước 450s.
+- **Chỉ đạo chủ dự án: KHÔNG re-sweep 2469 nữa** → chạy DELTA 191 bài
+  (184 đuôi chưa quét + 7 trượt cũ + hard2_0051 đổi lộ trình bank n=13).
+  Ledger cuối = ghép dấu baseline 2284 (build d968874) + dấu delta (build
+  cuối) — hợp lệ vì audit đối chứng 1250 bài FALSE: build cuối phát
+  chứng chỉ Y HỆT baseline trừ đúng các bài trong delta.
+- Baseline 4.32.2 (dừng chủ động ở 2284): 2281/2284, trượt đúng
+  hard3_0271/0314 + order5_0014 — không hồi quy toolchain.
+
 ## 7. Việc còn lại, theo thứ tự
 
 **Chặn nộp bài:** xác nhận đội đã đăng ký trên nền tảng; xem form nộp đòi gì;
