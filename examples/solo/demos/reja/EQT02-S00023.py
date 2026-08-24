@@ -1,3 +1,27 @@
+"""Certificate-producing Solo solver for magma-equation implications.
+
+The solver combines deterministic proof and countermodel searches with an
+untrusted LLM strategist. LLM actions are only hints: mechanical code checks
+candidate tables or constructs Lean certificates, and the judge remains the
+trust boundary.
+
+Architecture map, in source order:
+
+* protocol and budgets -- proxy I/O, structured feedback, effort allocation;
+* equation kernel -- tuple terms, parsing, matching, evaluation, Lean rendering;
+* countermodel portfolio -- finite, SAT, polynomial, and symbolic searches;
+* proof state and engines -- candidate blackboard, saturation, superposition,
+  completion, and proof rendering;
+* focused strategies -- recognizable equation shapes and helper-law chains;
+* tool and judge adapters -- dispatch, certificate submission, attribution;
+* collaboration -- LLM action validation, feedback, retry, and plan repair;
+* case-run scheduler -- orders all strategies under the wall-clock budget.
+
+Start with ``main`` and ``solve`` at the bottom, then follow a selected route to
+its module. This file stays self-contained because Solo submissions permit only
+one ``solver.py``.
+"""
+
 from __future__ import annotations
 import ast
 from copy import deepcopy
@@ -16,6 +40,11 @@ from collections import Counter
 from dataclasses import dataclass, field
 from itertools import product
 from typing import Any
+
+
+# LLM prompt and proxy I/O adapters
+# =================================
+
 PROMPT = 'You are steering trusted mechanical tools for a magma equation problem.\nThe magma operator is ◇, never *.\n\nProblem {problem.id}:\n  H    : {problem.equation1}\n  Goal : {problem.equation2}\n\nProblem analysis:\n{solver.problem_analysis}\n\nMechanical analysis:\n{solver.analysis}\n\nTool registry:\n{solver.tool_registry}\n\nRecommended tool calls:\n{solver.tool_advice}\n\nStrategy cards:\n{solver.strategy_cards}\n\nPhase directive:\n{solver.phase_directive}\n\nSolver-controlled judge-attempt summary:\n{solver.judge_feedback}\n\nMechanical feedback from solver-side hint attempts:\n{solver.mechanical_feedback}\n\nPersistent candidate/proved-fact blackboard:\n{solver.candidate_blackboard}\n\nFew-shot tool-call guidance:\n{solver.fewshots}\n\nCurrent collaboration goal:\n{solver.collaboration_goal}\n\nReturn exactly one JSON object, no prose, no markdown, no chain-of-thought.\nKeep ordinary actions under 1200 characters. When the phase explicitly enables\na symbolic type-level model, a complete Lean artifact or structured model plan\nmay use the official 20,000-byte false-certificate envelope. Prefer structured\nparts over rewriting a whole artifact after a local Lean error.\n\nAllowed responses:\nThere is no tool named "true_midpoint"; true-side bridges must use\n{"kind":"midpoint","lemma":"<equation>"} or {"kind":"tool_call","tool":"lemma_chain","lemmas":[...]}.\n{"kind":"tool_call","tool":"standard_aux_superposition","target":"goal","lemmas":["const","proj_l","proj_r","rowconst"],"budget":10,"why":"try standard collapse/projection/rowconst lemmas"}\n{"kind":"tool_call","tool":"lemma_chain","target":"goal","lemmas":[{"name":"square_absorb","equation":"u ◇ (v ◇ v) = v"},{"name":"right_square","equation":"u ◇ v = v ◇ v"}]}\n{"kind":"midpoint","lemma":"a ◇ (b ◇ b) = b","why":"one bridge equation; solver proves H=>lemma and H+lemma=>Goal"}\n{"kind":"candidate_bundle","candidates":[{"lemma":"<direct bridge>"},{"lemma":"<stronger reusable law>"},{"lemma":"<small repair of the closest failed leg>"}],"why":"ranked alternatives; the solver normalizes, verifies, and retains each candidate"}\nUse any exact tool name and argument shape from tool_registry/tool_advice.\n{"kind":"tool_call","tool":"false_model_search","target":"goal","routes":["model_finder_v2:n=6","local_search:n=6:seed=2"],"budget":8}\n{"kind":"false_model_family","carrier_size":8,"default":{"kind":"affine","params":[1,0,0]},"rules":[{"when":{"kind":"diagonal"},"value":"i+1"}],"budget":8}\n{"kind":"symbolic_model_plan","representation":"infinite","model_name":"model","imports":["Mathlib.Tactic"],"carrier":"ℕ","definitions":["let parity : Nat → Bool := ...","let op (x y : Nat) := ..."],"operation":"op","setup":["have helper : ... := by\n  ..."],"hypothesis_proof":"intro x y z\n...","counterexample_proof":"intro goal_holds\nhave h := goal_holds ...\n..."}\n{"kind":"symbolic_model_patch","set":{"hypothesis_proof":"intro x y z\n<complete repaired tactic body>"}}\n{"kind":"goal_proof","proof":"intro x y\\nhave h1 := h x x x\\ngrind"}\n{"kind":"false_table","counterexample_table":[[0,1],[1,0]]}\n\nThe equations in midpoint, midpoint_chain, and lemma_chain are untrusted hints.\nThe solver tries to prove each helper from H before using it. Bad hints are\nignored. If mechanical_feedback reports that a tool call or midpoint failed, do\nnot repeat the exact same call; repair it or switch strategy.\nFor a true-side bridge, prefer 3-5 ranked, mathematically distinct candidates\nin candidate_bundle unless one exact repair is strongly indicated. The\ncandidate_blackboard persists mechanically proved, refuted, and budget-limited\nlemmas across rounds. If a lemma is proved but not connected to the goal, add a\nnew bridge from that proved fact instead of replacing or repeating it.\nIf phase_directive or allowed_action_override narrows the response kinds,\nthat narrower contract overrides the generic examples above.\nDo not write Lean unless you return kind=goal_proof, kind=infinite_model,\nkind=symbolic_model_plan, or kind=symbolic_model_patch.\nLean policy: do not use ZMod/ZMod.*. Keep custom helper declarations local\ninside def submission or under the submission.* namespace.\nPrefer tool_call, midpoint, midpoint_chain, lemma_hint, lemma_chain,\nfalse_model_family, symbolic_model_plan, symbolic_model_patch, or false_table.\n'
 
 def read_msg() -> dict[str, Any]:
@@ -34,6 +63,11 @@ def call_judge(verdict: str, code: str) -> dict[str, Any]:
 def call_llm(context: dict[str, Any]) -> dict[str, Any]:
     send_msg({'call': 'llm', 'context': context})
     return read_msg()
+
+
+# Collaboration protocol and renewable budgets
+# =============================================
+
 PROTOCOL_VERSION = 'sair-collab-protocol-v0'
 _DECISIVE_TRUE_JUDGE_REJECTIONS: set[str] = set()
 _JUDGE_FEEDBACK_JOURNAL: list[dict[str, Any]] = []
@@ -154,6 +188,12 @@ class BudgetWorkItem:
     last_context_version: int = -1
 
 class RenewableBudgetBroker:
+    """Allocate bounded, renewable work grants across midpoint proof tasks.
+
+    Every task receives an initial chance before retries compete by score.
+    Exhausted tasks become eligible again only after ``advance_context`` records
+    new information, preventing a stuck candidate from consuming the budget.
+    """
 
     def __init__(self, policy: MidpointBudgetPolicy):
         self.policy = policy
@@ -240,6 +280,11 @@ class RenewableBudgetBroker:
 
     def snapshot(self) -> dict[str, Any]:
         return {'kind': 'renewable_budget_broker', 'policy_id': self.policy.policy_id, 'policy': self.policy.to_mapping(), 'committed_budget': round(self.committed_budget, 6), 'remaining_budget': round(self.remaining_budget, 6), 'context_version': self.context_version, 'tasks': [{'task_id': task.task_id, 'status': task.status, 'enabled': task.enabled, 'grant_count': task.grant_count, 'committed_budget': round(task.committed_budget, 6), 'failures': task.failures, 'progress': round(task.progress, 6), 'companion_succeeded': task.companion_succeeded, **task.metadata} for task in self.tasks.values()], 'events': list(self.events)}
+
+
+# Equation representation and tool capability registry
+# ====================================================
+
 Term = tuple
 
 @dataclass
@@ -377,6 +422,7 @@ def strip_outer(s: str) -> str:
     return s
 
 def parse_term(text: str, variables: set[str]) -> Term:
+    """Parse one magma expression into the tuple form used by all searches."""
     s = strip_outer(normalize(text))
     depth = 0
     last_op = -1
@@ -394,6 +440,7 @@ def parse_term(text: str, variables: set[str]) -> Term:
     raise ValueError(f'cannot parse term: {text!r}')
 
 def parse_equation(text: str) -> dict[str, Any]:
+    """Parse ``lhs = rhs`` and retain its variables, trees, and normalized text."""
     text = normalize(text)
     lhs_s, rhs_s = [p.strip() for p in text.split('=', 1)]
     vs = variables_of(text)
@@ -553,6 +600,12 @@ def eq_holds(eq: dict[str, Any], table: list[list[int]]) -> bool:
         if eval_term(eq['lhs'], env, table) != eval_term(eq['rhs'], env, table):
             return False
     return True
+
+
+# Countermodel portfolio
+# ======================
+# Each route searches a different finite or symbolic operation family. Route
+# telemetry also prevents later passes from repeating unproductive work.
 
 def is_counterexample(h_eq: dict[str, Any], g_eq: dict[str, Any], table: list[list[int]]) -> bool:
     return bool(table) and eq_holds(h_eq, table) and (not eq_holds(g_eq, table))
@@ -2211,6 +2264,11 @@ def structured_counterexample_search(h_eq: dict[str, Any], g_eq: dict[str, Any],
     return None
 
 def false_model_search_detailed(h_eq: dict[str, Any], g_eq: dict[str, Any], call: dict[str, Any], default_budget: float=8.0, *, semantic_context: dict[str, Any] | None=None):
+    """Run requested countermodel routes and return a candidate plus telemetry.
+
+    A candidate is not a verdict: central checks and the Lean judge still
+    validate it. Failed route state feeds later scheduling decisions.
+    """
     if not finite_countermodel_search_allowed(semantic_context):
         state = semantic_status_state(semantic_context or {})
         return (None, protocol_state('FalseModelSearchState', 'finite_search_prohibited', 'false_model_search', tool='false_model_search', trials=[], semantic_status=state, need_hint=state.get('need_hint'), suggested_next_actions=state.get('suggested_next_actions')))
@@ -2372,6 +2430,10 @@ def false_model_search_detailed(h_eq: dict[str, Any], g_eq: dict[str, Any], call
 def false_model_search(h_eq: dict[str, Any], g_eq: dict[str, Any], call: dict[str, Any], default_budget: float=8.0, *, semantic_context: dict[str, Any] | None=None):
     found, _state = false_model_search_detailed(h_eq, g_eq, call, default_budget, semantic_context=semantic_context)
     return found
+
+
+# Proof candidates, persistent facts, and mechanical feedback
+# ===========================================================
 
 def goal_terms(g_eq: dict[str, Any], limit: int=12) -> list[str]:
     terms = sorted({term_to_str(t) for t in subterms(g_eq['lhs']) + subterms(g_eq['rhs'])}, key=lambda s: (-len(s), s))
@@ -2712,6 +2774,13 @@ def expand_hint_variants(hints: list[UniversalEquation], g_eq: dict[str, Any], *
 
 @dataclass
 class CandidateBlackboard:
+    """Persist mechanically checked lemma outcomes across collaboration rounds.
+
+    Canonical equation identities deduplicate renamed or reversed hints. Only
+    proved facts become assumptions; other outcomes remain feedback so later
+    rounds repair rather than repeat them.
+    """
+
     records: dict[str, dict[str, Any]] = field(default_factory=dict)
     events: list[dict[str, Any]] = field(default_factory=list)
     round_counter: int = 0
@@ -3413,6 +3482,9 @@ def grounding_h_certificate_bodies(h_eq: dict[str, Any], g_eq: dict[str, Any]):
                     break
         yield (f'grounding_h:flood={tier_index}', '\n'.join([*prefix, *accumulated, 'grind']))
 
+# Proof engines: saturation, superposition, collapse, and completion
+# =================================================================
+
 def pc_canon(l: Term, r: Term) -> tuple[Term, Term]:
     if term_size(l) > term_size(r) or (term_size(l) == term_size(r) and term_key(l) > term_key(r)):
         l, r = (r, l)
@@ -3532,6 +3604,11 @@ def pc_paramodulants(rec_a: dict[str, Any], rec_b: dict[str, Any], counter: list
     return out
 
 def pc_saturate(start: list[tuple[Term, Term]], target, max_rounds: int=5, max_eqs: int=900, max_size: int=20, time_budget: float | None=None, cpu_budget: float | None=None, allow_var_overlap: bool=False) -> tuple[int | None, list[dict[str, Any]], dict[str, Any]]:
+    """Saturate proved equations while retaining a renderable derivation DAG.
+
+    Every derived equation records parents and replay metadata because a search
+    result is useful only when its dependency chain can be emitted as Lean.
+    """
     deadline = time.monotonic() + time_budget if time_budget else None
     cpu_deadline = time.process_time() + cpu_budget if cpu_budget else None
     counter = [0]
@@ -4196,6 +4273,7 @@ def ordered_completion_targets(h_eq: dict[str, Any], call: dict[str, Any] | None
     return targets
 
 def ordered_completion_attempt(h_eq: dict[str, Any], g_eq: dict[str, Any], call: dict[str, Any] | None=None) -> tuple[str | None, dict[str, Any]]:
+    """Discover oriented helper laws, then replay only a winning proof plan."""
     call = call or {}
     total_budget = float(call.get('budget') or call.get('time_budget') or 120.0)
     deadline = time.monotonic() + max(1.0, total_budget)
@@ -5094,6 +5172,11 @@ def midpoint_progress_signal(state: dict[str, Any] | None) -> float:
     return min(1.0, score)
 
 def generic_midpoint_chain_attempt(h_eq: dict[str, Any], g_eq: dict[str, Any], hints: list[UniversalEquation], *, budget_policy: dict[str, Any] | MidpointBudgetPolicy | None=None, total_budget: float | None=None, ordered_chain: bool=False) -> tuple[str | None, dict[str, Any]]:
+    """Prove untrusted helper equations before consuming them toward the goal.
+
+    The broker balances attaining each helper from H with consuming proved
+    helpers in H + helpers => Goal. Proved helpers survive a missing goal link.
+    """
     limited_hints = hints[:10]
     if isinstance(budget_policy, MidpointBudgetPolicy):
         policy = budget_policy
@@ -5302,6 +5385,10 @@ def hint_payload_attempt(payload: dict[str, Any], h_eq: dict[str, Any], g_eq: di
 def body_from_hint_payload(payload: dict[str, Any], h_eq: dict[str, Any], g_eq: dict[str, Any], *, capability_mask: Any=None) -> str | None:
     body, _state = hint_payload_attempt(payload, h_eq, g_eq, capability_mask=capability_mask)
     return body
+
+
+# Focused TRUE strategies and helper-law chains
+# =============================================
 
 def op(left: Term, right: Term) -> Term:
     return ('op', left, right)
@@ -5780,7 +5867,17 @@ def helper_chain_portfolio_body(h_eq: dict[str, Any], g_eq: dict[str, Any]) -> s
     body, _state = helper_chain_portfolio_attempt(h_eq, g_eq, budget=12.0)
     return body
 
+
+# Tool dispatch, analysis text, and judge adapters
+# =================================================
+
 def run_tool_call_detailed(call: dict[str, Any], h_eq: dict[str, Any], g_eq: dict[str, Any], *, capability_mask: Any=None, verify_candidates: bool=False) -> tuple[str | None, dict[str, Any] | None]:
+    """Dispatch one normalized tool action and return proof text plus state.
+
+    Capability gates are enforced here. Optional verification prevents an
+    untrusted action from counting as proof-producing merely because it
+    rendered a candidate certificate.
+    """
     raw_tool = str(call.get('tool') or '').strip()
     tool = TOOL_ALIASES.get(raw_tool, raw_tool)
     gate_state = capability_gate_state(tool, capability_mask)
@@ -6163,6 +6260,13 @@ def is_infinite_model_payload(data: dict[str, Any]) -> bool:
     tool = TOOL_ALIASES.get(str(data.get('tool') or '').strip(), data.get('tool'))
     kind = str(data.get('kind') or '').strip()
     return bool(tool == 'infinite_model_artifact' or kind in {'infinite_model', 'infinite_countermodel', 'infinite_model_artifact'})
+
+
+# Symbolic artifacts and the LLM collaboration loop
+# =================================================
+# The LLM selects actions but never expands the trusted computing base. Action
+# validation, failure memory, and mechanical verification stay in this module.
+
 SYMBOLIC_MODEL_PLAN_VERSION = 'sair-symbolic-model-plan-v1'
 SYMBOLIC_MODEL_PLAN_KINDS = {'symbolic_model_plan', 'type_model_plan', 'infinite_model_plan', 'structured_infinite_model'}
 SYMBOLIC_MODEL_PATCH_KINDS = {'symbolic_model_patch', 'type_model_patch', 'infinite_model_patch', 'structured_infinite_model_patch'}
@@ -6803,6 +6907,12 @@ def should_try_collaboration_first(h_eq: dict[str, Any], g_eq: dict[str, Any]) -
     return bool(right_square_h_roles(h_eq) or square_sandwich_h_roles(h_eq) or rowconst_h_roles(h_eq) or repeated_self_absorption_h(h_eq, g_eq) or goal_generalization_actions(h_eq, g_eq))
 
 def try_llm_collaboration(h_eq: dict[str, Any], g_eq: dict[str, Any], budget: float, *, max_rounds: int, collaboration_goal: str, initial_feedback: list[dict[str, Any]] | None=None, prefer_false: bool | str=False, feedback_sink: list[dict[str, Any]] | None=None, semantic_context: dict[str, Any] | None=None, capability_mask: Any=None, allow_infinite_model_artifacts: bool=False, hint_budget_cap: float | None=None, failed_signatures: set[str] | None=None, candidate_blackboard: CandidateBlackboard | None=None) -> str | None:
+    """Run bounded strategist rounds around the trusted mechanical modules.
+
+    Each round builds context from telemetry, normalizes one JSON action,
+    suppresses exact repeats, executes it, and records checked progress. A
+    non-``None`` result means the judge accepted a certificate.
+    """
     mechanical_feedback: list[dict[str, Any]] = list(initial_feedback or [])
     finite_search_allowed = finite_countermodel_search_allowed(semantic_context)
     if semantic_context and semantic_context.get('semantic_class') != 'unclassified':
@@ -7052,7 +7162,17 @@ def try_llm_collaboration(h_eq: dict[str, Any], g_eq: dict[str, Any], budget: fl
         feedback_sink.extend([*mechanical_feedback[-9:], protocol_state('CandidateBlackboardState', 'snapshot', 'candidate_blackboard', blackboard=candidate_blackboard.snapshot())])
     return None
 
+
+# Case-run scheduler and process entry point
+# ==========================================
+
 def solve(problem: dict[str, Any], budget: float) -> str:
+    """Order proof, countermodel, and collaboration passes for one case run.
+
+    Cheap deterministic routes run first. Later phases consume accumulated
+    telemetry and larger budget slices; every accepted exit follows a judge
+    call, while other statuses explain why no route won.
+    """
     solve_started = time.monotonic()
     _DECISIVE_TRUE_JUDGE_REJECTIONS.clear()
     _JUDGE_FEEDBACK_JOURNAL.clear()
@@ -7238,6 +7358,7 @@ def solve(problem: dict[str, Any], budget: float) -> str:
     return status or 'unsolved'
 
 def main() -> None:
+    """Read one Solo start message, solve its problem, and log the outcome."""
     startup = read_msg()
     problem = startup.get('problem', startup)
     budget = float(startup.get('budget', {}).get('timeout_seconds', 3600))
