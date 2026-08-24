@@ -311,6 +311,30 @@ cách khác hẳn.
 - Baseline 4.32.2 (dừng chủ động ở 2284): 2281/2284, trượt đúng
   hard3_0271/0314 + order5_0014 — không hồi quy toolchain.
 
+## 3h. RẠNG SÁNG 25/08 — SỐ CHỨNG NHẬN 2464/2469 (cổng sweep ĐẠT)
+
+**Ledger cuối = ghép 4 nguồn** (prov ghép ghi tại
+`$SCRATCH/results/final_cert.jsonl.prov.json`, đọc nó trước khi nghi ngờ):
+baseline 4.32.2 build d968874 (2284 bài, dừng chủ động) + delta 187 + delta2
+3 + delta3 1 trên build cuối `9e65773` (solver sha e730ca21805c, 350 KB).
+Hợp lệ vì build cuối phát chứng chỉ y hệt baseline cho mọi bài ngoài delta
+(đối chứng 1250 bài FALSE). **2464/2469, nền 2434, chênh +30.**
+
+5 bài trượt, đều hiểu rõ cơ chế:
+- `hard3_0271`, `hard3_0314` — TRUE implicit, chờ MÁY CHUỖI vào solver
+  (0271 đã có cert chuỗi judge-accepted ngoài solver; 0314 chưa ghép được —
+  đường Hasse 1 bước, cần nhảy nội-lớp, lượt chạy bị dừng ngang).
+- `order5_0014/0016/0042` — sống hết 600s (vá bộ nhớ hiệu quả — không còn
+  chết giây 125) nhưng không giải nổi trong 600s. Giải thật 3600s: còn cửa.
+
+Đêm có nhiều task nền bị dừng ngang (dấu `[killed]` của trình quản lý task,
+nguồn lệnh không xác định được từ trong session; KHÔNG phải crash/OOM/quá
+giờ). Hệ quả: vài prov không kịp ghi — đã bù bằng prov ghép tường minh;
+ledger ghi từng dòng nên không mất dấu nào.
+
+Việc sáng 25/08: verify + marathon trên build cuối (đang chạy nối tiếp) →
+gói nộp `make_submission.sh` → chủ dự án xác nhận đăng ký/form/nộp đè.
+
 ## 7. Việc còn lại, theo thứ tự
 
 **Chặn nộp bài:** xác nhận đội đã đăng ký trên nền tảng; xem form nộp đòi gì;
