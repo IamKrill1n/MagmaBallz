@@ -5020,19 +5020,6 @@ def solve_problem(
             "priority": problem_priority(problem, eq1, eq2),
         }
 
-    named_infinite = named_infinite_certificate(eq1, eq2)
-    if named_infinite is not None:
-        route, code = named_infinite
-        return {
-            "answer": {
-                "id": str(problem.get("id", "")),
-                "verdict": "false",
-                "code": code,
-            },
-            "route": route,
-            "priority": problem_priority(problem, eq1, eq2),
-        }
-
     oracle_false_budget = false_time_budget
     if etp_oracle_verdict(eq1, eq2) is True:
         # Bài chắc chắn TRUE (oracle ETP đã kiểm 100% trên corpus): mọi giây
@@ -5040,6 +5027,20 @@ def solve_problem(
         oracle_false_budget = 2.0 if false_time_budget is None else min(false_time_budget, 2.0)
     counterexample = find_counterexample(eq1, eq2, time_budget=oracle_false_budget)
     if counterexample is None:
+        # Lane vô hạn CHỈ chạy khi mọi tầng hữu hạn trắng tay: bài nào từng
+        # có witness bảng thì giữ nguyên witness đó (nguyên tắc cộng-thêm).
+        named_infinite = named_infinite_certificate(eq1, eq2)
+        if named_infinite is not None:
+            route, code = named_infinite
+            return {
+                "answer": {
+                    "id": str(problem.get("id", "")),
+                    "verdict": "false",
+                    "code": code,
+                },
+                "route": route,
+                "priority": problem_priority(problem, eq1, eq2),
+            }
         closure_first = not absorption_hypothesis(eq1)
         if closure_first:
             closure = equational_closure_route(eq1, eq2)
