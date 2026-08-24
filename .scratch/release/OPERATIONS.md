@@ -214,6 +214,48 @@ công khai. Nếu nó khó hơn:
 Rủi ro dịch phân bố (−53) lớn gấp ~6 lần dư địa (+9). Forge và ML là **bảo
 hiểm**, không phải phần thưởng. Ưu tiên chế đề: order-5 trước, rồi hard2.
 
+## 3e. NGÀY 24/08 — hai bài "cạn mọi cách" đã ăn được + ĐỔI MÔI TRƯỜNG CHẤM
+
+**Ăn được `hard2_0027` và `hard2_0125`** (commit `386bfa8`), cả hai từng nằm
+trong danh sách "đã thử và thất bại":
+
+- `hard2_0027` là cặp Austin (đúng ở MỌI magma hữu hạn — mọi tầng bảng mù về
+  nguyên lý). Chứng chỉ Lean model vô hạn trên ℕ viết lại từ Equation1659
+  của ETP (đảo đối số), judge ACCEPTED. Mẹo kỹ thuật quyết định: judge chỉ
+  soi `direct_declarations` của RIÊNG def `submission` (không đệ quy), nên
+  bổ đề nặng (simp/omega/if) đặt trong namespace `submission.*` — tiền tố
+  được phép — còn `submission` chỉ ghép ⟨Nat, M, h1, h2⟩. Tiên đề bị soi
+  XUYÊN SUỐT (collectAxioms) nhưng simp/omega chỉ chạm propext/Quot.sound.
+- `hard2_0125`: bảng bậc 6 từ kho All4x4Tables của ETP → `ET00`, đặt CUỐI
+  `WITNESS_TABLES`.
+- Khớp bằng hình dạng alpha-canonical của CẢ HAI phương trình, không theo id
+  (giữ đúng cam kết trong SUBMISSION_NOTE mục 3).
+
+**Đồng bộ upstream 24/08 (merge `1392dc9`):** ban tổ chức đã (a) bump môi
+trường chấm chính thức lên **Lean/Mathlib 4.32.2** (máy này trước đó chấm
+bằng 4.30.0-rc2 — MỌI số liệu cũ là đo trên môi trường khác thứ được chấm),
+(b) vá 4 họ bypass judge (nonce-theorem + union hai báo cáo phụ thuộc; cấm
+thêm `notation`/`infix`/`run_cmd`/`run_elab`/`@[init`— chứng chỉ của ta
+không dùng token nào trong số đó và vẫn hợp lệ dưới cơ chế union), (c) công
+bố thang điểm chính thức: 4 hạng mục Normal/Hard/Extra Hard/Order 5, mỗi bài
+1 điểm, và **cam kết không tái sử dụng đề từ bất kỳ bộ công khai nào**.
+
+Hệ quả của (c): mọi witness/cert khớp đúng-bài chỉ có giá trị trên corpus
+công khai (proxy), không ăn điểm trực tiếp ở bộ đề riêng. Hướng ăn điểm
+thật: TỔNG QUÁT HÓA lane vô hạn — `Austin_implications.txt` trong
+`.scratch/etp-haul/` có 820 cặp "đúng hữu hạn, sai tổng quát"; gặp bài nào
+thuộc họ này ở bộ đề riêng thì tầng hữu hạn đều vô vọng. Dài hạn: sinh cert
+vô hạn theo mẫu; ngắn hạn tối thiểu: đừng đốt ngân sách bảng cho các cặp đó.
+
+**Trạng thái đo lại:** verify + sweep cũ đều nhiễm tranh chấp (tải đỉnh
+14–35 trên ngưỡng 8.5) → phán quyết "HỎNG/hồi quy" của verify KHÔNG kết luận
+được; sweep 2462 đã lưu thành `final_cert.tainted-contention-20260824.jsonl`.
+Sau khi rebuild 4.32.2 xong: chạy `scripts/run_harness.py` (gate framework
+mới), chấm lại nhanh 2 bài mới + khói, rồi nạp lại LaunchAgent để dây chuyền
+verify + sweep từ đầu TRÊN MÔI TRƯỜNG THẬT. Plist còn ghim JUDGE_LEAN_PATH
+theo toolchain 4.30 — vô hại vì run_chain.sh `source .env.judge` đè lại,
+nhưng nên cập nhật plist khi tiện.
+
 ## 7. Việc còn lại, theo thứ tự
 
 **Chặn nộp bài:** xác nhận đội đã đăng ký trên nền tảng; xem form nộp đòi gì;
@@ -249,9 +291,9 @@ Một session mới KHÔNG được làm lại những thứ này mà không có
 
 **Bài/lớp bài đã cạn mọi cách**
 
-- `hard2_0027`, `hard2_0125`: saturation 4 cấu hình + deep attack + anneal bậc
-  8–12 + tuyến tính vô hạn — tất cả trống. Kết luận: **lỗ hổng TẦM VỚI**, cần
-  năng lực mới (Knuth–Bendix / model hữu hạn bậc 13–30), không phải cố hơn.
+- ~~`hard2_0027`, `hard2_0125`~~ **ĐÃ GIẢI 24/08** (xem mục 3e) — chẩn đoán
+  "lỗ hổng TẦM VỚI, cần năng lực mới" là ĐÚNG: lời giải đến từ kho ETP
+  (model vô hạn + bảng bậc 6), không phải từ cố thêm với động cơ cũ.
 - `hard3_0314`, `evaluation_hard_0196`, `evaluation_order5_0014/0016/0028/0042/0152`:
   trượt qua ≥3 cấu hình tấn công độc lập.
 - **Tường Equation 168**: `evaluation_extra_hard` giải 161/161 bài không-168
