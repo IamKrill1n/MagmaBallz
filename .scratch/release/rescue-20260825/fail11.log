@@ -1,0 +1,21 @@
+scoreboard: 11 cases (1 solvers x 1 corpora), timeout=600s workers=1 llm=OFF
+[1/11] -- m6final      hard2_0027                 None    604.3s judge=0 
+[2/11] -- m6final      hard2_0125                 None    603.8s judge=0 
+[3/11] OK m6final      hard3_0106                 true    246.9s judge=1 accepted
+[4/11] OK m6final      hard3_0214                 true    289.2s judge=1 accepted
+[5/11] -- m6final      hard3_0271                 None    602.9s judge=0 
+[6/11] -- m6final      hard3_0314                 None    602.5s judge=0 
+[7/11] -- m6final      evaluation_order5_0014     None    602.9s judge=0 
+[8/11] -- m6final      evaluation_order5_0016     None    603.2s judge=0 
+[9/11] OK m6final      evaluation_order5_0028     true    291.3s judge=1 accepted
+[10/11] -- m6final      evaluation_order5_0042     None    602.7s judge=0 
+[11/11] OK m6final      evaluation_order5_0152     true    294.9s judge=1 accepted
+
+========================================================================
+SCOREBOARD  (/private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/results/fail11.jsonl)
+========================================================================
+solver        corpus                accepted     n   med s
+m6final       fail11                       4    11     603
+[lab] đồng bộ build vào /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/subs/m6final: sha=eb06ce656df1 225822 byte
+[lab] chạy lại-11-bài: 1 luồng, build 67080e6, máy sạch, chặn ngủ đang bật
+[lab] lại-11-bài: KHÔNG ĐÁNG TIN — 22/261 mẫu (8.4%) vượt tải 8.5; cơn tải cực nặng, đỉnh 16.56; 1 tiến trình tranh chấp | tải đỉnh 16.56/8.5 (22/261 mẫu vượt) | bộ nhớ đỉnh 2 | swap 30720->31744 MB | dấu ghi tại /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/results/fail11.jsonl.prov.json

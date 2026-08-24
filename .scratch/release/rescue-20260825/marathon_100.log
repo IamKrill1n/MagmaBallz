@@ -1,0 +1,3 @@
+error: --manifest is not a file: /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/marathon_100.jsonl
+[lab] chạy marathon: 1 luồng, build 9e65773, máy sạch, chặn ngủ đang bật
+[lab] marathon: lệnh thoát mã 2 | tải đỉnh 0.0/8.5 (0/0 mẫu vượt) | bộ nhớ đỉnh 1 | swap 16384->16384 MB | dấu ghi tại /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/marathon_100.log.prov.json

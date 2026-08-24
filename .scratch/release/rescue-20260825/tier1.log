@@ -1,0 +1,21 @@
+==============================================================================
+A. PHÍA FALSE — tìm phản mẫu bậc 4..12, ngân sách thật
+==============================================================================
+
+hard2_0027  (H: x = y ◇ ((z ◇ (y ◇ y)) ◇ x)   G: x = (y ◇ z) ◇ ((x ◇ z) ◇ x))
+   bậc  4: không có       0.2s   (nắp 3M nút)
+   bậc  5: không có      77.1s   (nắp 3M nút)
+   bậc  6: không có     114.6s   (nắp 3M nút)
+   bậc  7: không có     143.4s   (nắp 3M nút)
+   bậc  8: không có     221.7s   (nắp 3M nút)
+   bậc  9: không có     335.3s   (nắp 3M nút)
+   bậc 10: không có     434.7s   (nắp 3M nút)
+   bậc 11: không có     528.7s   (nắp 3M nút)
+   bậc 12: không có     583.4s   (nắp 3M nút)
+
+hard2_0125  (H: x = ((x ◇ (y ◇ z)) ◇ z) ◇ x   G: x = ((x ◇ x) ◇ (y ◇ y)) ◇ x)
+   bậc  4: không có       1.9s   (nắp 3M nút)
+   bậc  5: không có     108.0s   (nắp 3M nút)
+   bậc  6: không có     287.3s   (nắp 3M nút)
+   bậc  7: không có     533.4s   (nắp 3M nút)
+   bậc  8: không có     900.0s   (nắp 3M nút)

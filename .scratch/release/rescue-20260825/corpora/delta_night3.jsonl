@@ -1,0 +1,1 @@
+{"id": "hard3_0314", "index": 314, "difficulty": "hard", "eq1_id": 2923, "eq2_id": 1623, "equation1": "x = ((y ◇ (x ◇ z)) ◇ y) ◇ x", "equation2": "x = (y ◇ z) ◇ (w ◇ (u ◇ x))", "answer": true}

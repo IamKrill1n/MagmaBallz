@@ -1,0 +1,8 @@
+bài                       nấc           kết quả                              giây
+evaluation_order5_0016    x = y         không dựng được                       174 <== reja23 dùng nấc này
+evaluation_order5_0016    x ◇ y = x     không dựng được                       183
+evaluation_order5_0016    x ◇ y = y     không dựng được                       186
+evaluation_order5_0028    x = y         H có mô hình phá nấc -> loại (đúng)      0
+evaluation_order5_0028    x ◇ y = x     DỰNG ĐƯỢC: true:cp_saturation:rel_beam:1    229 <== reja23 dùng nấc này
+evaluation_order5_0028    x ◇ y = y     H có mô hình phá nấc -> loại (đúng)      0
+evaluation_order5_0042    x = y         không dựng được                       660

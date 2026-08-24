@@ -1,0 +1,5 @@
+[lab] dọn rác lượt trước: 1 thư mục artifact, 0 container
+scoreboard: 4 cases (1 solvers x 1 corpora), timeout=600s workers=1 llm=OFF
+[1/4] -- m6final      evaluation_order5_0014     None    600.8s judge=0 
+[2/4] -- m6final      evaluation_order5_0016     None    600.7s judge=0 
+[3/4] OK m6final      hard2_0051                 false    10.2s judge=1 accepted

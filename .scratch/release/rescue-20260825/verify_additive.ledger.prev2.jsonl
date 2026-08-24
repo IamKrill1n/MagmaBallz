@@ -1,0 +1,6 @@
+{"id": "hard3_0131", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:29", "judge": "accepted", "s": 98.5}
+{"id": "hard3_0214", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:19", "judge": "accepted", "s": 241.4}
+{"id": "hard3_0266", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:64", "judge": "accepted", "s": 91.2}
+{"id": "hard2_0028", "nhóm": "VỀ", "route": "true:cp_saturation:wide:17", "judge": "accepted", "s": 37.2}
+{"id": "normal_0062", "nhóm": "VỀ", "route": "true:cp_saturation:wide:6", "judge": "accepted", "s": 39.0}
+{"id": "normal_0492", "nhóm": "VỀ", "route": "true:cp_saturation:wide:7", "judge": "accepted", "s": 41.1}

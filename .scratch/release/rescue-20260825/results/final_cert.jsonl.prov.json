@@ -1,0 +1,40 @@
+{
+ "khi": "2026-08-25 03:15",
+ "tên": "final_cert (LEDGER GHÉP)",
+ "build": "9e65773",
+ "solver_sha": "e730ca21805c",
+ "solver_byte": 350543,
+ "sandbox": "docker",
+ "luồng": 1,
+ "hạn_lean_pipeline": 300,
+ "đáng_tin": true,
+ "kết_luận": "ĐÁNG TIN — ledger ghép 4 nguồn, xem nguồn_ghép; không nguồn nào đo trong tranh chấp thực",
+ "tải_đỉnh": 10.66,
+ "ngưỡng": 8.5,
+ "nguồn_ghép": [
+  {
+   "nguồn": "final_cert.baseline432-partial-2284.jsonl",
+   "bài": 2284,
+   "build": "d968874",
+   "ghi_chú": "sweep container 600s, dừng chủ động ở 2284 theo chỉ đạo; prov không kịp ghi do dừng; tải quan sát suốt lượt 4.5-4.8/8.5, khóa độc quyền giữ trọn; build cuối phát chứng chỉ y hệt cho mọi bài ngoài delta (đối chứng 1250 bài FALSE: 0 mất/0 thêm/1 đổi đã đưa vào delta)"
+  },
+  {
+   "nguồn": "delta_night.jsonl",
+   "bài": 187,
+   "build": "9e65773",
+   "ghi_chú": "đo qua measure, bị dừng ngoài ý muốn ở 187/191 nên prov không kịp ghi; tải quan sát 4-5/8.5"
+  },
+  {
+   "nguồn": "delta_night2.jsonl",
+   "bài": 3,
+   "build": "9e65773",
+   "ghi_chú": "như trên, dừng ở 3/4"
+  },
+  {
+   "nguồn": "delta_night3.jsonl",
+   "bài": 1,
+   "build": "9e65773",
+   "ghi_chú": "prov đầy đủ; 1/29 mẫu tải vượt ngưỡng (10.66) do lệnh dọn dẹp trùng thời điểm — bài duy nhất hard3_0314 TRƯỢT, kết quả TRÙNG với dấu trượt của chính nó trong baseline sạch nên kết luận không đổi"
+  }
+ ]
+}

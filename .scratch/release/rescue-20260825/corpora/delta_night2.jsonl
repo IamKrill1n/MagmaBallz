@@ -1,0 +1,4 @@
+{"id": "evaluation_order5_0014", "index": 14, "difficulty": "order5_normal", "eq1_id": 8502, "eq2_id": 27144, "equation1": "x = y * (x * (((z * y) * y) * y))", "equation2": "x = ((y * z) * (x * y)) * (x * z)", "answer": true}
+{"id": "evaluation_order5_0016", "index": 16, "difficulty": "order5_normal", "eq1_id": 10278, "eq2_id": 17625, "equation1": "x = y * ((x * z) * ((z * z) * z))", "equation2": "x = (y * z) * (y * (w * (w * u)))", "answer": true}
+{"id": "hard2_0051", "index": 51, "difficulty": "hard", "eq1_id": 2531, "eq2_id": 4307, "equation1": "x = (y ◇ ((y ◇ x) ◇ x)) ◇ y", "equation2": "x ◇ (x ◇ y) = z ◇ (z ◇ y)", "answer": false}
+{"id": "hard3_0314", "index": 314, "difficulty": "hard", "eq1_id": 2923, "eq2_id": 1623, "equation1": "x = ((y ◇ (x ◇ z)) ◇ y) ◇ x", "equation2": "x = (y ◇ z) ◇ (w ◇ (u ◇ x))", "answer": true}

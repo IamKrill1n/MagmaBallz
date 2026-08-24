@@ -1,0 +1,16 @@
+=== evaluation_order5_0016 / m6final: giải=False sau 603.0s (ngân sách 600s) llm=1 judge=0 ===
+
+--- MỌI loại bản ghi trong log ---
+{'llm': 1, 'solver_stderr': 1, 'timeout': 1}
+   {'type': 'solver_stderr', 'tail': '{"route": "skip:deterministic", "reason": "No deterministic certificate available; escalating through proxy LLM."}\n{"route": "llm:skip", "round": 0, "error": "OPENAI_API_KEY or OPENROUTER_API_KEY not set"}\n{"route": "endgame:pass", "slack": 26, "window_s": 240.0}\n{"route": "endgame:escalate", "v\\u00ec": "budget", "slack": 26, "depth": 3, "rounds": 120, "pool": 3000}\n{"route": "endgame:pass", "slac', 'returncode': '-9'}
+   {'type': 'timeout', 'message': 'solver exceeded 600s timeout'}
+--- nhật ký route của solver (427 ký tự) ---
+{"route": "skip:deterministic", "reason": "No deterministic certificate available; escalating through proxy LLM."}
+{"route": "llm:skip", "round": 0, "error": "OPENAI_API_KEY or OPENROUTER_API_KEY not set"}
+{"route": "endgame:pass", "slack": 26, "window_s": 240.0}
+{"route": "endgame:escalate", "v\u00ec": "budget", "slack": 26, "depth": 3, "rounds": 120, "pool": 3000}
+{"route": "endgame:pass", "slack": 26, "window_s": 336.0}
+
+[lab] đồng bộ build vào /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/subs/m6final: sha=eb06ce656df1 225822 byte
+[lab] chạy vá-bộ-nhớ: 1 luồng, build 58058ab, máy sạch, chặn ngủ đang bật
+[lab] vá-bộ-nhớ: ĐÁNG TIN | tải đỉnh 7.17/8.5 (0/29 mẫu vượt) | bộ nhớ đỉnh 2 | swap 30720->30720 MB | dấu ghi tại /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/results/memfix.log.prov.json
