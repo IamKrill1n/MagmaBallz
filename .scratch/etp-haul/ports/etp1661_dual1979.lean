@@ -1,6 +1,6 @@
 import JudgeProblem
 
--- ETP model Equation1661 (thang chẵn lẻ có vùng vá 0..3), chiều DUAL (op đảo đối số), giả thuyết eq1979 — tổ hợp op mở ra y hệt chiều gốc.
+-- ETP model ETP-1661 (thang chẵn lẻ có vùng vá 0..3), chiều DUAL (op đảo đối số), giả thuyết eq1979 — tổ hợp op mở ra y hệt chiều gốc.
 -- Base law eq1661: x = (x ◇ y) ◇ ((y ◇ z) ◇ y).
 -- Bất biến then chốt: C := (y ◇ z) ◇ y luôn cùng chẵn lẻ với y, và mọi
 -- nhánh của phép ghép cuối chỉ cần CHẴN LẺ của C, không cần giá trị.

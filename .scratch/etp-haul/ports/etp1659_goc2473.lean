@@ -1,6 +1,6 @@
 import JudgeProblem
 
--- ETP model Equation1659, chiều GỐC, giả thuyết eq2473 (thân h1 y hệt cert 1167 dual — cùng tổ hợp op).
+-- ETP model ETP-1659, chiều GỐC, giả thuyết eq2473 (thân h1 y hệt cert 1167 dual — cùng tổ hợp op).
 -- Đúng chứng chỉ đã được judge accepted cho hard2_0027, tổng quát hóa
 -- điểm vi phạm thành {VIOLATION}.
 

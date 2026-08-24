@@ -126,6 +126,8 @@ def judge():
         done += 1
         problem = {
             "id": f'{m["model"]}_{m["eq1"]}_{m["eq2"]}',
+            "eq1_id": m["eq1"],
+            "eq2_id": m["eq2"],
             "equation1": eq_lines[m["eq1"] - 1],
             "equation2": eq_lines[m["eq2"] - 1],
             "proof_policy": DEFAULT_PROOF_POLICY,

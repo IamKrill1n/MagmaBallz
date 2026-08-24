@@ -1,0 +1,29 @@
+{
+ "status": "accepted",
+ "error_code": "ACCEPTED",
+ "message": "certificate accepted",
+ "verdict": "false",
+ "artifact_path": "/private/tmp/mb-art-1h06efrw/etp1659_dual2000_2000_3867.472787047af4",
+ "direct_declarations": [
+  "And",
+  "And.intro",
+  "EquationLHS",
+  "EquationRHS",
+  "Exists",
+  "Exists.intro",
+  "Goal",
+  "Magma",
+  "Nat",
+  "Not",
+  "submission",
+  "submission.M",
+  "submission.h1",
+  "submission.h2"
+ ],
+ "axioms": [
+  "Quot.sound",
+  "propext"
+ ],
+ "stdout": "",
+ "stderr": ""
+}

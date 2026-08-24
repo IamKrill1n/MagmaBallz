@@ -1436,106 +1436,6 @@ def false_certificate(n: int, table: list[list[int]]) -> str:
     )
 
 
-# Austin-pair infinite countermodel: eq1167 => eq1763 holds in EVERY finite
-# magma and fails only on infinite carriers (Equational Theories Project,
-# Austin implication list), so every finite tier above is structurally blind
-# here — no table of any order can witness it. The model is the ETP
-# Equation1659 parity-ladder operation on Nat, argument-dualized
-# (x ◇ y = op y x); the derivation chain 1659 => 2473 ⇏ 1852 dualizes to
-# 1167 ⇏ 1763. Numerically checked on [0,60)^3 and judge-accepted on
-# hard2_0027 (2026-08-24). The heavy lemmas live in the submission.*
-# namespace; `submission` itself only assembles them, keeping the direct
-# dependency report inside the judge's allowed-declaration policy.
-AUSTIN_1167_1763_CERT = """import JudgeProblem
-
-def submission.op (x t : Nat) : Nat :=
-  if x = 0 then (if t % 2 = 0 then 1 else 0)
-  else (if x % 2 = t % 2 then x + 1 else x - 1)
-
-def submission.M : Magma Nat := { op := fun a b => submission.op b a }
-
-theorem submission.op_pos_eq (x t : Nat) (hx : ¬ x = 0) (h : x % 2 = t % 2) :
-    submission.op x t = x + 1 := by
-  simp only [submission.op]
-  rw [if_neg hx, if_pos h]
-
-theorem submission.op_pos_ne (x t : Nat) (hx : ¬ x = 0) (h : ¬ x % 2 = t % 2) :
-    submission.op x t = x - 1 := by
-  simp only [submission.op]
-  rw [if_neg hx, if_neg h]
-
-theorem submission.op_zero (t : Nat) :
-    submission.op 0 t = if t % 2 = 0 then 1 else 0 := by
-  simp [submission.op]
-
-theorem submission.op_self (y : Nat) : submission.op y y = y + 1 := by
-  by_cases hy : y = 0
-  · subst hy
-    rw [submission.op_zero 0, if_pos rfl]
-  · exact submission.op_pos_eq y y hy rfl
-
-theorem submission.op_pos_mod (x z : Nat) (hx : ¬ x = 0) :
-    submission.op x z % 2 = (x + 1) % 2 := by
-  by_cases h : x % 2 = z % 2
-  · have he := submission.op_pos_eq x z hx h
-    omega
-  · have he := submission.op_pos_ne x z hx h
-    omega
-
-theorem submission.h1 : @EquationLHS Nat submission.M := by
-  intro x y z
-  show x = submission.op (submission.op x (submission.op (submission.op y y) z)) y
-  rw [submission.op_self y]
-  generalize hg : submission.op (y + 1) z = B
-  have hB : B % 2 = (y + 1 + 1) % 2 := by
-    rw [← hg]
-    exact submission.op_pos_mod (y + 1) z (by omega)
-  by_cases hx : x = 0
-  · subst hx
-    by_cases hy : y % 2 = 0
-    · rw [submission.op_zero B, if_pos (show B % 2 = 0 by omega)]
-      have h1y := submission.op_pos_ne 1 y (by omega) (by omega)
-      omega
-    · rw [submission.op_zero B, if_neg (show ¬ B % 2 = 0 by omega)]
-      rw [submission.op_zero y, if_neg hy]
-  · by_cases hxy : x % 2 = y % 2
-    · rw [submission.op_pos_eq x B hx (by omega)]
-      have h2 := submission.op_pos_ne (x + 1) y (by omega) (by omega)
-      omega
-    · rw [submission.op_pos_ne x B hx (by omega)]
-      by_cases hx1 : x = 1
-      · subst hx1
-        show 1 = submission.op 0 y
-        rw [submission.op_zero y, if_pos (show y % 2 = 0 by omega)]
-      · have h2 := submission.op_pos_eq (x - 1) y (by omega) (by omega)
-        omega
-
-theorem submission.h2 : ¬ @EquationRHS Nat submission.M := by
-  intro h
-  exact absurd (h 0 1 0) (by decide)
-
-def submission : Goal :=
-  ⟨Nat, submission.M, submission.h1, submission.h2⟩
-"""
-
-# Alpha-canonical shapes of eq1167 / eq1763 ("x = y ◇ ((z ◇ (y ◇ y)) ◇ x)",
-# "x = (y ◇ z) ◇ ((x ◇ z) ◇ x)"), variables renamed v0/v1/v2 in order of
-# first appearance across (lhs, rhs).
-AUSTIN_1167_1763_KEY = (
-    (
-        ("var", "v0"),
-        ("op", ("var", "v1"),
-         ("op", ("op", ("var", "v2"), ("op", ("var", "v1"), ("var", "v1"))),
-          ("var", "v0"))),
-    ),
-    (
-        ("var", "v0"),
-        ("op", ("op", ("var", "v1"), ("var", "v2")),
-         ("op", ("op", ("var", "v0"), ("var", "v2")), ("var", "v0"))),
-    ),
-)
-
-
 def alpha_canonical_pair(eq: dict[str, Any]) -> tuple[Term, Term]:
     mapping: dict[str, str] = {}
 
@@ -1550,19 +1450,182 @@ def alpha_canonical_pair(eq: dict[str, Any]) -> tuple[Term, Term]:
     return (walk(eq["lhs"]), walk(eq["rhs"]))
 
 
+
+def _etp_op_1659(x: int, y: int) -> int:
+    if x == 0:
+        return 1 if y % 2 == 0 else 0
+    return x + 1 if x % 2 == y % 2 else x - 1
+
+
+def _etp_op_1661(x: int, y: int) -> int:
+    if x < 4:
+        even = y % 2 == 0
+        return ((0, 2), (1, 3), (2, 0), (4, 1))[x][0 if even else 1]
+    return x - 1 if x % 2 == y % 2 else x + 1
+
+
+def _etp_op_1701a(x: int, y: int) -> int:
+    if y == 0:
+        return 0
+    return y - 1 if x % 2 == y % 2 else y + 1
+
+
+def _etp_op_1117(a: int, b: int) -> int:
+    return 2 * a - b // 2
+
+
+def _etp_op_1648b(x: int, y: int) -> int:
+    return x + 1 if x > y else x - 1
+
+
+# Registry model vô hạn port từ ETP ManuallyProved — mỗi chiều đã được
+# judge phê trên mẫu cert trước khi nhúng. Khớp theo hình dạng alpha-
+# canonical của GIẢ THUYẾT; điểm vi phạm của đích tìm bằng quét cửa sổ
+# xác định (không ngẫu nhiên). Emit chỉ khi tìm được vi phạm.
+INFINITE_MODEL_LANE = (
+    {
+        "name": "etp1117_dual2538",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v1'), ('op', ('op', ('var', 'v1'), ('var', 'v0')), ('var', 'v2'))), ('var', 'v2'))),
+        "carrier": "int",
+        "op": _etp_op_1117,
+        "dual": True,
+        "template": 'import JudgeProblem\n\n-- [DUAL, luật nền eq2538] ETP model 1117: op a b = 2a - b/2 on Int (ediv). Base law eq1117.\n-- Placeholder {VIOLATION} is replaced per problem by the emitter.\n\ndef submission.op (a b : Int) : Int := 2 * a - b / 2\n\ndef submission.M : Magma Int := { op := fun a b => submission.op b a }\n\ntheorem submission.h1 : @EquationLHS Int submission.M := by\n  intro x y z\n  show x = submission.op z (submission.op (submission.op z (submission.op x y)) y)\n  simp only [submission.op]\n  omega\n\ntheorem submission.h2 : ¬ @EquationRHS Int submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Int, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1117_goc",
+        "base_canon": (('var', 'v0'), ('op', ('var', 'v1'), ('op', ('op', ('var', 'v1'), ('op', ('var', 'v0'), ('var', 'v2'))), ('var', 'v2')))),
+        "carrier": "int",
+        "op": _etp_op_1117,
+        "dual": False,
+        "template": 'import JudgeProblem\n\n-- ETP model 1117: op a b = 2a - b/2 on Int (ediv). Base law eq1117.\n-- Placeholder {VIOLATION} is replaced per problem by the emitter.\n\ndef submission.op (a b : Int) : Int := 2 * a - b / 2\n\ndef submission.M : Magma Int := { op := submission.op }\n\ntheorem submission.h1 : @EquationLHS Int submission.M := by\n  intro x y z\n  show x = submission.op y (submission.op (submission.op y (submission.op x z)) z)\n  simp only [submission.op]\n  omega\n\ntheorem submission.h2 : ¬ @EquationRHS Int submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Int, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1648b_dual1924",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v1'), ('op', ('var', 'v1'), ('var', 'v0'))), ('op', ('var', 'v1'), ('var', 'v0')))),
+        "carrier": "int",
+        "op": _etp_op_1648b,
+        "dual": True,
+        "template": 'import JudgeProblem\n\n-- [DUAL, luật nền eq1924] ETP model 1648 (second, Facts row): op x t = if t < x then x+1 else x-1 on Int.\n-- Base law eq1648: x = (x ◇ y) ◇ ((x ◇ y) ◇ y).\n\ndef submission.op (x t : Int) : Int :=\n  if t < x then x + 1 else x - 1\n\ndef submission.M : Magma Int := { op := fun a b => submission.op b a }\n\ntheorem submission.op_gt (x t : Int) (h : t < x) : submission.op x t = x + 1 := by\n  simp only [submission.op]\n  rw [if_pos h]\n\ntheorem submission.op_le (x t : Int) (h : ¬ t < x) : submission.op x t = x - 1 := by\n  simp only [submission.op]\n  rw [if_neg h]\n\ntheorem submission.h1 : @EquationLHS Int submission.M := by\n  intro x y\n  show x = submission.op (submission.op x y)\n        (submission.op (submission.op x y) y)\n  by_cases h : y < x\n  · have a1 := submission.op_gt x y h\n    rw [a1]\n    have a2 := submission.op_gt (x + 1) y (by omega)\n    rw [a2]\n    have a3 := submission.op_le (x + 1) (x + 1 + 1) (by omega)\n    rw [a3]\n    omega\n  · have a1 := submission.op_le x y h\n    rw [a1]\n    have a2 := submission.op_le (x - 1) y (by omega)\n    rw [a2]\n    have a3 := submission.op_gt (x - 1) (x - 1 - 1) (by omega)\n    rw [a3]\n    omega\n\ntheorem submission.h2 : ¬ @EquationRHS Int submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Int, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1648b_goc",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v0'), ('var', 'v1')), ('op', ('op', ('var', 'v0'), ('var', 'v1')), ('var', 'v1')))),
+        "carrier": "int",
+        "op": _etp_op_1648b,
+        "dual": False,
+        "template": 'import JudgeProblem\n\n-- ETP model 1648 (second, Facts row): op x t = if t < x then x+1 else x-1 on Int.\n-- Base law eq1648: x = (x ◇ y) ◇ ((x ◇ y) ◇ y).\n\ndef submission.op (x t : Int) : Int :=\n  if t < x then x + 1 else x - 1\n\ndef submission.M : Magma Int := { op := submission.op }\n\ntheorem submission.op_gt (x t : Int) (h : t < x) : submission.op x t = x + 1 := by\n  simp only [submission.op]\n  rw [if_pos h]\n\ntheorem submission.op_le (x t : Int) (h : ¬ t < x) : submission.op x t = x - 1 := by\n  simp only [submission.op]\n  rw [if_neg h]\n\ntheorem submission.h1 : @EquationLHS Int submission.M := by\n  intro x y\n  show x = submission.op (submission.op x y)\n        (submission.op (submission.op x y) y)\n  by_cases h : y < x\n  · have a1 := submission.op_gt x y h\n    rw [a1]\n    have a2 := submission.op_gt (x + 1) y (by omega)\n    rw [a2]\n    have a3 := submission.op_le (x + 1) (x + 1 + 1) (by omega)\n    rw [a3]\n    omega\n  · have a1 := submission.op_le x y h\n    rw [a1]\n    have a2 := submission.op_le (x - 1) y (by omega)\n    rw [a2]\n    have a3 := submission.op_gt (x - 1) (x - 1 - 1) (by omega)\n    rw [a3]\n    omega\n\ntheorem submission.h2 : ¬ @EquationRHS Int submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Int, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1659_dual1167",
+        "base_canon": (('var', 'v0'), ('op', ('var', 'v1'), ('op', ('op', ('var', 'v2'), ('op', ('var', 'v1'), ('var', 'v1'))), ('var', 'v0')))),
+        "carrier": "nat",
+        "op": _etp_op_1659,
+        "dual": True,
+        "template": 'import JudgeProblem\n\n-- ETP model ETP-1659, chiều DUAL (op đảo đối số), giả thuyết eq1167.\n-- Đúng chứng chỉ đã được judge accepted cho hard2_0027, tổng quát hóa\n-- điểm vi phạm thành {VIOLATION}.\n\ndef submission.op (x t : Nat) : Nat :=\n  if x = 0 then (if t % 2 = 0 then 1 else 0)\n  else (if x % 2 = t % 2 then x + 1 else x - 1)\n\ndef submission.M : Magma Nat := { op := fun a b => submission.op b a }\n\ntheorem submission.op_pos_eq (x t : Nat) (hx : ¬ x = 0) (h : x % 2 = t % 2) :\n    submission.op x t = x + 1 := by\n  simp only [submission.op]\n  rw [if_neg hx, if_pos h]\n\ntheorem submission.op_pos_ne (x t : Nat) (hx : ¬ x = 0) (h : ¬ x % 2 = t % 2) :\n    submission.op x t = x - 1 := by\n  simp only [submission.op]\n  rw [if_neg hx, if_neg h]\n\ntheorem submission.op_zero (t : Nat) :\n    submission.op 0 t = if t % 2 = 0 then 1 else 0 := by\n  simp [submission.op]\n\ntheorem submission.op_self (y : Nat) : submission.op y y = y + 1 := by\n  by_cases hy : y = 0\n  · subst hy\n    rw [submission.op_zero 0, if_pos rfl]\n  · exact submission.op_pos_eq y y hy rfl\n\ntheorem submission.op_pos_mod (x z : Nat) (hx : ¬ x = 0) :\n    submission.op x z % 2 = (x + 1) % 2 := by\n  by_cases h : x % 2 = z % 2\n  · have he := submission.op_pos_eq x z hx h\n    omega\n  · have he := submission.op_pos_ne x z hx h\n    omega\n\ntheorem submission.h1 : @EquationLHS Nat submission.M := by\n  intro x y z\n  show x = submission.op (submission.op x (submission.op (submission.op y y) z)) y\n  rw [submission.op_self y]\n  generalize hg : submission.op (y + 1) z = B\n  have hB : B % 2 = (y + 1 + 1) % 2 := by\n    rw [← hg]\n    exact submission.op_pos_mod (y + 1) z (by omega)\n  by_cases hx : x = 0\n  · subst hx\n    by_cases hy : y % 2 = 0\n    · rw [submission.op_zero B, if_pos (show B % 2 = 0 by omega)]\n      have h1y := submission.op_pos_ne 1 y (by omega) (by omega)\n      omega\n    · rw [submission.op_zero B, if_neg (show ¬ B % 2 = 0 by omega)]\n      rw [submission.op_zero y, if_neg hy]\n  · by_cases hxy : x % 2 = y % 2\n    · rw [submission.op_pos_eq x B hx (by omega)]\n      have h2 := submission.op_pos_ne (x + 1) y (by omega) (by omega)\n      omega\n    · rw [submission.op_pos_ne x B hx (by omega)]\n      by_cases hx1 : x = 1\n      · subst hx1\n        show 1 = submission.op 0 y\n        rw [submission.op_zero y, if_pos (show y % 2 = 0 by omega)]\n      · have h2 := submission.op_pos_eq (x - 1) y (by omega) (by omega)\n        omega\n\ntheorem submission.h2 : ¬ @EquationRHS Nat submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Nat, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1659_dual2000",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v1'), ('op', ('var', 'v2'), ('var', 'v2'))), ('op', ('var', 'v2'), ('var', 'v0')))),
+        "carrier": "nat",
+        "op": _etp_op_1659,
+        "dual": True,
+        "template": 'import JudgeProblem\n\n-- [DUAL, luật nền eq2000] ETP model ETP-1659, chiều GỐC (không đảo đối số).\n-- Base law eq1659: x = (x ◇ y) ◇ ((y ◇ y) ◇ z).\n-- Cùng op với cert 1167 (dual) đã accepted; khác phần lắp h1.\n\ndef submission.op (x t : Nat) : Nat :=\n  if x = 0 then (if t % 2 = 0 then 1 else 0)\n  else (if x % 2 = t % 2 then x + 1 else x - 1)\n\ndef submission.M : Magma Nat := { op := fun a b => submission.op b a }\n\ntheorem submission.op_pos_eq (x t : Nat) (hx : ¬ x = 0) (h : x % 2 = t % 2) :\n    submission.op x t = x + 1 := by\n  simp only [submission.op]\n  rw [if_neg hx, if_pos h]\n\ntheorem submission.op_pos_ne (x t : Nat) (hx : ¬ x = 0) (h : ¬ x % 2 = t % 2) :\n    submission.op x t = x - 1 := by\n  simp only [submission.op]\n  rw [if_neg hx, if_neg h]\n\ntheorem submission.op_zero (t : Nat) :\n    submission.op 0 t = if t % 2 = 0 then 1 else 0 := by\n  simp [submission.op]\n\ntheorem submission.op_self (y : Nat) : submission.op y y = y + 1 := by\n  by_cases hy : y = 0\n  · subst hy\n    rw [submission.op_zero 0, if_pos rfl]\n  · exact submission.op_pos_eq y y hy rfl\n\ntheorem submission.op_pos_mod (x z : Nat) (hx : ¬ x = 0) :\n    submission.op x z % 2 = (x + 1) % 2 := by\n  by_cases h : x % 2 = z % 2\n  · have he := submission.op_pos_eq x z hx h\n    omega\n  · have he := submission.op_pos_ne x z hx h\n    omega\n\ntheorem submission.h1 : @EquationLHS Nat submission.M := by\n  intro x y z\n  show x = submission.op (submission.op x z)\n        (submission.op (submission.op z z) y)\n  rw [submission.op_self z]\n  generalize hg : submission.op (z + 1) y = B\n  have hB : B % 2 = (z + 1 + 1) % 2 := by\n    rw [← hg]\n    exact submission.op_pos_mod (z + 1) y (by omega)\n  by_cases hx : x = 0\n  · subst hx\n    by_cases hy : z % 2 = 0\n    · rw [submission.op_zero z, if_pos hy]\n      have hf := submission.op_pos_ne 1 B (by omega) (by omega)\n      rw [hf]\n    · rw [submission.op_zero z, if_neg hy]\n      rw [submission.op_zero B, if_neg (show ¬ B % 2 = 0 by omega)]\n  · by_cases hxy : x % 2 = z % 2\n    · rw [submission.op_pos_eq x z hx hxy]\n      have hf := submission.op_pos_ne (x + 1) B (by omega) (by omega)\n      rw [hf]\n      omega\n    · rw [submission.op_pos_ne x z hx hxy]\n      by_cases hx1 : x = 1\n      · subst hx1\n        show 1 = submission.op 0 B\n        rw [submission.op_zero B, if_pos (show B % 2 = 0 by omega)]\n      · have hf := submission.op_pos_eq (x - 1) B (by omega) (by omega)\n        rw [hf]\n        omega\n\ntheorem submission.h2 : ¬ @EquationRHS Nat submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Nat, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1659_goc",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v0'), ('var', 'v1')), ('op', ('op', ('var', 'v1'), ('var', 'v1')), ('var', 'v2')))),
+        "carrier": "nat",
+        "op": _etp_op_1659,
+        "dual": False,
+        "template": 'import JudgeProblem\n\n-- ETP model ETP-1659, chiều GỐC (không đảo đối số).\n-- Base law eq1659: x = (x ◇ y) ◇ ((y ◇ y) ◇ z).\n-- Cùng op với cert 1167 (dual) đã accepted; khác phần lắp h1.\n\ndef submission.op (x t : Nat) : Nat :=\n  if x = 0 then (if t % 2 = 0 then 1 else 0)\n  else (if x % 2 = t % 2 then x + 1 else x - 1)\n\ndef submission.M : Magma Nat := { op := submission.op }\n\ntheorem submission.op_pos_eq (x t : Nat) (hx : ¬ x = 0) (h : x % 2 = t % 2) :\n    submission.op x t = x + 1 := by\n  simp only [submission.op]\n  rw [if_neg hx, if_pos h]\n\ntheorem submission.op_pos_ne (x t : Nat) (hx : ¬ x = 0) (h : ¬ x % 2 = t % 2) :\n    submission.op x t = x - 1 := by\n  simp only [submission.op]\n  rw [if_neg hx, if_neg h]\n\ntheorem submission.op_zero (t : Nat) :\n    submission.op 0 t = if t % 2 = 0 then 1 else 0 := by\n  simp [submission.op]\n\ntheorem submission.op_self (y : Nat) : submission.op y y = y + 1 := by\n  by_cases hy : y = 0\n  · subst hy\n    rw [submission.op_zero 0, if_pos rfl]\n  · exact submission.op_pos_eq y y hy rfl\n\ntheorem submission.op_pos_mod (x z : Nat) (hx : ¬ x = 0) :\n    submission.op x z % 2 = (x + 1) % 2 := by\n  by_cases h : x % 2 = z % 2\n  · have he := submission.op_pos_eq x z hx h\n    omega\n  · have he := submission.op_pos_ne x z hx h\n    omega\n\ntheorem submission.h1 : @EquationLHS Nat submission.M := by\n  intro x y z\n  show x = submission.op (submission.op x y)\n        (submission.op (submission.op y y) z)\n  rw [submission.op_self y]\n  generalize hg : submission.op (y + 1) z = B\n  have hB : B % 2 = (y + 1 + 1) % 2 := by\n    rw [← hg]\n    exact submission.op_pos_mod (y + 1) z (by omega)\n  by_cases hx : x = 0\n  · subst hx\n    by_cases hy : y % 2 = 0\n    · rw [submission.op_zero y, if_pos hy]\n      have hf := submission.op_pos_ne 1 B (by omega) (by omega)\n      rw [hf]\n    · rw [submission.op_zero y, if_neg hy]\n      rw [submission.op_zero B, if_neg (show ¬ B % 2 = 0 by omega)]\n  · by_cases hxy : x % 2 = y % 2\n    · rw [submission.op_pos_eq x y hx hxy]\n      have hf := submission.op_pos_ne (x + 1) B (by omega) (by omega)\n      rw [hf]\n      omega\n    · rw [submission.op_pos_ne x y hx hxy]\n      by_cases hx1 : x = 1\n      · subst hx1\n        show 1 = submission.op 0 B\n        rw [submission.op_zero B, if_pos (show B % 2 = 0 by omega)]\n      · have hf := submission.op_pos_eq (x - 1) B (by omega) (by omega)\n        rw [hf]\n        omega\n\ntheorem submission.h2 : ¬ @EquationRHS Nat submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Nat, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1659_goc2473",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v0'), ('op', ('op', ('var', 'v1'), ('var', 'v1')), ('var', 'v2'))), ('var', 'v1'))),
+        "carrier": "nat",
+        "op": _etp_op_1659,
+        "dual": False,
+        "template": 'import JudgeProblem\n\n-- ETP model ETP-1659, chiều GỐC, giả thuyết eq2473 (thân h1 y hệt cert 1167 dual — cùng tổ hợp op).\n-- Đúng chứng chỉ đã được judge accepted cho hard2_0027, tổng quát hóa\n-- điểm vi phạm thành {VIOLATION}.\n\ndef submission.op (x t : Nat) : Nat :=\n  if x = 0 then (if t % 2 = 0 then 1 else 0)\n  else (if x % 2 = t % 2 then x + 1 else x - 1)\n\ndef submission.M : Magma Nat := { op := submission.op }\n\ntheorem submission.op_pos_eq (x t : Nat) (hx : ¬ x = 0) (h : x % 2 = t % 2) :\n    submission.op x t = x + 1 := by\n  simp only [submission.op]\n  rw [if_neg hx, if_pos h]\n\ntheorem submission.op_pos_ne (x t : Nat) (hx : ¬ x = 0) (h : ¬ x % 2 = t % 2) :\n    submission.op x t = x - 1 := by\n  simp only [submission.op]\n  rw [if_neg hx, if_neg h]\n\ntheorem submission.op_zero (t : Nat) :\n    submission.op 0 t = if t % 2 = 0 then 1 else 0 := by\n  simp [submission.op]\n\ntheorem submission.op_self (y : Nat) : submission.op y y = y + 1 := by\n  by_cases hy : y = 0\n  · subst hy\n    rw [submission.op_zero 0, if_pos rfl]\n  · exact submission.op_pos_eq y y hy rfl\n\ntheorem submission.op_pos_mod (x z : Nat) (hx : ¬ x = 0) :\n    submission.op x z % 2 = (x + 1) % 2 := by\n  by_cases h : x % 2 = z % 2\n  · have he := submission.op_pos_eq x z hx h\n    omega\n  · have he := submission.op_pos_ne x z hx h\n    omega\n\ntheorem submission.h1 : @EquationLHS Nat submission.M := by\n  intro x y z\n  show x = submission.op (submission.op x (submission.op (submission.op y y) z)) y\n  rw [submission.op_self y]\n  generalize hg : submission.op (y + 1) z = B\n  have hB : B % 2 = (y + 1 + 1) % 2 := by\n    rw [← hg]\n    exact submission.op_pos_mod (y + 1) z (by omega)\n  by_cases hx : x = 0\n  · subst hx\n    by_cases hy : y % 2 = 0\n    · rw [submission.op_zero B, if_pos (show B % 2 = 0 by omega)]\n      have h1y := submission.op_pos_ne 1 y (by omega) (by omega)\n      omega\n    · rw [submission.op_zero B, if_neg (show ¬ B % 2 = 0 by omega)]\n      rw [submission.op_zero y, if_neg hy]\n  · by_cases hxy : x % 2 = y % 2\n    · rw [submission.op_pos_eq x B hx (by omega)]\n      have h2 := submission.op_pos_ne (x + 1) y (by omega) (by omega)\n      omega\n    · rw [submission.op_pos_ne x B hx (by omega)]\n      by_cases hx1 : x = 1\n      · subst hx1\n        show 1 = submission.op 0 y\n        rw [submission.op_zero y, if_pos (show y % 2 = 0 by omega)]\n      · have h2 := submission.op_pos_eq (x - 1) y (by omega) (by omega)\n        omega\n\ntheorem submission.h2 : ¬ @EquationRHS Nat submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Nat, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1661_dual1979",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v1'), ('op', ('var', 'v2'), ('var', 'v1'))), ('op', ('var', 'v1'), ('var', 'v0')))),
+        "carrier": "nat",
+        "op": _etp_op_1661,
+        "dual": True,
+        "template": 'import JudgeProblem\n\n-- ETP model ETP-1661 (thang chẵn lẻ có vùng vá 0..3), chiều DUAL (op đảo đối số), giả thuyết eq1979 — tổ hợp op mở ra y hệt chiều gốc.\n-- Base law eq1661: x = (x ◇ y) ◇ ((y ◇ z) ◇ y).\n-- Bất biến then chốt: C := (y ◇ z) ◇ y luôn cùng chẵn lẻ với y, và mọi\n-- nhánh của phép ghép cuối chỉ cần CHẴN LẺ của C, không cần giá trị.\n\ndef submission.op (x t : Nat) : Nat :=\n  if x = 0 then (if t % 2 = 0 then 0 else 2)\n  else if x = 1 then (if t % 2 = 0 then 1 else 3)\n  else if x = 2 then (if t % 2 = 0 then 2 else 0)\n  else if x = 3 then (if t % 2 = 0 then 4 else 1)\n  else (if x % 2 = t % 2 then x - 1 else x + 1)\n\ndef submission.M : Magma Nat := { op := fun a b => submission.op b a }\n\ntheorem submission.op0 (t : Nat) :\n    submission.op 0 t = if t % 2 = 0 then 0 else 2 := by\n  simp [submission.op]\n\ntheorem submission.op1 (t : Nat) :\n    submission.op 1 t = if t % 2 = 0 then 1 else 3 := by\n  simp [submission.op]\n\ntheorem submission.op2 (t : Nat) :\n    submission.op 2 t = if t % 2 = 0 then 2 else 0 := by\n  simp [submission.op]\n\ntheorem submission.op3 (t : Nat) :\n    submission.op 3 t = if t % 2 = 0 then 4 else 1 := by\n  simp [submission.op]\n\ntheorem submission.opg_eq (x t : Nat) (hx : 4 ≤ x) (h : x % 2 = t % 2) :\n    submission.op x t = x - 1 := by\n  simp only [submission.op]\n  rw [if_neg (by omega : ¬ x = 0), if_neg (by omega : ¬ x = 1),\n      if_neg (by omega : ¬ x = 2), if_neg (by omega : ¬ x = 3), if_pos h]\n\ntheorem submission.opg_ne (x t : Nat) (hx : 4 ≤ x) (h : ¬ x % 2 = t % 2) :\n    submission.op x t = x + 1 := by\n  simp only [submission.op]\n  rw [if_neg (by omega : ¬ x = 0), if_neg (by omega : ¬ x = 1),\n      if_neg (by omega : ¬ x = 2), if_neg (by omega : ¬ x = 3), if_neg h]\n\n-- C = (y ◇ z) ◇ y cùng chẵn lẻ với y, với mọi y z.\ntheorem submission.cpar (y z : Nat) :\n    submission.op (submission.op y z) y % 2 = y % 2 := by\n  by_cases h0 : y = 0\n  · subst h0\n    by_cases hz : z % 2 = 0\n    · rw [submission.op0 z, if_pos hz, submission.op0 0, if_pos rfl]\n    · rw [submission.op0 z, if_neg hz, submission.op2 0, if_pos rfl]\n  · by_cases h1 : y = 1\n    · subst h1\n      by_cases hz : z % 2 = 0\n      · rw [submission.op1 z, if_pos hz, submission.op1 1,\n            if_neg (by omega : ¬ (1 : Nat) % 2 = 0)]\n      · rw [submission.op1 z, if_neg hz, submission.op3 1,\n            if_neg (by omega : ¬ (1 : Nat) % 2 = 0)]\n    · by_cases h2 : y = 2\n      · subst h2\n        by_cases hz : z % 2 = 0\n        · rw [submission.op2 z, if_pos hz, submission.op2 2,\n              if_pos (by omega : (2 : Nat) % 2 = 0)]\n        · rw [submission.op2 z, if_neg hz, submission.op0 2,\n              if_pos (by omega : (2 : Nat) % 2 = 0)]\n      · by_cases h3 : y = 3\n        · subst h3\n          by_cases hz : z % 2 = 0\n          · rw [submission.op3 z, if_pos hz]\n            have hb := submission.opg_ne 4 3 (by omega) (by omega)\n            omega\n          · rw [submission.op3 z, if_neg hz, submission.op1 3,\n                if_neg (by omega : ¬ (3 : Nat) % 2 = 0)]\n        · have hy4 : 4 ≤ y := by omega\n          by_cases hz : y % 2 = z % 2\n          · rw [submission.opg_eq y z hy4 hz]\n            by_cases hy5 : y = 4\n            · subst hy5\n              show submission.op 3 4 % 2 = 4 % 2\n              rw [submission.op3 4, if_pos (by omega : (4 : Nat) % 2 = 0)]\n            · have hc := submission.opg_ne (y - 1) y (by omega) (by omega)\n              omega\n          · rw [submission.opg_ne y z hy4 hz]\n            have hc := submission.opg_ne (y + 1) y (by omega) (by omega)\n            omega\n\ntheorem submission.h1 : @EquationLHS Nat submission.M := by\n  intro x y z\n  show x = submission.op (submission.op x y)\n        (submission.op (submission.op y z) y)\n  generalize hg : submission.op (submission.op y z) y = C\n  have hC : C % 2 = y % 2 := by\n    rw [← hg]\n    exact submission.cpar y z\n  by_cases hy : y % 2 = 0\n  · by_cases h0 : x = 0\n    · subst h0\n      rw [submission.op0 y, if_pos hy, submission.op0 C,\n          if_pos (by omega : C % 2 = 0)]\n    · by_cases h1 : x = 1\n      · subst h1\n        rw [submission.op1 y, if_pos hy, submission.op1 C,\n            if_pos (by omega : C % 2 = 0)]\n      · by_cases h2 : x = 2\n        · subst h2\n          rw [submission.op2 y, if_pos hy, submission.op2 C,\n              if_pos (by omega : C % 2 = 0)]\n        · by_cases h3 : x = 3\n          · subst h3\n            rw [submission.op3 y, if_pos hy]\n            have hf := submission.opg_eq 4 C (by omega) (by omega)\n            omega\n          · have hx4 : 4 ≤ x := by omega\n            by_cases hxy : x % 2 = y % 2\n            · rw [submission.opg_eq x y hx4 hxy]\n              by_cases hx5 : x = 4\n              · subst hx5\n                show (4 : Nat) = submission.op 3 C\n                rw [submission.op3 C, if_pos (by omega : C % 2 = 0)]\n              · have hf := submission.opg_ne (x - 1) C (by omega) (by omega)\n                omega\n            · rw [submission.opg_ne x y hx4 hxy]\n              have hf := submission.opg_eq (x + 1) C (by omega) (by omega)\n              omega\n  · by_cases h0 : x = 0\n    · subst h0\n      rw [submission.op0 y, if_neg hy, submission.op2 C,\n          if_neg (by omega : ¬ C % 2 = 0)]\n    · by_cases h1 : x = 1\n      · subst h1\n        rw [submission.op1 y, if_neg hy, submission.op3 C,\n            if_neg (by omega : ¬ C % 2 = 0)]\n      · by_cases h2 : x = 2\n        · subst h2\n          rw [submission.op2 y, if_neg hy, submission.op0 C,\n              if_neg (by omega : ¬ C % 2 = 0)]\n        · by_cases h3 : x = 3\n          · subst h3\n            rw [submission.op3 y, if_neg hy, submission.op1 C,\n                if_neg (by omega : ¬ C % 2 = 0)]\n          · have hx4 : 4 ≤ x := by omega\n            by_cases hxy : x % 2 = y % 2\n            · rw [submission.opg_eq x y hx4 hxy]\n              have hf := submission.opg_ne (x - 1) C (by omega) (by omega)\n              omega\n            · rw [submission.opg_ne x y hx4 hxy]\n              have hf := submission.opg_eq (x + 1) C (by omega) (by omega)\n              omega\n\ntheorem submission.h2 : ¬ @EquationRHS Nat submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Nat, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1661_goc",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v0'), ('var', 'v1')), ('op', ('op', ('var', 'v1'), ('var', 'v2')), ('var', 'v1')))),
+        "carrier": "nat",
+        "op": _etp_op_1661,
+        "dual": False,
+        "template": 'import JudgeProblem\n\n-- ETP model ETP-1661 (thang chẵn lẻ có vùng vá 0..3), chiều GỐC.\n-- Base law eq1661: x = (x ◇ y) ◇ ((y ◇ z) ◇ y).\n-- Bất biến then chốt: C := (y ◇ z) ◇ y luôn cùng chẵn lẻ với y, và mọi\n-- nhánh của phép ghép cuối chỉ cần CHẴN LẺ của C, không cần giá trị.\n\ndef submission.op (x t : Nat) : Nat :=\n  if x = 0 then (if t % 2 = 0 then 0 else 2)\n  else if x = 1 then (if t % 2 = 0 then 1 else 3)\n  else if x = 2 then (if t % 2 = 0 then 2 else 0)\n  else if x = 3 then (if t % 2 = 0 then 4 else 1)\n  else (if x % 2 = t % 2 then x - 1 else x + 1)\n\ndef submission.M : Magma Nat := { op := submission.op }\n\ntheorem submission.op0 (t : Nat) :\n    submission.op 0 t = if t % 2 = 0 then 0 else 2 := by\n  simp [submission.op]\n\ntheorem submission.op1 (t : Nat) :\n    submission.op 1 t = if t % 2 = 0 then 1 else 3 := by\n  simp [submission.op]\n\ntheorem submission.op2 (t : Nat) :\n    submission.op 2 t = if t % 2 = 0 then 2 else 0 := by\n  simp [submission.op]\n\ntheorem submission.op3 (t : Nat) :\n    submission.op 3 t = if t % 2 = 0 then 4 else 1 := by\n  simp [submission.op]\n\ntheorem submission.opg_eq (x t : Nat) (hx : 4 ≤ x) (h : x % 2 = t % 2) :\n    submission.op x t = x - 1 := by\n  simp only [submission.op]\n  rw [if_neg (by omega : ¬ x = 0), if_neg (by omega : ¬ x = 1),\n      if_neg (by omega : ¬ x = 2), if_neg (by omega : ¬ x = 3), if_pos h]\n\ntheorem submission.opg_ne (x t : Nat) (hx : 4 ≤ x) (h : ¬ x % 2 = t % 2) :\n    submission.op x t = x + 1 := by\n  simp only [submission.op]\n  rw [if_neg (by omega : ¬ x = 0), if_neg (by omega : ¬ x = 1),\n      if_neg (by omega : ¬ x = 2), if_neg (by omega : ¬ x = 3), if_neg h]\n\n-- C = (y ◇ z) ◇ y cùng chẵn lẻ với y, với mọi y z.\ntheorem submission.cpar (y z : Nat) :\n    submission.op (submission.op y z) y % 2 = y % 2 := by\n  by_cases h0 : y = 0\n  · subst h0\n    by_cases hz : z % 2 = 0\n    · rw [submission.op0 z, if_pos hz, submission.op0 0, if_pos rfl]\n    · rw [submission.op0 z, if_neg hz, submission.op2 0, if_pos rfl]\n  · by_cases h1 : y = 1\n    · subst h1\n      by_cases hz : z % 2 = 0\n      · rw [submission.op1 z, if_pos hz, submission.op1 1,\n            if_neg (by omega : ¬ (1 : Nat) % 2 = 0)]\n      · rw [submission.op1 z, if_neg hz, submission.op3 1,\n            if_neg (by omega : ¬ (1 : Nat) % 2 = 0)]\n    · by_cases h2 : y = 2\n      · subst h2\n        by_cases hz : z % 2 = 0\n        · rw [submission.op2 z, if_pos hz, submission.op2 2,\n              if_pos (by omega : (2 : Nat) % 2 = 0)]\n        · rw [submission.op2 z, if_neg hz, submission.op0 2,\n              if_pos (by omega : (2 : Nat) % 2 = 0)]\n      · by_cases h3 : y = 3\n        · subst h3\n          by_cases hz : z % 2 = 0\n          · rw [submission.op3 z, if_pos hz]\n            have hb := submission.opg_ne 4 3 (by omega) (by omega)\n            omega\n          · rw [submission.op3 z, if_neg hz, submission.op1 3,\n                if_neg (by omega : ¬ (3 : Nat) % 2 = 0)]\n        · have hy4 : 4 ≤ y := by omega\n          by_cases hz : y % 2 = z % 2\n          · rw [submission.opg_eq y z hy4 hz]\n            by_cases hy5 : y = 4\n            · subst hy5\n              show submission.op 3 4 % 2 = 4 % 2\n              rw [submission.op3 4, if_pos (by omega : (4 : Nat) % 2 = 0)]\n            · have hc := submission.opg_ne (y - 1) y (by omega) (by omega)\n              omega\n          · rw [submission.opg_ne y z hy4 hz]\n            have hc := submission.opg_ne (y + 1) y (by omega) (by omega)\n            omega\n\ntheorem submission.h1 : @EquationLHS Nat submission.M := by\n  intro x y z\n  show x = submission.op (submission.op x y)\n        (submission.op (submission.op y z) y)\n  generalize hg : submission.op (submission.op y z) y = C\n  have hC : C % 2 = y % 2 := by\n    rw [← hg]\n    exact submission.cpar y z\n  by_cases hy : y % 2 = 0\n  · by_cases h0 : x = 0\n    · subst h0\n      rw [submission.op0 y, if_pos hy, submission.op0 C,\n          if_pos (by omega : C % 2 = 0)]\n    · by_cases h1 : x = 1\n      · subst h1\n        rw [submission.op1 y, if_pos hy, submission.op1 C,\n            if_pos (by omega : C % 2 = 0)]\n      · by_cases h2 : x = 2\n        · subst h2\n          rw [submission.op2 y, if_pos hy, submission.op2 C,\n              if_pos (by omega : C % 2 = 0)]\n        · by_cases h3 : x = 3\n          · subst h3\n            rw [submission.op3 y, if_pos hy]\n            have hf := submission.opg_eq 4 C (by omega) (by omega)\n            omega\n          · have hx4 : 4 ≤ x := by omega\n            by_cases hxy : x % 2 = y % 2\n            · rw [submission.opg_eq x y hx4 hxy]\n              by_cases hx5 : x = 4\n              · subst hx5\n                show (4 : Nat) = submission.op 3 C\n                rw [submission.op3 C, if_pos (by omega : C % 2 = 0)]\n              · have hf := submission.opg_ne (x - 1) C (by omega) (by omega)\n                omega\n            · rw [submission.opg_ne x y hx4 hxy]\n              have hf := submission.opg_eq (x + 1) C (by omega) (by omega)\n              omega\n  · by_cases h0 : x = 0\n    · subst h0\n      rw [submission.op0 y, if_neg hy, submission.op2 C,\n          if_neg (by omega : ¬ C % 2 = 0)]\n    · by_cases h1 : x = 1\n      · subst h1\n        rw [submission.op1 y, if_neg hy, submission.op3 C,\n            if_neg (by omega : ¬ C % 2 = 0)]\n      · by_cases h2 : x = 2\n        · subst h2\n          rw [submission.op2 y, if_neg hy, submission.op0 C,\n              if_neg (by omega : ¬ C % 2 = 0)]\n        · by_cases h3 : x = 3\n          · subst h3\n            rw [submission.op3 y, if_neg hy, submission.op1 C,\n                if_neg (by omega : ¬ C % 2 = 0)]\n          · have hx4 : 4 ≤ x := by omega\n            by_cases hxy : x % 2 = y % 2\n            · rw [submission.opg_eq x y hx4 hxy]\n              have hf := submission.opg_ne (x - 1) C (by omega) (by omega)\n              omega\n            · rw [submission.opg_ne x y hx4 hxy]\n              have hf := submission.opg_eq (x + 1) C (by omega) (by omega)\n              omega\n\ntheorem submission.h2 : ¬ @EquationRHS Nat submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Nat, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1701a_dual1839",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v0'), ('op', ('var', 'v0'), ('var', 'v1'))), ('op', ('var', 'v0'), ('var', 'v2')))),
+        "carrier": "nat",
+        "op": _etp_op_1701a,
+        "dual": True,
+        "template": 'import JudgeProblem\n\n-- [DUAL, luật nền eq1839] ETP model op_1701_8: op a b = if b = 0 then 0 else (b-1 / b+1 theo chẵn lẻ).\n-- Base law eq1701: x = (y ◇ x) ◇ ((z ◇ x) ◇ x).\n\ndef submission.op (a b : Nat) : Nat :=\n  if b = 0 then 0 else (if a % 2 = b % 2 then b - 1 else b + 1)\n\ndef submission.M : Magma Nat := { op := fun a b => submission.op b a }\n\ntheorem submission.op_z (a : Nat) : submission.op a 0 = 0 := by\n  simp [submission.op]\n\ntheorem submission.op_eq (a b : Nat) (hb : ¬ b = 0) (h : a % 2 = b % 2) :\n    submission.op a b = b - 1 := by\n  simp only [submission.op]\n  rw [if_neg hb, if_pos h]\n\ntheorem submission.op_ne (a b : Nat) (hb : ¬ b = 0) (h : ¬ a % 2 = b % 2) :\n    submission.op a b = b + 1 := by\n  simp only [submission.op]\n  rw [if_neg hb, if_neg h]\n\ntheorem submission.op_par (a b : Nat) (hb : ¬ b = 0) :\n    ¬ submission.op a b % 2 = b % 2 := by\n  by_cases h : a % 2 = b % 2\n  · have he := submission.op_eq a b hb h\n    omega\n  · have he := submission.op_ne a b hb h\n    omega\n\ntheorem submission.h1 : @EquationLHS Nat submission.M := by\n  intro x y z\n  show x = submission.op (submission.op z x)\n        (submission.op (submission.op y x) x)\n  by_cases hx : x = 0\n  · subst hx\n    rfl\n  · have hC := submission.op_ne (submission.op y x) x hx\n      (submission.op_par y x hx)\n    by_cases hy : z % 2 = x % 2\n    · have hA := submission.op_eq z x hx hy\n      rw [hA, hC]\n      have hf := submission.op_eq (x - 1) (x + 1) (by omega) (by omega)\n      rw [hf]\n      omega\n    · have hA := submission.op_ne z x hx hy\n      rw [hA, hC]\n      have hf := submission.op_eq (x + 1) (x + 1) (by omega) rfl\n      rw [hf]\n      omega\n\ntheorem submission.h2 : ¬ @EquationRHS Nat submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Nat, submission.M, submission.h1, submission.h2⟩\n',
+    },
+    {
+        "name": "etp1701a_goc",
+        "base_canon": (('var', 'v0'), ('op', ('op', ('var', 'v1'), ('var', 'v0')), ('op', ('op', ('var', 'v2'), ('var', 'v0')), ('var', 'v0')))),
+        "carrier": "nat",
+        "op": _etp_op_1701a,
+        "dual": False,
+        "template": 'import JudgeProblem\n\n-- ETP model op_1701_8: op a b = if b = 0 then 0 else (b-1 / b+1 theo chẵn lẻ).\n-- Base law eq1701: x = (y ◇ x) ◇ ((z ◇ x) ◇ x).\n\ndef submission.op (a b : Nat) : Nat :=\n  if b = 0 then 0 else (if a % 2 = b % 2 then b - 1 else b + 1)\n\ndef submission.M : Magma Nat := { op := submission.op }\n\ntheorem submission.op_z (a : Nat) : submission.op a 0 = 0 := by\n  simp [submission.op]\n\ntheorem submission.op_eq (a b : Nat) (hb : ¬ b = 0) (h : a % 2 = b % 2) :\n    submission.op a b = b - 1 := by\n  simp only [submission.op]\n  rw [if_neg hb, if_pos h]\n\ntheorem submission.op_ne (a b : Nat) (hb : ¬ b = 0) (h : ¬ a % 2 = b % 2) :\n    submission.op a b = b + 1 := by\n  simp only [submission.op]\n  rw [if_neg hb, if_neg h]\n\ntheorem submission.op_par (a b : Nat) (hb : ¬ b = 0) :\n    ¬ submission.op a b % 2 = b % 2 := by\n  by_cases h : a % 2 = b % 2\n  · have he := submission.op_eq a b hb h\n    omega\n  · have he := submission.op_ne a b hb h\n    omega\n\ntheorem submission.h1 : @EquationLHS Nat submission.M := by\n  intro x y z\n  show x = submission.op (submission.op y x)\n        (submission.op (submission.op z x) x)\n  by_cases hx : x = 0\n  · subst hx\n    rfl\n  · have hC := submission.op_ne (submission.op z x) x hx\n      (submission.op_par z x hx)\n    by_cases hy : y % 2 = x % 2\n    · have hA := submission.op_eq y x hx hy\n      rw [hA, hC]\n      have hf := submission.op_eq (x - 1) (x + 1) (by omega) (by omega)\n      rw [hf]\n      omega\n    · have hA := submission.op_ne y x hx hy\n      rw [hA, hC]\n      have hf := submission.op_eq (x + 1) (x + 1) (by omega) rfl\n      rw [hf]\n      omega\n\ntheorem submission.h2 : ¬ @EquationRHS Nat submission.M := by\n  intro h\n  exact absurd (h {VIOLATION}) (by decide)\n\ndef submission : Goal :=\n  ⟨Nat, submission.M, submission.h1, submission.h2⟩\n',
+    },
+)
+
+_ETP_NAT_WINDOW = tuple(range(14))
+_ETP_INT_WINDOW = tuple(range(-10, 11))
+
+
+def _etp_render_value(v: int, carrier: str) -> str:
+    if carrier == "int":
+        return f"({v} : Int)" if v >= 0 else f"(({v}) : Int)"
+    return str(v)
+
+
 def named_infinite_certificate(
     eq1: dict[str, Any], eq2: dict[str, Any]
 ) -> tuple[str, str] | None:
-    """Exact-shape lookup for pairs whose only countermodels are infinite.
-
-    Keyed by alpha-canonical term structure of BOTH equations, so it can
-    never fire on any other problem; checked before the finite FALSE tiers,
-    which would otherwise burn their whole budget on a provably hopeless
-    search.
-    """
-    key = (alpha_canonical_pair(eq1), alpha_canonical_pair(eq2))
-    if key == AUSTIN_1167_1763_KEY:
-        return "false:witness_inf:austin_1167_1763", AUSTIN_1167_1763_CERT
+    """Model vô hạn ETP: khớp giả thuyết theo hình dạng, phát cert với điểm
+    vi phạm tìm động. Bao trùm cả cặp CHƯA TỪNG THẤY có cùng giả thuyết."""
+    key = alpha_canonical_pair(eq1)
+    for lane in INFINITE_MODEL_LANE:
+        if key != lane["base_canon"]:
+            continue
+        base_op = lane["op"]
+        op = (lambda a, b, _o=base_op: _o(b, a)) if lane["dual"] else base_op
+        window = _ETP_INT_WINDOW if lane["carrier"] == "int" else _ETP_NAT_WINDOW
+        variables = eq2["variables"]
+        assignment = None
+        total = len(window) ** len(variables)
+        for index in range(total):
+            rest, vals = index, []
+            for _ in variables:
+                rest, digit = divmod(rest, len(window))
+                vals.append(window[digit])
+            env = dict(zip(variables, vals))
+            env["op"] = op
+            try:
+                if eval_term(eq2["lhs"], env) != eval_term(eq2["rhs"], env):
+                    assignment = [env[v] for v in variables]
+                    break
+            except Exception:
+                break
+        if assignment is None:
+            continue
+        args = " ".join(_etp_render_value(v, lane["carrier"]) for v in assignment)
+        code = lane["template"].replace("{VIOLATION}", args)
+        if not sanitize_lean_code(code, verdict="false"):
+            continue
+        return f'false:witness_inf:{lane["name"]}', code
     return None
 
 

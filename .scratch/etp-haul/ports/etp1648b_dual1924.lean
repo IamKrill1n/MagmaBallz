@@ -25,14 +25,14 @@ theorem submission.h1 : @EquationLHS Int submission.M := by
     rw [a1]
     have a2 := submission.op_gt (x + 1) y (by omega)
     rw [a2]
-    have a3 := submission.op_le (x + 1) (x + 2) (by omega)
+    have a3 := submission.op_le (x + 1) (x + 1 + 1) (by omega)
     rw [a3]
     omega
   · have a1 := submission.op_le x y h
     rw [a1]
     have a2 := submission.op_le (x - 1) y (by omega)
     rw [a2]
-    have a3 := submission.op_gt (x - 1) (x - 2) (by omega)
+    have a3 := submission.op_gt (x - 1) (x - 1 - 1) (by omega)
     rw [a3]
     omega
 

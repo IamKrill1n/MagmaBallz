@@ -171,16 +171,21 @@ def named_infinite_certificate(
 '''
     )
 
-    # thay từ đầu khối AUSTIN đến hết hàm named_infinite_certificate cũ
-    start = src.index("# Austin-pair infinite countermodel")
-    end_marker = 'return "false:witness_inf:austin_1167_1763", AUSTIN_1167_1763_CERT\n    return None\n'
-    end = src.index(end_marker) + len(end_marker)
-    # giữ lại alpha_canonical_pair (nằm trong đoạn bị thay) — tách nó ra
-    seg = src[start:end]
-    keep_start = seg.index("def alpha_canonical_pair")
-    keep_end = seg.index("def named_infinite_certificate")
-    kept = seg[keep_start:keep_end]
-    src = src[:start] + kept + registry + src[end:]
+    if "# Austin-pair infinite countermodel" in src:
+        # lần đầu: thay khối AUSTIN đơn lẻ, giữ lại alpha_canonical_pair
+        start = src.index("# Austin-pair infinite countermodel")
+        end_marker = 'return "false:witness_inf:austin_1167_1763", AUSTIN_1167_1763_CERT\n    return None\n'
+        end = src.index(end_marker) + len(end_marker)
+        seg = src[start:end]
+        keep_start = seg.index("def alpha_canonical_pair")
+        keep_end = seg.index("def named_infinite_certificate")
+        kept = seg[keep_start:keep_end]
+        src = src[:start] + kept + registry + src[end:]
+    else:
+        # tái áp: thay khối đã sinh (từ _etp_op_1659 tới trước hàm kế tiếp)
+        start = src.index("def _etp_op_1659")
+        end = src.index("def singleton_true_certificate")
+        src = src[:start] + registry.lstrip("\n") + "\n\n" + src[end:]
     S.write_text(src, encoding="utf-8")
     print(f"đã vá solver: {len(ok_lanes)} chiều, cỡ file {S.stat().st_size:,}B")
 

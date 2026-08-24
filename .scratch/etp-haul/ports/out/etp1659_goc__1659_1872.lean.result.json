@@ -1,0 +1,29 @@
+{
+ "status": "accepted",
+ "error_code": "ACCEPTED",
+ "message": "certificate accepted",
+ "verdict": "false",
+ "artifact_path": "/private/tmp/mb-art-at697ck9/etp1659_goc_1659_1872.b375acf5419c",
+ "direct_declarations": [
+  "And",
+  "And.intro",
+  "EquationLHS",
+  "EquationRHS",
+  "Exists",
+  "Exists.intro",
+  "Goal",
+  "Magma",
+  "Nat",
+  "Not",
+  "submission",
+  "submission.M",
+  "submission.h1",
+  "submission.h2"
+ ],
+ "axioms": [
+  "Quot.sound",
+  "propext"
+ ],
+ "stdout": "",
+ "stderr": ""
+}

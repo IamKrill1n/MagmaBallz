@@ -1,6 +1,6 @@
 import JudgeProblem
 
--- ETP model Equation1659, chiều DUAL (op đảo đối số), giả thuyết eq1167.
+-- ETP model ETP-1659, chiều DUAL (op đảo đối số), giả thuyết eq1167.
 -- Đúng chứng chỉ đã được judge accepted cho hard2_0027, tổng quát hóa
 -- điểm vi phạm thành {VIOLATION}.
 

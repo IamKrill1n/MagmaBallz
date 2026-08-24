@@ -1,6 +1,6 @@
 import JudgeProblem
 
--- ETP model Equation1659, chiều GỐC (không đảo đối số).
+-- ETP model ETP-1659, chiều GỐC (không đảo đối số).
 -- Base law eq1659: x = (x ◇ y) ◇ ((y ◇ y) ◇ z).
 -- Cùng op với cert 1167 (dual) đã accepted; khác phần lắp h1.
 
