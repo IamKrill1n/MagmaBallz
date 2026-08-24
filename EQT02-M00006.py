@@ -736,6 +736,19 @@ def parse_equation(text: str) -> dict[str, Any]:
 # vượt ngưỡng, tức vùng mà hành vi hiện tại là CHẾT.
 MEMORY_RELIEF_FRACTION = 0.50   # xả cache
 MEMORY_STOP_FRACTION = 0.75     # dừng lượt bão hòa, báo lý do "memory"
+
+# Giả định khi KHÔNG đọc được cgroup (chạy ngoài container, ví dụ macOS).
+# 2048 MB là con số pipeline/config.json ghi cho hộp cát; mặc định dự phòng
+# trong proxy.py còn chặt hơn (512 MB). Tự dựng đúng bức tường mà giải thật
+# sẽ dựng là trung thực hơn là chạy không trần rồi tưởng mình làm được.
+DEFAULT_SANDBOX_MEMORY_BYTES = 2048 * 1024 * 1024
+
+# Hiệu chuẩn 24/08 trên evaluation_order5_0016: RSS bám rất sát tổng số ô
+# trong 12 cache memo, 504–568 byte mỗi ô qua 11 mẫu từ 260 MB tới 1,64 GB.
+# Lấy đầu cao cho ước lượng thiên về an toàn (xả sớm hơn là chết muộn).
+# Đếm ô là đại lượng đo được ở MỌI nền — không cần cgroup, không cần RSS — và
+# KHÔNG phụ thuộc tải máy, nên phép đo dùng nó là tất định.
+CACHE_BYTES_PER_ENTRY = 560
 _MEM_LIMIT: list[int | None] = []
 
 
@@ -743,6 +756,14 @@ def sandbox_memory_limit() -> int | None:
     """Giới hạn bộ nhớ thật của hộp cát, đọc từ cgroup. None nếu không có
     giới hạn (chạy trên máy trần) — lúc đó chốt chặn im lặng, không đổi gì."""
     if _MEM_LIMIT:
+        return _MEM_LIMIT[0]
+    env = os.environ.get("MAGMA_MEM_LIMIT_BYTES")
+    if env is not None:
+        try:
+            val = int(env)
+        except ValueError:
+            val = 0
+        _MEM_LIMIT.append(val if val > 0 else None)   # 0 = tắt hẳn chốt
         return _MEM_LIMIT[0]
     lim = None
     for path in ("/sys/fs/cgroup/memory.max",
@@ -758,12 +779,31 @@ def sandbox_memory_limit() -> int | None:
                     break
         except Exception:
             continue
-    _MEM_LIMIT.append(lim)
-    return lim
+    _MEM_LIMIT.append(lim if lim else DEFAULT_SANDBOX_MEMORY_BYTES)
+    return _MEM_LIMIT[0]
+
+
+def cache_entries() -> int:
+    """Tổng số ô đang giữ trong mọi cache memo của module."""
+    total = 0
+    for obj in globals().values():
+        info = getattr(obj, "cache_info", None)
+        if callable(info):
+            try:
+                total += info().currsize
+            except Exception:
+                pass
+    return total
 
 
 def memory_fraction() -> float:
-    """Tỉ lệ bộ nhớ đã dùng trên giới hạn hộp cát. 0.0 khi không đo được."""
+    """Tỉ lệ bộ nhớ đã dùng trên giới hạn hộp cát.
+
+    Ba đường, theo thứ tự trung thực giảm dần:
+      1. cgroup memory.current — số THẬT, dùng trong container thi đấu;
+      2. /proc/self/statm      — RSS thật trên Linux không cgroup;
+      3. ước lượng từ số ô cache — đường duy nhất chạy được trên macOS, và
+         là đường tất định: không phụ thuộc tải máy hay tốc độ máy."""
     lim = sandbox_memory_limit()
     if not lim:
         return 0.0
@@ -777,7 +817,8 @@ def memory_fraction() -> float:
             pages = int(fh.read().split()[1])
         return pages * 4096 / lim
     except Exception:
-        return 0.0
+        pass
+    return cache_entries() * CACHE_BYTES_PER_ENTRY / lim
 
 
 def relieve_memory() -> float:
