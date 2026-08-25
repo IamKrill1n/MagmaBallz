@@ -96,9 +96,12 @@ round.
 flowchart TD
     START(["Problem: does H ⇒ Goal?"]) --> S1
 
-    S1["Stage 1 — Semantic audit<br/>(implication_semantics)"]
-    S1 -- "FALSE, but a finite<br/>countermodel cannot exist" --> INF["Go directly to the LLM:<br/>symbolic_model_plan<br/>(infinite countermodel — the only route)"]
-    S1 -- "ordinary case" --> S2
+    S1["Stage 1 — Semantic-status initialization<br/>(currently always unclassified:<br/>general = unknown, finite = unknown)"]
+    S1 -- "current behavior:<br/>finite search remains enabled" --> S2
+
+    DORMANT["Dormant semantic branch<br/>(requires a future audited classifier<br/>to return general = false, finite = true)"]
+    S1 -. "not reachable in the current build" .-> DORMANT
+    DORMANT --> INF["Go directly to the LLM:<br/>symbolic_model_plan<br/>(infinite countermodel)"]
 
     S2["Stage 2 — Structural router<br/>(residue-ray pattern → early LLM checkpoint)"] --> S3
 
@@ -130,11 +133,12 @@ can finish early.
 
 ### What each stage does
 
-1. **Semantic audit:** Determines what kind of answer is logically possible. In
-   particular, it distinguishes failure of the unrestricted implication from failure
-   on finite magmas. If the implication is false but all finite magmas satisfy it,
-   finite-table searches are pointless, so the solver must construct an infinite
-   symbolic countermodel.
+1. **Semantic-status initialization:** `implication_semantics` currently ignores the
+   problem and returns `general_status = unknown`, `finite_status = unknown`, and
+   `semantic_class = unclassified`. Consequently, it never disables finite-table
+   search. Code for routing an audited `general = false, finite = true` classification
+   to an infinite symbolic countermodel exists, but no current classifier or registry
+   can produce that classification, so the branch is dormant.
 2. **Structural router:** Examines the syntax of `H` for recognizable shapes. A
    residue-ray shape suggests a specialized infinite, residue-controlled operation
    family, so the solver asks the LLM early whether that route is appropriate.
@@ -177,11 +181,11 @@ to the wrong answer direction too early.
 
 ## 3. Sequence diagram — lifecycle of one problem
 
-This timeline shows the actual order of events. Cheap tools run first without using the
-LLM. Only after they fail is telemetry packaged and sent to the LLM. Every LLM
-suggestion is mechanically verified before use, and a judge rejection becomes feedback
-for another attempt. This submit–reject–resubmit loop accounts for reja23's 252 rejected
-submissions.
+This timeline shows the actual order of events. A residue-ray syntax match can trigger
+one early LLM checkpoint; otherwise the cheap mechanical tools run first. Later LLM
+calls receive packaged search telemetry. Every LLM suggestion is mechanically verified
+before use, and a judge rejection becomes feedback for another attempt. This
+submit–reject–resubmit loop accounts for reja23's 252 rejected submissions.
 
 ```mermaid
 sequenceDiagram
@@ -190,8 +194,13 @@ sequenceDiagram
     participant L as LLM (strategist)
     participant J as Judge (Lean)
 
-    Note over S: Stages 1–5 — audit and cheap tools#59;<br/>the LLM has not been used yet
-    S->>S: implication_semantics (semantic audit)
+    Note over S: Stage 1 initializes unknown semantic status#59;<br/>finite search remains enabled
+    S->>S: implication_semantics → unclassified / unknown / unknown
+    opt residue-ray syntax detected and budget permits
+        S->>L: early structural-router checkpoint
+        L-->>S: one proposed action
+        S->>S: mechanically validate the proposal
+    end
     S->>S: rigidity scout, model finder n=4..5,<br/>superposition with standard lemmas
 
     alt cheap tools solve the problem
@@ -232,10 +241,11 @@ sequenceDiagram
 
 ### How the sequence works
 
-1. **Start mechanically:** The solver classifies the problem and tries its cheapest
-   proof and countermodel tools before spending an LLM call.
+1. **Initialize and start searching:** The solver assigns the default unknown semantic
+   status, optionally runs the residue-ray LLM checkpoint, and then tries its cheapest
+   proof and countermodel tools.
 2. **Finish immediately when possible:** If those tools produce a certificate, Lean
-   checks it; acceptance ends the run without involving the LLM.
+   checks it and acceptance ends the run.
 3. **Package useful failure information:** If they fail, the solver records what was
    tried, the closest search frontier, and the specific hint needed next.
 4. **Request exactly one action:** The LLM receives that context and must choose one

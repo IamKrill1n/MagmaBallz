@@ -111,3 +111,6 @@ Uses the default triage labels: needs-triage, needs-info, ready-for-agent, ready
 
 ### Domain docs
 Single-context repo (one CONTEXT.md + docs/adr/ at repo root). See `docs/agents/domain.md`.
+
+### Answer guide
+- Answer me concisely, sacrifice grammar for shorter answers, only write paragraphs when I ask for more details.
