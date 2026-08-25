@@ -1,0 +1,17 @@
+       4s  RSS      260 MB  ô cache      526,911  byte/ô      518
+       8s  RSS      457 MB  ô cache      890,448  byte/ô      538
+      12s  RSS      587 MB  ô cache    1,163,939  byte/ô      529
+      16s  RSS      703 MB  ô cache    1,354,041  byte/ô      544
+      20s  RSS      852 MB  ô cache    1,573,748  byte/ô      568
+      24s  RSS     1018 MB  ô cache    1,959,325  byte/ô      545
+      28s  RSS     1228 MB  ô cache    2,367,600  byte/ô      544
+      32s  RSS     1445 MB  ô cache    2,674,470  byte/ô      566
+      37s  RSS     1565 MB  ô cache    2,918,201  byte/ô      562
+      41s  RSS     1743 MB  ô cache    3,238,898  byte/ô      564
+      45s  RSS     1644 MB  ô cache    3,417,751  byte/ô      504
+      49s  RSS     1957 MB  ô cache    3,632,688  byte/ô      565
+      53s  RSS     2062 MB  ô cache    3,788,253  byte/ô      571
+      57s  RSS     1981 MB  ô cache    3,941,296  byte/ô      527
+      61s  RSS     1230 MB  ô cache    4,077,758  byte/ô      316
+      66s  RSS     2238 MB  ô cache    4,231,194  byte/ô      555
+      74s  RSS     2301 MB  ô cache    4,523,242  byte/ô      533

@@ -30,17 +30,17 @@ python3 scripts/run_marathon.py \
 
 Marathon LLM calls go through a per-run local HTTP proxy at `127.0.0.1:<port>` — the upstream key (`OPENROUTER_API_KEY` / `OPENAI_API_KEY` / `DEEPSEEK_API_KEY`) is held by the runner and never reaches the solver subprocess. Set the upstream variable in your shell before launching; the runner refuses to start a proxy without one.
 
-The default budgets are derived from a per-problem reference (600 s /
-65 536 tokens — see `REF_PER_PROBLEM_*` in `scripts/run_marathon.py`,
-deliberately decoupled from Solo's 3600 s for dev-loop practicality)
-multiplied by `N × compression_ratio = N × 0.5`:
+The default budgets are a flat per-problem allowance (300 s / 32 768
+tokens — see `PER_PROBLEM_*` in `scripts/run_marathon.py`, deliberately
+far below Solo's 3600 s wall-clock so the solver must triage) multiplied
+by the manifest length `N`:
 
 ```
-budget_seconds = compression_ratio × N × ref_seconds_per_problem
-budget_tokens  = compression_ratio × N × ref_tokens_per_problem
+budget_seconds = N × 300
+budget_tokens  = N × 32768
 ```
 
-Override with `--compression-ratio 1.0` (no compression — every problem at the per-problem reference cost) or with explicit `--budget-seconds` / `--budget-tokens`.
+Override with explicit `--budget-seconds` / `--budget-tokens`.
 
 A submission is one file: `solver.py`, ≤500 KB. The marathon runner sets `JUDGE_MARATHON_MANIFEST` in the env when launching; the solver should read that JSONL of problems, append answers to `JUDGE_MARATHON_OUTPUT`, and exit. When the env var is absent, the same file should fall back to the Solo stdin/stdout protocol — one file, two modes. See [`../../docs/marathon_mode.md`](../../docs/marathon_mode.md) for the full env contract.
 
@@ -70,7 +70,7 @@ For roughly **40-50% of `normal`-distribution problems**, a small Cayley table w
 Marathon Run
   Solver:       baseline
   Manifest:     normal_5.jsonl (N=5)
-  Budget:       60s wall, 0 tokens (compression_ratio=0.5 × 5 × 600s/65536tok)
+  Budget:       1500s wall, 163840 tokens (5 × 300s / 5 × 32768tok)
 
 Solver exited rc=0 wall=1.0s sigterm=False sigkill=False
 

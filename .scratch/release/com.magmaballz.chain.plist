@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.magmaballz.chain</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/nhatminh/dev/active/MagmaBallz/.scratch/release/run_chain.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>JUDGE_LEAN_PATH</key><string>/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/Cli/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/batteries/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/Qq/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/aesop/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/importGraph/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/plausible/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/packages/mathlib/.lake/build/lib/lean:/Users/nhatminh/dev/active/MagmaBallz/.lake/build/lib/lean:/Users/nhatminh/.elan/toolchains/leanprover--lean4---v4.30.0-rc2/lib/lean</string>
+    <key>DEVELOPER_DIR</key><string>/Applications/Xcode.app/Contents/Developer</string>
+    <key>PATH</key><string>/Users/nhatminh/.elan/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin</string>
+    <key>HOME</key><string>/Users/nhatminh</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>600</integer>
+  <key>WorkingDirectory</key><string>/Users/nhatminh/dev/active/MagmaBallz</string>
+  <key>StandardOutPath</key><string>/Users/nhatminh/dev/active/MagmaBallz/.scratch/release/launchd.out</string>
+  <key>StandardErrorPath</key><string>/Users/nhatminh/dev/active/MagmaBallz/.scratch/release/launchd.err</string>
+  <key>ProcessType</key><string>Standard</string>
+  <key>Nice</key><integer>5</integer>
+</dict>
+</plist>

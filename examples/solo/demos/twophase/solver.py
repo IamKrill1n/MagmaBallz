@@ -701,8 +701,14 @@ def parse_lean_error(stderr_text):
     expected = ""
     got = ""
 
+    # Lean 4.32 capitalizes most diagnostics ("Type mismatch", "Application type
+    # mismatch:", "Unknown identifier `x`") where 4.30 emitted them lowercase and
+    # single-quoted. Match case-insensitively so classification is identical on
+    # both, and accept either quote style in the identifier regexes.
+    stderr_low = stderr_text.lower()
+
     # Check for decideFin!/decide failure — means the table doesn't satisfy the equation
-    if "application type mismatch" in stderr_text and "of_decide_eq_true" in stderr_text:
+    if "application type mismatch" in stderr_low and "of_decide_eq_true" in stderr_low:
         # Extract which equation failed
         eq_match = re.search(r'decide \((\w+) \(Fin (\d+)\)\)', stderr_text)
         if eq_match:
@@ -719,31 +725,33 @@ def parse_lean_error(stderr_text):
             }
 
     for i, line in enumerate(lines):
-        if "type mismatch" in line:
+        low = line.lower()
+        if "type mismatch" in low:
             error_type = "type_mismatch"
             for j in range(i, min(i + 6, len(lines))):
-                if "has type" in lines[j] and "expected" not in lines[j]:
-                    got = lines[j].split("has type")[-1].strip()
+                low_j = lines[j].lower()
+                if "has type" in low_j and "expected" not in low_j:
+                    got = re.split(r"has type", lines[j], flags=re.I)[-1].strip()
                     if not got and j + 1 < len(lines):
                         got = lines[j + 1].strip()
-                if "expected to have type" in lines[j]:
+                if "expected to have type" in low_j:
                     expected = lines[j+1].strip() if j+1 < len(lines) else ""
-        elif "unknown identifier" in line:
+        elif "unknown identifier" in low:
             error_type = "unknown_identifier"
-            m = re.search(r"unknown identifier '([^']*)'", line)
+            m = re.search(r"unknown identifier ['`]([^'`]*)['`]", line, re.I)
             detail = m.group(1) if m else line
-        elif "unknown tactic" in line:
+        elif "unknown tactic" in low:
             error_type = "unknown_tactic"
-            m = re.search(r"unknown tactic '([^']*)'", line)
+            m = re.search(r"unknown tactic ['`]([^'`]*)['`]", line, re.I)
             detail = m.group(1) if m else line
-        elif "unsolved goals" in line:
+        elif "unsolved goals" in low:
             error_type = "unsolved_goals"
             if i + 1 < len(lines):
                 detail = lines[i+1].strip()
-        elif "application type mismatch" in line:
+        elif "application type mismatch" in low:
             error_type = "app_type_mismatch"
             detail = line
-        elif "function expected" in line:
+        elif "function expected" in low:
             error_type = "function_expected"
             detail = line
 

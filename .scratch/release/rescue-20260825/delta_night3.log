@@ -1,0 +1,13 @@
+[lab] dọn rác lượt trước: 1 thư mục artifact, 0 container
+scoreboard: 1 cases (1 solvers x 1 corpora), timeout=600s workers=1 llm=OFF
+[1/1] -- m6final      hard3_0314                 None    600.5s judge=0 
+
+========================================================================
+SCOREBOARD  (/private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/results/delta_night3.jsonl)
+========================================================================
+solver        corpus                accepted     n   med s
+m6final       delta_night3                 0     1     600
+[lab] đồng bộ build vào /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/subs/m6final: sha=e730ca21805c 350543 byte
+[lab] chạy delta3: 1 luồng, build 9e65773, máy sạch, chặn ngủ đang bật
+[lab] delta3: KHÔNG ĐÁNG TIN — 1/29 mẫu (3.5%) vượt tải 8.5 | tải đỉnh 10.66/8.5 (1/29 mẫu vượt) | bộ nhớ đỉnh 2 | swap 18432->18432 MB | dấu ghi tại /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/results/delta_night3.jsonl.prov.json
+exit=0

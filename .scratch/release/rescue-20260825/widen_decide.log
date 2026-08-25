@@ -1,0 +1,15 @@
+=== CÂU 1: 5 bài này solver hiện có giải được không? ===
+  evaluation_order5_0059   GIẢI ĐƯỢC: false:witness:HV055   0s
+  evaluation_order5_0093   GIẢI ĐƯỢC: false:witness:Z3B   0s
+  hard1_0057               GIẢI ĐƯỢC: false:witness:HV046   0s
+  hard2_0188               GIẢI ĐƯỢC: false:witness:HV091   0s
+  hard3_0309               GIẢI ĐƯỢC: false:witness:HV055   0s
+
+  -> nới bậc chỉ đáng giá nếu số này > 0: 0 bài chưa giải được: []
+
+=== CÂU 2: judge Lean có nhận chứng chỉ bậc 27..43 không? ===
+  evaluation_order5_0059   bậc 27: BỎ QUA — 14,348,907 phép, Lean không kham nổi
+  evaluation_order5_0093   bậc 43 (3 biến, 79,507 phép, cert 5,539 byte): malformed   sạch=True   0s
+  hard1_0057               bậc 27 (4 biến, 531,441 phép, cert 2,339 byte): malformed   sạch=True   0s
+  hard2_0188               bậc 27 (4 biến, 531,441 phép, cert 2,285 byte): malformed   sạch=True   0s
+  hard3_0309               bậc 27 (3 biến, 19,683 phép, cert 2,339 byte): malformed   sạch=True   0s

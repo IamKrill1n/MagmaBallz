@@ -1,0 +1,68 @@
+[08-20 07:13] === dây chuyền khởi động/tiếp tục ===
+[08-20 07:13] chặng 1: verify_additive
+[08-20 07:15] === dây chuyền khởi động/tiếp tục ===
+[08-20 07:15] chặng 1: verify_additive
+[08-20 07:19] chặng 2: Marathon 99 bài (lần đầu)
+[08-20 07:21] === dây chuyền khởi động/tiếp tục ===
+[08-20 07:21] chặng 1: verify_additive
+[08-20 07:31] === dây chuyền khởi động/tiếp tục ===
+[08-20 07:31] chặng 1: verify_additive
+[08-20 07:34]   cổng verify: ⏳ verify: ĐANG CHẠY — giữ 1/1 về 0/0
+[08-20 07:34] chặng 2: Marathon 99 bài (lần đầu)
+[08-20 07:35] === dây chuyền khởi động/tiếp tục ===
+[08-20 07:35] chặng 1: verify_additive
+[08-20 08:56] === dây chuyền khởi động/tiếp tục ===
+[08-20 08:56] chặng 1: verify_additive
+[08-20 09:09]   cổng verify: · verify: CHƯA CHẠY — chưa có dữ liệu
+[08-20 09:09] chặng 2: Marathon 99 bài (lần đầu)
+[08-20 09:09] === dây chuyền khởi động/tiếp tục ===
+[08-20 09:09] chặng 1: verify_additive
+[08-20 09:49]   cổng verify: ❌ verify: HỎNG — giữ 3/3, đòi lại 2/3 — CÓ HỒI QUY, không được nộp build này, xem lại thiết kế cộng-thêm
+[08-20 09:49]   ⛔ CHẶN NỘP — verify hỏng, xem STATUS.md
+[08-20 09:49]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%)
+[08-20 09:49] chặng 3: sweep chứng nhận 2469 bài
+[08-20 16:20]   cổng sweep: · sweep: CHƯA CHẠY — chưa có kết quả
+[08-20 16:20] chặng 4: sieve Forge (có sổ cái, tự resume)
+[08-20 16:23] Tầng 3-5 tạm hoãn: còn chặng chặn nộp bài chưa xong
+[08-20 16:23] === dây chuyền hoàn tất — xem .scratch/release/STATUS.md ===
+[08-20 16:23] === dây chuyền khởi động/tiếp tục ===
+[08-20 16:23] chặng 1: verify_additive
+[08-20 16:52]   cổng verify: ❌ verify: HỎNG — giữ 1/3, đòi lại 3/3 — CÓ HỒI QUY, không được nộp build này, xem lại thiết kế cộng-thêm
+[08-20 16:52]   ⛔ CHẶN NỘP — verify hỏng, xem STATUS.md
+[08-20 16:52]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%)
+[08-20 16:52] chặng 3: sweep chứng nhận 2469 bài
+[08-20 16:52]   khói docker 6 bài
+[08-20 19:38] === dây chuyền khởi động/tiếp tục ===
+[08-20 19:39]   !! UPSTREAM CÓ 2 COMMIT MỚI:
+[08-20 19:39]      e00901b rules: name the Lean/Mathlib version in the overview core task
+[08-20 19:39]      119dbfe rules: state Lean 4.32.0 / Mathlib 4.32.0 as the verification environment
+[08-20 19:39]      RULES: rules/evaluation.md | 2 ++
+[08-20 19:39]      RULES: rules/overview.md   | 2 +-
+[08-20 19:39]      RULES: 2 files changed, 3 insertions(+), 1 deletion(-)
+[08-20 19:39] chặng 1: verify_additive
+[08-20 20:03] === dây chuyền: 1 luồng (tính từ số lõi), build 649313d ===
+[08-20 20:03] chặng 1: verify_additive
+[08-20 21:39]   cổng verify: ❌ verify: HỎNG — giữ 1/3, đòi lại 3/3 — CÓ HỒI QUY, không được nộp build này, xem lại thiết kế cộng-thêm
+[08-20 21:39]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%)
+[08-20 21:39] chặng 3: sweep chứng nhận 2469 bài, trong container, 1 luồng
+[08-21 00:39]   cổng sweep: ◐ sweep: DỞ DANG — 4/2469, đang giải 4
+[08-21 00:39] Tầng 3-5 tạm hoãn: còn chặng chặn nộp bài chưa xong
+[08-21 00:39] === hoàn tất — xem .scratch/release/STATUS.md ===
+[08-21 00:39] === dây chuyền: 1 luồng (tính từ số lõi), build 9b579ce ===
+[08-21 00:39] chặng 1: verify_additive
+[08-21 01:51]   cổng verify: ❌ verify: HỎNG — giữ 1/3, đòi lại 2/3 — CÓ HỒI QUY, không được nộp build này, xem lại thiết kế cộng-thêm
+[08-21 01:51]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%)
+[08-21 01:51] chặng 3: sweep chứng nhận 2469 bài, trong container, 1 luồng
+[08-24 15:03] === dây chuyền: 1 luồng (tính từ số lõi), build 386bfa8 ===
+[08-24 15:03]   !! UPSTREAM CÓ 6 COMMIT MỚI
+[08-24 15:03]      4db175c rules: drop the "still being refined" caveat from Community Feedback
+[08-24 15:03]      242a6d0 rules: state the four-category scoring and the no-reuse guarantee
+[08-24 15:03]      de6b47c fix(judge): close certificate bypasses found by the challenger
+[08-24 15:03]      5ef2e45 fix(demos): classify Lean diagnostics case-insensitively
+[08-24 15:03]      fc4309c chore(lean): bump toolchain and Mathlib to v4.32.2
+[08-24 15:03] chặng 1: verify_additive
+[08-24 15:16] === dây chuyền: 1 luồng (tính từ số lõi), build d968874 ===
+[08-24 15:16] chặng 1: verify_additive
+[08-24 15:25]   cổng verify: ⚠️ verify: NGỜ — giữ 3/3, đòi lại 3/3 — lượt-4-cộng-thêm an toàn | ⚠️ ĐO TRONG TRANH CHẤP: tải đỉnh 9.37/8.5, đối thủ 0 — số này KHÔNG dùng được
+[08-24 15:25]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%)
+[08-24 15:25] chặng 3: sweep chứng nhận 2469 bài, trong container, 1 luồng

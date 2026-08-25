@@ -100,10 +100,24 @@ def main() -> None:
     labeled.close()
     print(f"bank-inseparable candidates: {len(candidates)}", flush=True)
 
-    frontier = open(HERE / "frontier_v1.jsonl", "w")
+    # Durable restart: a flushed per-pair ledger means a kill/sleep/reboot
+    # costs at most the pair in flight, and frontier_v1 is append-only.
+    ledger_path = HERE / "checked_v1.jsonl"
+    already: set[tuple[int, int]] = set()
+    if ledger_path.exists():
+        for line in ledger_path.open():
+            try:
+                r = json.loads(line)
+                already.add((r["h"], r["t"]))
+            except (json.JSONDecodeError, KeyError):
+                continue
+    ledger = ledger_path.open("a")
+    frontier = open(HERE / "frontier_v1.jsonl", "a")
     solved_ctr = frontier_ctr = 0
     t0 = time.time()
-    for n, (h, t) in enumerate(candidates[:PAIR_TEST_CAP], 1):
+    todo = [(h, t) for (h, t) in candidates[:PAIR_TEST_CAP] if (h, t) not in already]
+    print(f"resume: {len(already)} pairs already checked, {len(todo)} to go", flush=True)
+    for n, (h, t) in enumerate(todo, 1):
         problem = {
             "id": f"forge_{h}_{t}",
             "eq1_id": 100000 + h, "eq2_id": 100000 + t,  # out-of-band ids
@@ -114,6 +128,8 @@ def main() -> None:
         except Exception as exc:  # noqa: BLE001 — a crash must not kill the sieve
             res = None
             print(f"  solver error on {problem['id']}: {exc!r}", flush=True)
+        ledger.write(json.dumps({"h": h, "t": t, "solved": res is not None}) + "\n")
+        ledger.flush()
         if res is not None:
             solved_ctr += 1
         else:
@@ -127,10 +143,11 @@ def main() -> None:
             }) + "\n")
             frontier.flush()
         if n % 50 == 0:
-            print(f"{n}/{min(len(candidates), PAIR_TEST_CAP)} "
+            print(f"{n}/{len(todo)} "
                   f"solved={solved_ctr} frontier={frontier_ctr} "
                   f"({(time.time()-t0)/n:.1f}s/pair)", flush=True)
     frontier.close()
+    ledger.close()
     print(f"DONE: solved={solved_ctr} frontier={frontier_ctr} "
           f"in {(time.time()-t0)/60:.0f} min", flush=True)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import inspect
 import json
 import os
@@ -622,18 +623,22 @@ def run_pipeline_prompt_cases() -> list[dict[str, Any]]:
         ROOT / "examples" / "solo" / "TUTORIAL.md",
         ROOT / "examples" / "marathon" / "TUTORIAL.md",
     ]
-    forbidden_substrings = [
+    # Numeric needles carry digit-boundary guards so legitimate larger
+    # numbers that merely contain the stale value as a substring (e.g.
+    # the Marathon 5-problem default pool 163840 = 5 × 32768) don't trip
+    # the check.
+    forbidden_patterns = [
         "Max LLM calls",
         "Max judge calls",
-        "16,384",
-        "16384",
+        r"(?<![0-9])16,384(?![0-9])",
+        r"(?<![0-9])16384(?![0-9])",
     ]
     doc_drift: list[str] = []
     for doc in doc_files:
         text = doc.read_text(encoding="utf-8")
-        for needle in forbidden_substrings:
-            if needle in text:
-                doc_drift.append(f"{doc.name}: contains '{needle}'")
+        for needle in forbidden_patterns:
+            if re.search(needle, text):
+                doc_drift.append(f"{doc.name}: matches '{needle}'")
     _record(
         "pipeline_docs_no_stale_budget_language",
         not doc_drift,
@@ -1701,6 +1706,57 @@ def run_pipeline_prompt_cases() -> list[dict[str, Any]]:
         "" if not stderr_problems else "; ".join(stderr_problems),
     )
 
+    # Demo solvers classify Lean diagnostics by substring to drive their repair
+    # loops. Lean 4.32 capitalized most messages ("type mismatch" -> "Type
+    # mismatch") and switched identifier quoting from 'x' to `x`, which silently
+    # downgraded every match to "unknown". Pin both spellings so a future
+    # toolchain bump that changes the wording again fails here instead of
+    # quietly degrading the solvers.
+    diag_variants = {
+        "type_mismatch": [
+            "S.lean:1:1: error: type mismatch\n  a\nhas type\n  True\nbut is expected to have type\n  Nat",
+            "S.lean:1:1: error: Type mismatch\n  a\nhas type\n  True\nbut is expected to have type\n  Nat",
+        ],
+        "unknown_identifier": [
+            "S.lean:1:1: error: unknown identifier 'foo'",
+            "S.lean:1:1: error(lean.unknownIdentifier): Unknown identifier `foo`",
+        ],
+        "unsolved_goals": [
+            "S.lean:1:1: error: unsolved goals\ncase left\nT True",
+            "S.lean:1:1: error: Unsolved goals\ncase left\nT True",
+        ],
+        "function_expected": [
+            "S.lean:1:1: error: function expected at\n  5",
+            "S.lean:1:1: error: Function expected at\n  5",
+        ],
+    }
+    diag_drift: list[str] = []
+    for demo in ("opnorm", "twophase"):
+        solver_path = ROOT / "examples" / "solo" / "demos" / demo / "solver.py"
+        try:
+            spec = importlib.util.spec_from_file_location(f"_harness_demo_{demo}", solver_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            parse = module.parse_lean_error
+        except Exception as exc:  # noqa: BLE001
+            diag_drift.append(f"{demo}: could not load parse_lean_error ({exc})")
+            continue
+        for expected_type, variants in diag_variants.items():
+            for text in variants:
+                got = parse(text).get("type")
+                if got != expected_type:
+                    diag_drift.append(
+                        f"{demo}: {text.splitlines()[0]!r} -> {got!r}, expected {expected_type!r}"
+                    )
+        ident = parse("S.lean:1:1: error(lean.unknownIdentifier): Unknown identifier `foo`")
+        if ident.get("detail") != "foo":
+            diag_drift.append(f"{demo}: backtick identifier not extracted, got {ident.get('detail')!r}")
+    _record(
+        "pipeline_demo_lean_diagnostic_classification_is_case_insensitive",
+        not diag_drift,
+        "" if not diag_drift else "; ".join(diag_drift),
+    )
+
     return results
 
 
@@ -1846,6 +1902,37 @@ def run_verify_branch_cases(base_config: JudgeConfig) -> list[dict[str, Any]]:
         "ok": res_lenient.get("error_code") != "FALSE_CERT_TOO_LARGE",
         "detail": (
             f"got {res_lenient.get('status')}/{res_lenient.get('error_code')}"
+        ),
+    })
+
+    # Lean 4.32's default-on ``linter.defProp`` fires on the judge's own
+    # documented ``def submission : Goal`` shape. Lean writes diagnostics to
+    # stdout, so on the LEAN_REJECTED path (where ``stderr`` is empty and the
+    # message falls back to stdout) the warning used to be interleaved into the
+    # contestant-facing message — telling every contestant to rewrite the exact
+    # shape this judge requires. ``r4_cr_injection`` is a fixture whose
+    # ``def submission`` elaborates cleanly before a later parse error, which is
+    # the precise shape that triggers the leak (a fixture that errors *inside*
+    # the def suppresses the linter and would pin nothing).
+    noise_problem = json.loads(
+        (ROOT / "tests" / "fixtures" / "problems" / "p_true_basic.json").read_text(encoding="utf-8")
+    )
+    noise_raw = (ROOT / "tests" / "challenger" / "answers" / "r4_cr_injection.answer.json").read_text(
+        encoding="utf-8", errors="surrogateescape"
+    )
+    res_noise = verify_answer(noise_problem, noise_raw, config=base_config)
+    noise_msg = res_noise.get("message") or ""
+    noise_clean = (
+        res_noise.get("status") == "incorrect"
+        and "linter." not in noise_msg
+        and "is a proposition" not in noise_msg
+    )
+    results.append({
+        "name": "verify_rejected_message_carries_no_linter_noise",
+        "ok": noise_clean,
+        "detail": (
+            "" if noise_clean
+            else f"status={res_noise.get('status')} message={noise_msg[:200]!r}"
         ),
     })
     return results
@@ -2858,15 +2945,25 @@ def run_judge_internal_cases() -> list[dict[str, Any]]:
         "" if ok_strip else f"paths leaked through: {stripped!r}",
     )
 
-    # Problem.lean should be anonymous (``example : Goal := submission``) and
-    # must not drag in ``equational_theories`` — the project is self-contained.
+    # Problem.lean must bind the checked term to a NAMED declaration and report
+    # the dependency policy on THAT name, not only on ``submission``.
+    #
+    # This replaces an earlier assertion that pinned the opposite (an anonymous
+    # ``example`` plus ``#judge_report submission``). That shape was a total
+    # bypass: a polymorphic ``def submission {P : Prop} [inst : C P] : P``
+    # has an empty axiom closure of its own, so an axiom carried by the resolved
+    # instance never appeared in the report — one problem-agnostic payload was
+    # accepted for both verdicts, including for a goal of the form ``P ∧ ¬P``.
+    # Do not relax this back to an anonymous example.
     src = _render_problem_source(nonce="n0")
+    checked_name = "_judge_checked_n0"
     _record(
-        "judge_problem_uses_anonymous_example",
-        "theorem judge_verify" not in src
-        and "example :" in src
+        "judge_problem_reports_policy_on_named_checked_binding",
+        f"theorem {checked_name} : Goal := submission" in src
+        and f'#judge_report {checked_name} "n0"' in src
+        and '#judge_report submission "n0"' in src
         and "equational_theories" not in src,
-        f"src head: {src[:120]!r}",
+        f"src head: {src[:200]!r}",
     )
 
     # `_equation_def` interpolates problem text verbatim into Lean source.
@@ -2981,13 +3078,44 @@ def run_judge_internal_cases() -> list[dict[str, Any]]:
                 )
                 continue
             _record(f"judge_parse_report_nondict_{payload}", True)
-        # Positive control: a valid dict payload must still round-trip.
-        valid = '{"nonce":"nonce-x","axioms":[],"direct_declarations":[]}'
-        got = _parse_report(f"JUDGE_REPORT {valid}\n", "nonce-x")
+        # Positive control: the two judge-emitted reports round-trip, and their
+        # axiom / declaration sets are UNIONED. The union is what makes a forged
+        # extra report harmless — it can only widen the dependency set.
+        both = (
+            'JUDGE_REPORT {"nonce":"nonce-x","target":"submission",'
+            '"axioms":["a1"],"direct_declarations":["d1"]}\n'
+            'JUDGE_REPORT {"nonce":"nonce-x","target":"_judge_checked_nonce-x",'
+            '"axioms":["a2"],"direct_declarations":["d2"]}\n'
+        )
+        got = _parse_report(both, "nonce-x")
         _record(
             "judge_parse_report_valid_dict_roundtrips",
-            isinstance(got, dict) and got.get("nonce") == "nonce-x",
-            "" if isinstance(got, dict) else f"got {got!r}",
+            isinstance(got, dict)
+            and got.get("nonce") == "nonce-x"
+            and got.get("axioms") == ["a1", "a2"]
+            and got.get("direct_declarations") == ["d1", "d2"],
+            f"got {got!r}",
+        )
+
+        # A submission that suppresses one of the two reports — e.g. by forging
+        # an empty one from a module initializer and exiting the process before
+        # Lean emits the genuine ones — must be detected, never silently
+        # trusted. Only the forged `submission` report is present here.
+        forged_only = (
+            'JUDGE_REPORT {"nonce":"nonce-x","target":"submission",'
+            '"axioms":[],"direct_declarations":[]}\n'
+        )
+        try:
+            _parse_report(forged_only, "nonce-x")
+            suppression_detected = False
+            detail = "a single forged report was accepted"
+        except JudgeInfrastructureError:
+            suppression_detected = True
+            detail = ""
+        _record(
+            "judge_parse_report_rejects_suppressed_second_report",
+            suppression_detected,
+            detail,
         )
     except Exception as exc:  # noqa: BLE001
         _record("judge_parse_report_nondict_suite", False, f"suite raised: {exc}")
@@ -3017,6 +3145,18 @@ def run_banned_token_cases() -> list[dict[str, Any]]:
         "elab", "elab_rules", "macro", "macro_rules", "syntax",
         "unsafe", "unsafeCast", "unsafeIO", "unsafePerformIO",
         "implemented_by", "extern",
+        # Confirmed bypass vectors — each one had a working exploit before it
+        # was banned, so none of these may be dropped from the list:
+        #   run_cmd / run_elab  — arbitrary elaboration-time execution; with
+        #                         `skipKernelTC` they add an unchecked decl.
+        #   @[init …]           — module initializer runs at `import Submission`,
+        #                         i.e. before the judge's own commands.
+        #   notation & friends  — persistent parser extensions travel through the
+        #                         .olean, and Problem.lean is parsed after that
+        #                         import, so `notation "Goal" => True` rewrites
+        #                         the judge's own statement.
+        "run_cmd", "run_elab", "@[init", "skipKernelTC",
+        "notation", "notation3", "infix", "infixl", "infixr", "prefix", "postfix",
     }
     missing = sorted(required - set(BANNED_PROOF_TOKENS))
     _record(

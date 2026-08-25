@@ -33,9 +33,9 @@ Example: `E_4: x = x * y` implies `E_3: x = x * x`.
 Stage 2 raises the bar from Stage 1. Instead of only predicting true/false, participants must **prove** their answers:
 
 - If the implication is **true**: a Lean 4 proof that the hypothesis implies the goal.
-- If the implication is **false**: a Lean 4 proof certificate (a finite magma witness where the hypothesis holds but the goal fails).
+- If the implication is **false**: a Lean 4 proof certificate (a magma witness — finite or infinite — where the hypothesis holds but the goal fails).
 
-Both directions require machine-verifiable certificates. A deterministic Lean judge accepts or rejects each answer — no partial credit, no probabilistic scoring.
+Both directions require machine-verifiable certificates. A deterministic Lean judge (**Lean 4.32.2** / **Mathlib 4.32.2**) accepts or rejects each answer — no partial credit, no probabilistic scoring.
 
 ## What Participants Submit
 
@@ -47,12 +47,18 @@ The solver can combine:
 - **LLM calls** (via the organizer-provided proxy)
 - **Judge calls** (submit candidate proofs for Lean verification, receive accept/reject feedback)
 
+## Human-Interpretable Artifacts
+
+A 500 KB solver is not literally human-readable the way a Stage 1 prompt was, so for Stage 2 we read the goal of a "compact, human-readable artifact" as a **human-interpretable** one: the high-level strategy should be understandable and reproducible by a third party, even if the implementation involves extensive computation or generated data.
+
+The use of non-human-readable data sets in a submission is therefore permitted, as long as the [submission note](evaluation.md#submission-note) gives a human-readable description of the methodology used to produce them, sufficient to allow a third party to reproduce a comparable data set via some computation. Compiled binary executables that lack source code or documentation are not admissible under this criterion.
+
 ## Tracks
 
 Stage 2 has two tracks. Both share the same judge, the same five-status verdict mapping, and the same single-file `solver.py` contract (≤ 500 KB). They differ only in I/O shape and budgeting:
 
 - **Solo** — one problem per solver subprocess, fixed per-problem budget, stdin/stdout JSON protocol.
-- **Marathon** — N problems per solver subprocess (reference N=100), one shared global budget = `compression_ratio × N × Solo per-problem` (default `compression_ratio = 0.5`), file-based manifest in / append-only JSONL out.
+- **Marathon** — N problems per solver subprocess (reference N=100), one shared global budget of `N × 5 minutes` wall-clock and `N × 32768` tokens, file-based manifest in / append-only JSONL out.
 
 One source file can support both tracks. Concrete I/O, size limits, budgets, scoring, and the evaluation model are documented in **[evaluation.md](evaluation.md)**.
 
@@ -87,7 +93,7 @@ Stage 2 registration is **open to everyone** — participation is not restricted
 
 ## Community Feedback
 
-Rules, scoring details, and evaluation procedures are still being refined and will be shaped by community input. Community contributions are welcome.
+Community feedback and contributions are welcome, and we improve the competition based on them.
 
 Join the SAIR Foundation Zulip community for discussion and collaboration:
 

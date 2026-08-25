@@ -1,0 +1,6 @@
+{"id": "evaluation_order5_0016", "index": 16, "difficulty": "order5_normal", "eq1_id": 10278, "eq2_id": 17625, "equation1": "x = y * ((x * z) * ((z * z) * z))", "equation2": "x = (y * z) * (y * (w * (w * u)))", "answer": true}
+{"id": "evaluation_order5_0028", "index": 28, "difficulty": "order5_normal", "eq1_id": 8373, "eq2_id": 11727, "equation1": "x = x * (y * (((z * z) * z) * z))", "equation2": "x = x * (((x * y) * x) * (x * y))", "answer": true}
+{"id": "evaluation_order5_0042", "index": 42, "difficulty": "order5_normal", "eq1_id": 20115, "eq2_id": 21404, "equation1": "x = (y * z) * ((x * (x * y)) * z)", "equation2": "x = (x * (x * y)) * (z * (z * w))", "answer": true}
+{"id": "evaluation_order5_0152", "index": 152, "difficulty": "order5_normal", "eq1_id": 35120, "eq2_id": 7607, "equation1": "x = ((y * z) * ((y * y) * z)) * x", "equation2": "x = y * (x * ((z * (x * y)) * x))", "answer": true}
+{"id": "hard3_0106", "index": 106, "difficulty": "hard", "eq1_id": 853, "eq2_id": 160, "equation1": "x = x \u25c7 ((y \u25c7 z) \u25c7 (x \u25c7 y))", "equation2": "x = (x \u25c7 y) \u25c7 (y \u25c7 y)", "answer": true}
+{"id": "hard3_0271", "index": 271, "difficulty": "hard", "eq1_id": 2575, "eq2_id": 2227, "equation1": "x = (y \u25c7 ((z \u25c7 x) \u25c7 z)) \u25c7 x", "equation2": "x = ((y \u25c7 z) \u25c7 w) \u25c7 (w \u25c7 x)", "answer": true}

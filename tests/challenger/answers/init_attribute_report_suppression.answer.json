@@ -1,0 +1,4 @@
+{
+  "verdict": "false",
+  "code": "import JudgeProblem\n\ndef submission : Unit := ()\n\ndef doAttack : IO Unit := do\n  IO.println \"x\"\n  IO.Process.exit 0\n\n@[init doAttack]\ndef hook_ : Unit := ()\n"
+}

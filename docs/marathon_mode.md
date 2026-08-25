@@ -16,42 +16,34 @@ per-problem budgets), which is preserved unchanged.
 
 ## Reference Configuration
 
-The two global budgets are derived from a per-problem reference,
-multiplied by the manifest length `N` and the tunable knob
-**`compression_ratio`**:
+The two global budgets are a flat per-problem allowance multiplied by
+the manifest length `N`:
 
 ```
-budget_seconds = compression_ratio × N × ref_seconds_per_problem
-budget_tokens  = compression_ratio × N × ref_tokens_per_problem
+budget_seconds = N × 300      (5 minutes per problem)
+budget_tokens  = N × 32768
 ```
 
-The Marathon reference per-problem values are **600 s / 65 536 tokens**,
-defined as `REF_PER_PROBLEM_SECONDS` / `REF_PER_PROBLEM_TOKENS` in
-[`scripts/run_marathon.py`](../scripts/run_marathon.py). These are
-deliberately decoupled from Solo's `solver.timeout_seconds` (3600 s in
-`pipeline/config.json`) so the Marathon dev-loop wall-clock stays
-practical; the long-form Solo budget would push a single 100-problem
-Marathon run beyond a development day even at compression 0.5.
-
-`compression_ratio < 1` compresses the global budget below the
-fair-share total, forcing triage. `compression_ratio = 1.0` means no
-compression — the solver gets enough budget to attempt every problem at
-the per-problem reference cost. The reference value is **`0.5`**.
+The per-problem values are defined as `PER_PROBLEM_SECONDS` /
+`PER_PROBLEM_TOKENS` in
+[`scripts/run_marathon.py`](../scripts/run_marathon.py). They are
+deliberately far below Solo's per-problem budget (3600 s wall-clock,
+`pipeline/config.json`), so a Marathon solver cannot afford a
+Solo-depth attempt on every problem and must triage.
 
 | Knob               | Value                                  | Notes                                                              |
 | ------------------ | -------------------------------------- | ------------------------------------------------------------------ |
 | N                  | 100                                    | Canonical manifest `examples/problems/marathon/normal_100.jsonl` (= first 100 lines of `normal.jsonl`, no shuffle). |
-| `compression_ratio` | **0.5**                               | Reference. Configurable via `--compression-ratio` on the CLI.       |
-| Time budget        | 0.5 × 100 × 600 s = **30 000 s (≈ 8.3 h)** | Derived; can be set explicitly with `--budget-seconds`.        |
-| Token budget       | 0.5 × 100 × 65 536 = **3 276 800 tokens** | Derived; can be set explicitly with `--budget-tokens`. Counted by the marathon proxy at the network layer. |
+| Time budget        | 100 × 300 s = **30 000 s (≈ 8.3 h)**   | Can be set explicitly with `--budget-seconds`.                     |
+| Token budget       | 100 × 32 768 = **3 276 800 tokens**    | Can be set explicitly with `--budget-tokens`. Counted by the marathon proxy at the network layer. |
 | Concurrency        | Solver-controlled                      | Runner only enforces the two budgets.                              |
 | Manifest source    | `examples/problems/marathon/normal_100.jsonl` | Frozen 100-problem slice of `normal.jsonl`; no shuffle for MVP. |
 | Hard kill          | SIGTERM at budget, SIGKILL 5 s later   | Output JSONL frozen at SIGTERM time.                               |
 
-Why default to 0.5: triage must be load-bearing. At
-`compression_ratio = 1.0` a sequential solver could plausibly attempt
-every problem at Solo-equivalent budget and the track collapses back
-into "Solo run N times in series"; at 0.5 the solver must pick.
+Why 5 minutes: triage must be load-bearing. If the per-problem
+allowance matched Solo's 3600 s, a sequential solver could plausibly
+attempt every problem at full Solo depth and the track collapses back
+into "Solo run N times in series"; at 300 s the solver must pick.
 
 ## Solver Contract
 

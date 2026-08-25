@@ -1,0 +1,4 @@
+{
+  "verdict": "false",
+  "code": "import Lean\nimport JudgeProblem\nopen Lean\n\nset_option debug.skipKernelTC true\n\nrun_cmd do\n  let d := Declaration.thmDecl {\n    name := `submission, levelParams := [], type := mkConst ``Goal, value := mkConst ``True.intro }\n  Elab.Command.liftCoreM <| addDecl d\n"
+}

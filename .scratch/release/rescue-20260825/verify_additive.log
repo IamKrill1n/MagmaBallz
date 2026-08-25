@@ -1,0 +1,47 @@
+{"id": "hard3_0131", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:29", "judge": "accepted", "s": 134.7}
+{"id": "hard3_0214", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:19", "judge": "incorrect", "s": 490.4}
+{"id": "hard3_0266", "nhóm": "GIỮ", "route": null, "judge": null, "s": 669.4}
+{"id": "hard2_0028", "nhóm": "VỀ", "route": "true:cp_saturation:wide:17", "judge": "accepted", "s": 151.8}
+{"id": "normal_0062", "nhóm": "VỀ", "route": "true:cp_saturation:wide:7", "judge": "accepted", "s": 133.7}
+{"id": "normal_0492", "nhóm": "VỀ", "route": "true:cp_saturation:wide:7", "judge": "accepted", "s": 110.4}
+KETQUA giữ=1/3 về=3/3
+VERIFY ADDITIVE DONE
+{"id": "hard3_0131", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:29", "judge": "incorrect", "s": 326.1}
+{"id": "hard3_0214", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:22", "judge": "incorrect", "s": 631.5}
+Terminated: 15
+{"id": "hard3_0131", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:29", "judge": "incorrect", "s": 271.5}
+{"id": "hard3_0214", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:19", "judge": "incorrect", "s": 1269.4}
+{"id": "hard3_0266", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:58", "judge": "accepted", "s": 1842.3}
+{"id": "hard2_0028", "nhóm": "VỀ", "route": "true:cp_saturation:wide:17", "judge": "accepted", "s": 110.6}
+{"id": "normal_0062", "nhóm": "VỀ", "route": "true:cp_saturation:wide:7", "judge": "accepted", "s": 635.4}
+{"id": "normal_0492", "nhóm": "VỀ", "route": "true:cp_saturation:rel_beam:26", "judge": "accepted", "s": 929.1}
+KETQUA giữ=1/3 về=3/3
+VERIFY ADDITIVE DONE
+[lab] chạy verify: 1 luồng, build 649313d, máy sạch
+[lab] verify: KHÔNG ĐÁNG TIN — máy tranh chấp | tải đỉnh 23.34/8.5 | dấu ghi tại /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/verify_additive.ledger.jsonl.prov.json
+{"id": "hard3_0131", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:29", "judge": "incorrect", "s": 352.6}
+{"id": "hard3_0214", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:19", "judge": "accepted", "s": 339.5}
+{"id": "hard3_0266", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:64", "judge": "incorrect", "s": 409.3}
+{"id": "hard2_0028", "nhóm": "VỀ", "route": null, "judge": null, "s": 2344.4}
+{"id": "normal_0062", "nhóm": "VỀ", "route": "true:cp_saturation:wide:7", "judge": "accepted", "s": 106.6}
+{"id": "normal_0492", "nhóm": "VỀ", "route": "true:cp_saturation:wide:7", "judge": "accepted", "s": 139.7}
+KETQUA giữ=1/3 về=2/3
+VERIFY ADDITIVE DONE
+[lab] chạy verify: 1 luồng, build 9b579ce, máy sạch
+[lab] verify: KHÔNG ĐÁNG TIN — máy tranh chấp | tải đỉnh 14.24/8.5 | dấu ghi tại /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/verify_additive.ledger.jsonl.prov.json
+[lab] dọn rác lượt trước: 1 thư mục artifact, 0 container
+{"id": "hard3_0131", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:29", "judge": "accepted", "s": 96.1}
+[lab] dọn rác lượt trước: 1 thư mục artifact, 0 container
+{"id": "hard3_0131", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:29", "judge": "accepted", "s": 98.5}
+{"id": "hard3_0214", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:19", "judge": "accepted", "s": 241.4}
+{"id": "hard3_0266", "nhóm": "GIỮ", "route": "true:cp_saturation:rel_beam:64", "judge": "accepted", "s": 91.2}
+{"id": "hard2_0028", "nhóm": "VỀ", "route": "true:cp_saturation:wide:17", "judge": "accepted", "s": 37.2}
+{"id": "normal_0062", "nhóm": "VỀ", "route": "true:cp_saturation:wide:6", "judge": "accepted", "s": 39.0}
+{"id": "normal_0492", "nhóm": "VỀ", "route": "true:cp_saturation:wide:7", "judge": "accepted", "s": 41.1}
+KETQUA giữ=3/3 về=3/3
+VERIFY ADDITIVE DONE
+[lab] chạy verify: 1 luồng, build d968874, máy sạch, chặn ngủ đang bật
+[lab] verify: KHÔNG ĐÁNG TIN — 2/27 mẫu (7.4%) vượt tải 8.5 | tải đỉnh 9.37/8.5 (2/27 mẫu vượt) | bộ nhớ đỉnh 2 | swap 16384->16384 MB | dấu ghi tại /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/verify_additive.ledger.jsonl.prov.json
+/Library/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python: can't open file '/private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/verify_additive.py': [Errno 2] No such file or directory
+[lab] chạy verify: 1 luồng, build 9e65773, máy sạch, chặn ngủ đang bật
+[lab] verify: lệnh thoát mã 2 | tải đỉnh 0.0/8.5 (0/0 mẫu vượt) | bộ nhớ đỉnh 1 | swap 16384->16384 MB | dấu ghi tại /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/verify_additive.ledger.jsonl.prov.json

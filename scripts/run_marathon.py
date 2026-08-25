@@ -7,12 +7,13 @@ Usage:
         --manifest examples/problems/marathon/normal_100.jsonl
 
 Defaults follow the reference in ``docs/marathon_mode.md``:
-    * Wall-clock budget = compression_ratio * N * 600 s
-    * Token budget      = compression_ratio * N * 65536
+    * Wall-clock budget = N * 300 s   (5 minutes per problem)
+    * Token budget      = N * 32768
 
-``compression_ratio`` defaults to 0.5 — the global Marathon budget is
-half the sum of N Solo per-problem budgets. Smaller values squeeze
-harder; 1.0 means no compression (fair share per problem).
+The per-problem allowance is deliberately far below Solo's 3600 s /
+65536 tokens: the solver cannot afford a Solo-depth attempt on every
+problem and must triage. Override with explicit ``--budget-seconds`` /
+``--budget-tokens`` for local experiments.
 
 The Solo path (``scripts/run_harness.py`` / ``pipeline/runner.py``) is
 unchanged. This script is the *only* CLI entry for marathon mode.
@@ -32,13 +33,12 @@ from pipeline.marathon_runner import run_marathon  # noqa: E402
 from pipeline.marathon_score import score_marathon  # noqa: E402
 
 
-REF_PER_PROBLEM_SECONDS = 600
-REF_PER_PROBLEM_TOKENS = 65536
-# Marathon's global budget is `compression_ratio * N * solo_per_problem`.
-# Smaller = tighter compression = more triage pressure on the solver.
-# Default 0.5 makes triage load-bearing: the solver cannot finish all N
-# at single-problem budget and must choose what to attempt.
-DEFAULT_COMPRESSION_RATIO = 0.5
+# Marathon's global budget is a flat `N * per-problem` allowance —
+# 5 minutes and 32768 tokens per problem, vs Solo's 60 minutes / 65536.
+# The gap is what makes triage load-bearing: the solver cannot afford a
+# Solo-depth attempt on every problem and must choose what to attempt.
+PER_PROBLEM_SECONDS = 300
+PER_PROBLEM_TOKENS = 32768
 
 
 def _count_manifest_lines(path: Path) -> int:
@@ -67,14 +67,9 @@ def main() -> int:
     p.add_argument("--solver", required=True, help="Submission directory (single-file solver.py)")
     p.add_argument("--manifest", required=True, help="JSONL manifest of problems")
     p.add_argument("--budget-seconds", type=float, default=None,
-                   help=f"Wall-clock budget. Default: compression_ratio * N * {REF_PER_PROBLEM_SECONDS}s")
+                   help=f"Wall-clock budget. Default: N * {PER_PROBLEM_SECONDS}s")
     p.add_argument("--budget-tokens", type=int, default=None,
-                   help=f"LLM token budget. Default: compression_ratio * N * {REF_PER_PROBLEM_TOKENS}")
-    p.add_argument("--compression-ratio", type=float, default=DEFAULT_COMPRESSION_RATIO,
-                   help=("Compression ratio applied to the per-problem reference "
-                         "budgets when deriving global budgets. <1 squeezes the "
-                         "solver into triage; 1.0 = no compression. "
-                         f"Default: {DEFAULT_COMPRESSION_RATIO}."))
+                   help=f"LLM token budget. Default: N * {PER_PROBLEM_TOKENS}")
     p.add_argument("--output-dir", default=None,
                    help="Run dir; default under pipeline/results/marathon/")
     p.add_argument("--no-score", action="store_true",
@@ -97,14 +92,10 @@ def main() -> int:
         print(f"error: empty manifest: {manifest_path}", file=sys.stderr)
         return 2
 
-    if args.compression_ratio <= 0:
-        print(f"error: --compression-ratio must be > 0, got {args.compression_ratio}",
-              file=sys.stderr)
-        return 2
     if args.budget_seconds is None:
-        args.budget_seconds = args.compression_ratio * n * REF_PER_PROBLEM_SECONDS
+        args.budget_seconds = float(n * PER_PROBLEM_SECONDS)
     if args.budget_tokens is None:
-        args.budget_tokens = int(args.compression_ratio * n * REF_PER_PROBLEM_TOKENS)
+        args.budget_tokens = n * PER_PROBLEM_TOKENS
 
     if args.output_dir:
         run_dir = Path(args.output_dir).resolve()
@@ -123,8 +114,7 @@ def main() -> int:
     print(f"  Solver:       {submission_dir}")
     print(f"  Manifest:     {manifest_path} (N={n})")
     print(f"  Budget:       {int(args.budget_seconds)}s wall, {args.budget_tokens} tokens "
-          f"(compression_ratio={args.compression_ratio} × {n} × "
-          f"{REF_PER_PROBLEM_SECONDS}s/{REF_PER_PROBLEM_TOKENS}tok)")
+          f"({n} × {PER_PROBLEM_SECONDS}s / {n} × {PER_PROBLEM_TOKENS}tok)")
     print(f"  Run dir:      {run_dir}")
     print()
 

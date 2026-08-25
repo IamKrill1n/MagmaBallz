@@ -1,0 +1,4 @@
+{
+  "verdict": "false",
+  "code": "import JudgeProblem\n\nnamespace submission\nabbrev Flip : Prop := forall (G : Type) [Magma G], EquationLHS G -> EquationRHS G\nend submission\n\nnotation \"Goal\" => submission.Flip\n\ndef submission : submission.Flip :=\n  fun G _ h x y z => (h x y).symm.trans (h x z)\n"
+}
