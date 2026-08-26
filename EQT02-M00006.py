@@ -18,6 +18,7 @@ import json
 import importlib
 import os
 import re
+import signal
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -6248,6 +6249,100 @@ def marathon_reference_seconds() -> float:
     return MARATHON_REF_SECONDS_DEFAULT
 
 
+# --- CHỐT CHẶN TƯỜNG MỖI BÀI + PHA 2 CHO MARATHON -------------------------
+#
+# Hai lỗ hổng đối xứng nhau, cùng nằm ở chỗ ngân sách Marathon là ngân sách
+# DÙNG CHUNG mà lượt tất định lại tiêu theo kiểu ngân sách riêng.
+#
+# (a) KHÔNG CÓ TRẦN TRÊN. `false_time_budget` chỉ chặn find_counterexample.
+#     Phía TRUE không bị chặn gì: hai lượt wide của cp_saturation có backstop
+#     240 s MỖI lượt, cộng ladder 14 s và liệt kê cầu 25 s — một bài ăn được
+#     ~530 s của ngân sách chung. Bảy bài như thế là hết sạch.
+#
+# (b) KHÔNG CÓ ĐÁY. Đo 25/08 trên manifest 99 bài: solver dùng 168 s trong
+#     29.700 s rồi DỪNG. Bài nào lượt tất định không ăn được thì bỏ luôn —
+#     Marathon không có endgame, trong khi Solo grind tới hết giờ. Tức là
+#     99,4% ngân sách nằm không trong khi vẫn còn bài chưa giải.
+#
+# Cả hai vá đều nằm NGOÀI solve_problem nên đường Solo không đổi một byte.
+# Lượt 1 là lượt PHÂN LOẠI, không phải lượt cày. Bản đầu đặt 4x phần chia đều
+# và cho phép nửa số giây còn lại: đo trên manifest 8 bài / 420 s thì lượt 1
+# nuốt 404 s và pha 2 KHÔNG BAO GIỜ CHẠY — vá xong mà vô dụng.
+# Nửa phần chia đều, trần cứng 60 s: trên 99 bài / 29.700 s thì lượt 1 tốn tối
+# đa 20% ngân sách, còn 80% cho pha 2 phân đều cho bài chưa giải. Bài nào cần
+# hơn 60 s ở lượt 1 thì pha 2 mới là chỗ của nó — ở đó nó được cày với liều
+# leo thang thay vì cùng một liều lặp lại.
+MARATHON_WALL_MULTIPLE = 0.5     # một bài tối đa bằng mấy phần chia đều
+MARATHON_WALL_MIN = 10.0
+MARATHON_WALL_MAX = 60.0
+MARATHON_PASS2_RESERVE = 30.0    # giây chừa lại để ghi đáp án và đóng sổ
+MARATHON_PASS2_MIN_SLICE = 20.0  # lát nhỏ hơn thế thì grind không kịp làm gì
+
+
+class MarathonWallExpired(Exception):
+    """Bài này đã tiêu quá phần của nó; nhường chỗ cho bài sau."""
+
+
+def _marathon_wall_alarm(_signum, _frame):
+    raise MarathonWallExpired()
+
+
+def marathon_problem_wall(budget_seconds: float, count: int, remaining: float) -> float:
+    fair = budget_seconds / max(1, count)
+    cap = max(MARATHON_WALL_MIN, min(MARATHON_WALL_MAX, MARATHON_WALL_MULTIPLE * fair))
+    return max(5.0, min(cap, remaining * 0.25))
+
+
+def _walled(fn, wall: float):
+    """Chạy fn() với trần tường. Trả (kết quả, có_chạm_tường)."""
+    if not hasattr(signal, "setitimer"):
+        return fn(), False
+    cũ = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, _marathon_wall_alarm)
+    signal.setitimer(signal.ITIMER_REAL, wall)
+    try:
+        return fn(), False
+    except MarathonWallExpired:
+        return None, True
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, cũ)
+
+
+def marathon_pass2_attempt(problem: dict[str, Any], slice_seconds: float,
+                           slack: int, rounds: int, pool: int) -> dict[str, Any] | None:
+    """Một lát grind cho MỘT bài chưa giải, ở liều cho trước.
+
+    Cùng động cơ với endgame của Solo, chỉ khác là chia lát theo vòng để không
+    bài nào nuốt phần của bài khác. Chỉ chạy cho bài CHƯA có đáp án, nên nó
+    không thể làm mất thứ lượt tất định đã nộp."""
+    try:
+        eq1 = parse_equation(str(problem["equation1"]))
+        eq2 = parse_equation(str(problem["equation2"]))
+    except (KeyError, ValueError):
+        return None
+    if is_reflexive_problem(problem):
+        return None
+    deadline = time.monotonic() + slice_seconds
+    for beam in (False, True):
+        if deadline_expired(deadline):
+            return None
+        kq = _cp_saturation_attempt(
+            eq1, eq2, lemma_budget=pool, rounds=rounds, deadline=deadline,
+            beam=beam, term_slack=slack, raw_pair_cap=600 * slack, gap_time=15.0,
+        )
+        if kq is None:
+            continue
+        tag, proof, cited = kq
+        code = (guided_true_certificate_with_lemmas(eq2["variables"], cited, proof)
+                if cited else substitution_true_certificate(eq2["variables"], proof))
+        if not sanitize_lean_code(code, verdict="true"):
+            continue
+        return {"answer": make_true_answer(problem, code),
+                "route": f"true:marathon_pass2:{slack}:{tag}:{len(cited)}"}
+    return None
+
+
 def marathon_per_problem_budget(total_budget: float, problem_count: int, ref_seconds: float) -> float:
     if problem_count <= 0:
         return 0.25
@@ -6297,10 +6392,19 @@ def run_marathon() -> int:
     solved = 0
     deterministic_submitted = 0
     solved_ids: set[str] = set()
+    walled_out = 0
     for priority, problem in prioritized:
         if time.monotonic() + 5.0 >= deadline:
             break
-        answer_record = solve_problem(problem, false_time_budget=per_problem_budget)
+        wall = marathon_problem_wall(budget_seconds, len(prioritized),
+                                     deadline - time.monotonic())
+        answer_record, hit_wall = _walled(
+            lambda p=problem: solve_problem(p, false_time_budget=per_problem_budget),
+            wall)
+        if hit_wall:
+            walled_out += 1
+            log_stderr({"route": "marathon:wall", "id": str(problem.get("id")),
+                        "wall_seconds": round(wall, 1)})
         if answer_record is None:
             continue
         if not append_answer(output_path, answer_record["answer"]):
@@ -6459,9 +6563,50 @@ def run_marathon() -> int:
                         }
                     )
 
+    # ---- PHA 2: tiêu nốt ngân sách còn lại vào bài chưa giải ----------------
+    pass2_solved = 0
+    pass2_rounds = 0
+    chưa = [p for _pr, p in prioritized if str(p.get("id")) not in solved_ids]
+    slack2, rounds2, pool2 = ENDGAME_START_SLACK, 120, 3000
+    while chưa and time.monotonic() + MARATHON_PASS2_RESERVE < deadline:
+        còn = deadline - time.monotonic() - MARATHON_PASS2_RESERVE
+        lát = còn / (2.0 * len(chưa))
+        if lát < MARATHON_PASS2_MIN_SLICE:
+            lát = MARATHON_PASS2_MIN_SLICE
+        pass2_rounds += 1
+        log_stderr({"route": "marathon:pass2", "vòng": pass2_rounds,
+                    "chưa_giải": len(chưa), "lát_giây": round(lát, 1),
+                    "slack": slack2, "còn_giây": round(còn, 1)})
+        tiếp: list[dict[str, Any]] = []
+        for problem in chưa:
+            if time.monotonic() + MARATHON_PASS2_RESERVE >= deadline:
+                tiếp.append(problem)
+                continue
+            rec, _hw = _walled(
+                lambda p=problem: marathon_pass2_attempt(p, lát, slack2, rounds2, pool2),
+                lát + 5.0)
+            if rec is None:
+                tiếp.append(problem)
+                continue
+            if not append_answer(output_path, rec["answer"]):
+                continue
+            route_counts[rec["route"]] = route_counts.get(rec["route"], 0) + 1
+            solved += 1
+            pass2_solved += 1
+            solved_ids.add(str(problem.get("id")))
+        if len(tiếp) == len(chưa):
+            # Vòng này không ăn được bài nào -> nới liều đúng như endgame Solo
+            slack2 += ENDGAME_SLACK_STEP
+            rounds2 = min(int(rounds2 * 1.5), 50_000)
+            pool2 = min(int(pool2 * 1.6), 2_000_000)
+        chưa = tiếp
+
     print(
         json.dumps(
             {
+                "walled_out": walled_out,
+                "pass2_solved": pass2_solved,
+                "pass2_rounds": pass2_rounds,
                 "submitted_deterministic": deterministic_submitted,
                 "submitted_total": solved,
                 "llm_calls": llm_calls,

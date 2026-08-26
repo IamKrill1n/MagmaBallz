@@ -82,3 +82,10 @@ scripts/build_equation_index.py
 .scratch/ml/train_rows.jsonl
 .scratch/ml/harvested_ids.txt
 .scratch/release/run_chain.old.sh
+
+# Rác phiên đo 25-26/08: bản lưu trước khi vá, thư mục artifact judge tạm,
+# và bản solver đối chứng (tái tạo được bằng `git show <commit>:EQT02-M00006.py`).
+.scratch/release/*.bak-*
+.scratch/release/artifacts_recount/
+.scratch/release/solver_d968874.py
+.scratch/release/subs_recount/
