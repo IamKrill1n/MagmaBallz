@@ -117,13 +117,21 @@ if done_verify && done_marathon && done_sweep; then
   if ! done_census; then
     log "chặng 6: census route"
     $MEASURE --name census --result "$S/route_census.log" --wait 7200 \
-        -- "$PY_BIN" "$S/route_census.py" > "$S/route_census.log" 2>&1
+        -- "$PY_BIN" "$REPO/.scratch/release/route_census.py" > "$S/route_census.log" 2>&1
   fi
   gate census
   if ! done_label; then
-    log "chặng 7: label_doubt"
-    $MEASURE --name label --result "$S/label_doubt.log" --wait 7200 \
-        -- "$PY_BIN" "$S/label_doubt.py" >> "$S/label_doubt.log" 2>&1
+    if [ -f "$S/label_doubt.py" ]; then
+      log "chặng 7: label_doubt"
+      $MEASURE --name label --result "$S/label_doubt.log" --wait 7200 \
+          -- "$PY_BIN" "$S/label_doubt.py" >> "$S/label_doubt.log" 2>&1
+    else
+      # Bản gốc nằm trong scratchpad phiên 5aa77320 và đã bị dọn mất; đợt cứu
+      # 25/08 không chép nó vào repo. Trước đây vòng lặp này im lặng chạy lại
+      # một file không tồn tại mỗi 10 phút, mãi mãi — đúng họ lỗi số 5 của sổ
+      # vận hành: "chạy mà không làm gì, trông như đang làm".
+      log "chặng 7 BỎ QUA: thiếu $S/label_doubt.py (mất cùng scratchpad cũ) — phải viết lại trước khi chạy"
+    fi
   fi
   gate label
 else

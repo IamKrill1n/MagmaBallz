@@ -12,7 +12,10 @@ import importlib.util, json, pathlib, sys, time
 
 HERE = pathlib.Path(__file__).resolve().parent
 REPO = pathlib.Path("/Users/nhatminh/dev/active/MagmaBallz")
-SCRATCH = pathlib.Path("/private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad")
+# Bộ đề delta của phiên đo cũ: đường /private/tmp đã bị dọn, bản cứu nằm
+# trong repo. Glob trên thư mục không tồn tại trả về rỗng — nghĩa là trước
+# vá này harvest lặng lẽ bỏ qua toàn bộ corpora delta mà không báo gì.
+SCRATCH = REPO / ".scratch/release/rescue-20260825"
 sys.path.insert(0, str(HERE))
 import features as F
 

@@ -1,0 +1,190 @@
+{
+ "khi": "2026-08-26 04:00:14",
+ "tên": "route_census",
+ "bài": 2469,
+ "trần_giây": 60.0,
+ "workers": 5,
+ "giây": 1006.7,
+ "dân_số": {
+  "false:witness": 1248,
+  "true:bridge": 19,
+  "true:equational_closure": 118,
+  "true:square_twist_comm": 3,
+  "true:constancy": 25,
+  "true:absorption_closure": 23,
+  "true:absorption_context_bridge": 20,
+  "true:cp_saturation": 648,
+  "true:singleton": 312,
+  "true:middle_self_collapse": 2,
+  "true:front_double_self_collapse": 9,
+  "true:alternating_front_self_collapse": 5,
+  "true:rewrite_chain": 1,
+  "true:mirrored_alternating_front_self_collapse": 4,
+  "true:sandwich_left_projection": 3,
+  "true:rewrite": 8,
+  "(TRẦN)": 14,
+  "true:self_square_absorption": 1,
+  "false:witness_inf": 1,
+  "false:etp_bank": 1,
+  "true:repeat_tail_absorption": 1,
+  "true:projection": 1,
+  "true:c9_e1072_collapse": 2
+ },
+ "giây_theo_tầng": {
+  "false:witness": 41.6,
+  "true:bridge": 0.0,
+  "true:equational_closure": 240.6,
+  "true:square_twist_comm": 0.0,
+  "true:constancy": 0.0,
+  "true:absorption_closure": 53.8,
+  "true:absorption_context_bridge": 2.1,
+  "true:cp_saturation": 3798.0,
+  "true:singleton": 0.0,
+  "true:middle_self_collapse": 0.0,
+  "true:front_double_self_collapse": 0.0,
+  "true:alternating_front_self_collapse": 0.1,
+  "true:rewrite_chain": 0.0,
+  "true:mirrored_alternating_front_self_collapse": 0.0,
+  "true:sandwich_left_projection": 0.0,
+  "true:rewrite": 0.0,
+  "(TRẦN)": 840.7,
+  "true:self_square_absorption": 0.0,
+  "false:witness_inf": 10.3,
+  "false:etp_bank": 0.0,
+  "true:repeat_tail_absorption": 0.0,
+  "true:projection": 0.0,
+  "true:c9_e1072_collapse": 0.0
+ },
+ "theo_corpus": {
+  "false:witness": {
+   "evaluation_extra_hard": 100,
+   "evaluation_hard": 100,
+   "evaluation_normal": 100,
+   "evaluation_order5": 100,
+   "hard1": 45,
+   "hard2": 98,
+   "hard3": 205,
+   "normal": 500
+  },
+  "true:bridge": {
+   "evaluation_extra_hard": 16,
+   "evaluation_hard": 2,
+   "hard3": 1
+  },
+  "true:equational_closure": {
+   "evaluation_extra_hard": 68,
+   "evaluation_hard": 4,
+   "evaluation_normal": 3,
+   "hard1": 1,
+   "hard2": 2,
+   "hard3": 19,
+   "normal": 21
+  },
+  "true:square_twist_comm": {
+   "evaluation_extra_hard": 3
+  },
+  "true:constancy": {
+   "evaluation_extra_hard": 1,
+   "evaluation_hard": 1,
+   "hard3": 12,
+   "normal": 11
+  },
+  "true:absorption_closure": {
+   "evaluation_extra_hard": 4,
+   "evaluation_hard": 2,
+   "hard1": 1,
+   "hard2": 2,
+   "hard3": 8,
+   "normal": 6
+  },
+  "true:absorption_context_bridge": {
+   "evaluation_extra_hard": 1,
+   "evaluation_hard": 1,
+   "evaluation_normal": 3,
+   "hard2": 3,
+   "hard3": 8,
+   "normal": 4
+  },
+  "true:cp_saturation": {
+   "evaluation_extra_hard": 7,
+   "evaluation_hard": 53,
+   "evaluation_normal": 77,
+   "evaluation_order5": 54,
+   "hard1": 20,
+   "hard2": 92,
+   "hard3": 133,
+   "normal": 212
+  },
+  "true:singleton": {
+   "evaluation_hard": 14,
+   "evaluation_normal": 13,
+   "evaluation_order5": 41,
+   "hard3": 1,
+   "normal": 243
+  },
+  "true:middle_self_collapse": {
+   "evaluation_hard": 1,
+   "normal": 1
+  },
+  "true:front_double_self_collapse": {
+   "evaluation_hard": 9
+  },
+  "true:alternating_front_self_collapse": {
+   "evaluation_hard": 5
+  },
+  "true:rewrite_chain": {
+   "evaluation_hard": 1
+  },
+  "true:mirrored_alternating_front_self_collapse": {
+   "evaluation_hard": 4
+  },
+  "true:sandwich_left_projection": {
+   "evaluation_hard": 1,
+   "hard1": 1,
+   "hard3": 1
+  },
+  "true:rewrite": {
+   "evaluation_hard": 1,
+   "evaluation_normal": 4,
+   "hard3": 1,
+   "normal": 2
+  },
+  "(TRẦN)": {
+   "evaluation_hard": 1,
+   "evaluation_order5": 5,
+   "hard2": 1,
+   "hard3": 7
+  },
+  "true:self_square_absorption": {
+   "hard1": 1
+  },
+  "false:witness_inf": {
+   "hard2": 1
+  },
+  "false:etp_bank": {
+   "hard2": 1
+  },
+  "true:repeat_tail_absorption": {
+   "hard3": 1
+  },
+  "true:projection": {
+   "hard3": 1
+  },
+  "true:c9_e1072_collapse": {
+   "hard3": 2
+  }
+ },
+ "ứng_viên_ablation": [
+  "false:etp_bank",
+  "false:witness_inf",
+  "true:c9_e1072_collapse",
+  "true:middle_self_collapse",
+  "true:projection",
+  "true:repeat_tail_absorption",
+  "true:rewrite_chain",
+  "true:sandwich_left_projection",
+  "true:self_square_absorption",
+  "true:square_twist_comm"
+ ],
+ "ghi_chú": "Chỉ thấy route THẮNG, không thấy route nào khác cũng ăn được bài đó. Không kết luận thâu tóm từ file này."
+}

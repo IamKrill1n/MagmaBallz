@@ -1,0 +1,45 @@
+[lab] dọn rác lượt trước: 1 thư mục artifact, 0 container
+{"b\u00e0i": 20, "d\u01b0\u01a1ng": 47, "\u00e2m": 726}
+{"b\u00e0i": 40, "d\u01b0\u01a1ng": 81, "\u00e2m": 1227}
+{"b\u00e0i": 60, "d\u01b0\u01a1ng": 129, "\u00e2m": 1995}
+{"b\u00e0i": 80, "d\u01b0\u01a1ng": 206, "\u00e2m": 3081}
+{"b\u00e0i": 100, "d\u01b0\u01a1ng": 239, "\u00e2m": 3510}
+{"b\u00e0i": 120, "d\u01b0\u01a1ng": 303, "\u00e2m": 4427}
+{"b\u00e0i": 140, "d\u01b0\u01a1ng": 343, "\u00e2m": 4909}
+{"b\u00e0i": 160, "d\u01b0\u01a1ng": 396, "\u00e2m": 5651}
+{"b\u00e0i": 180, "d\u01b0\u01a1ng": 430, "\u00e2m": 6090}
+{"b\u00e0i": 200, "d\u01b0\u01a1ng": 458, "\u00e2m": 6372}
+{"b\u00e0i": 220, "d\u01b0\u01a1ng": 507, "\u00e2m": 7141}
+{"b\u00e0i": 240, "d\u01b0\u01a1ng": 575, "\u00e2m": 8311}
+{"b\u00e0i": 260, "d\u01b0\u01a1ng": 615, "\u00e2m": 8849}
+{"b\u00e0i": 280, "d\u01b0\u01a1ng": 646, "\u00e2m": 9324}
+{"b\u00e0i": 300, "d\u01b0\u01a1ng": 674, "\u00e2m": 9652}
+{"b\u00e0i": 320, "d\u01b0\u01a1ng": 714, "\u00e2m": 10039}
+{"b\u00e0i": 340, "d\u01b0\u01a1ng": 751, "\u00e2m": 10155}
+{"b\u00e0i": 360, "d\u01b0\u01a1ng": 779, "\u00e2m": 10251}
+{"b\u00e0i": 380, "d\u01b0\u01a1ng": 811, "\u00e2m": 10613}
+{"b\u00e0i": 400, "d\u01b0\u01a1ng": 847, "\u00e2m": 11166}
+{"b\u00e0i": 420, "d\u01b0\u01a1ng": 882, "\u00e2m": 11667}
+{"b\u00e0i": 440, "d\u01b0\u01a1ng": 918, "\u00e2m": 12172}
+{"b\u00e0i": 460, "d\u01b0\u01a1ng": 973, "\u00e2m": 12794}
+{"b\u00e0i": 480, "d\u01b0\u01a1ng": 1017, "\u00e2m": 13357}
+{"b\u00e0i": 500, "d\u01b0\u01a1ng": 1053, "\u00e2m": 13782}
+{"b\u00e0i": 520, "d\u01b0\u01a1ng": 1093, "\u00e2m": 14320}
+{"b\u00e0i": 540, "d\u01b0\u01a1ng": 1138, "\u00e2m": 14744}
+{"b\u00e0i": 560, "d\u01b0\u01a1ng": 1190, "\u00e2m": 15412}
+{"b\u00e0i": 580, "d\u01b0\u01a1ng": 1220, "\u00e2m": 15740}
+{"b\u00e0i": 600, "d\u01b0\u01a1ng": 1268, "\u00e2m": 16266}
+{"b\u00e0i": 620, "d\u01b0\u01a1ng": 1305, "\u00e2m": 16732}
+{"b\u00e0i": 640, "d\u01b0\u01a1ng": 1339, "\u00e2m": 17089}
+{"b\u00e0i": 660, "d\u01b0\u01a1ng": 1371, "\u00e2m": 17489}
+{"b\u00e0i": 680, "d\u01b0\u01a1ng": 1414, "\u00e2m": 18093}
+{"b\u00e0i": 700, "d\u01b0\u01a1ng": 1457, "\u00e2m": 18699}
+{"b\u00e0i": 720, "d\u01b0\u01a1ng": 1487, "\u00e2m": 19056}
+{"b\u00e0i": 740, "d\u01b0\u01a1ng": 1519, "\u00e2m": 19411}
+{"b\u00e0i": 760, "d\u01b0\u01a1ng": 1547, "\u00e2m": 19626}
+{"b\u00e0i": 780, "d\u01b0\u01a1ng": 1583, "\u00e2m": 20056}
+{"b\u00e0i": 800, "d\u01b0\u01a1ng": 1619, "\u00e2m": 20519}
+{"XONG_LUOT": 814, "d\u01b0\u01a1ng": 1636, "\u00e2m": 20671}
+HARVEST DONE
+[lab] chạy harvest: 1 luồng, build e757688, máy sạch, chặn ngủ đang bật
+[lab] harvest: KHÔNG ĐÁNG TIN — 27/54 mẫu (50.0%) vượt tải 8.5; swap phình 6144 MB | tải đỉnh 10.99/8.5 (27/54 mẫu vượt) | bộ nhớ đỉnh 2 | swap 7168->13312 MB | dấu ghi tại /Users/nhatminh/dev/active/MagmaBallz/.scratch/ml/train_rows.jsonl.prov.json

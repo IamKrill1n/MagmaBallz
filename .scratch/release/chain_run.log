@@ -1,0 +1,21 @@
+[08-25 22:16] === dây chuyền: 1 luồng (tính từ số lõi), build e757688 ===
+[08-25 22:16]   cổng verify: ✅ verify: ĐẠT — giữ 3/3, đòi lại 3/3 — lượt-4-cộng-thêm an toàn | môi trường sạch, build 722868b, 1 luồng
+[08-25 22:16]   cổng marathon: ✅ marathon: ĐẠT — 99/99 = 100.0% (kỳ vọng ≥95% — Solo cùng đề đạt ~99%) | môi trường sạch, build e757688, 1 luồng
+[08-25 22:16]   cổng sweep: ✅ sweep: ĐẠT — 2464/2469 (nền 2434, chênh +30) | môi trường sạch, build 9e65773, 1 luồng
+[08-25 22:16] chặng 4: sieve Forge
+Terminated: 15
+[08-26 03:25]   cổng sieve: ◐ sieve: DỞ DANG — 200/608, frontier=50
+[08-26 03:25] chặng 5: harvest ML
+[08-26 03:43]   cổng harvest: ⚠️ harvest: NGỜ — 22,307 dòng | dương 1,636 âm 20,671 (tỉ lệ 7.3%) | ⚠️ ĐO TRONG TRANH CHẤP: tải đỉnh 10.99/8.5, đối thủ 0 — số này KHÔNG dùng được
+[08-26 03:43] chặng 6: census route
+[08-26 04:00]   cổng census: ⚠️ census: NGỜ — 1 họ route, lớn nhất: tổng | ⚠️ ĐO TRONG TRANH CHẤP: tải đỉnh 15.46/8.5, đối thủ 0 — số này KHÔNG dùng được
+[08-26 04:00] chặng 7 BỎ QUA: thiếu /private/tmp/claude-501/-Users-nhatminh-dev-active-MagmaBallz/5aa77320-10be-4643-8ecb-555c1ad24f06/scratchpad/label_doubt.py (mất cùng scratchpad cũ) — phải viết lại trước khi chạy
+[08-26 04:00]   cổng label: · label: CHƯA CHẠY — 
+[08-26 04:00] === hoàn tất — xem .scratch/release/STATUS.md ===
+  [x] verify
+  [x] marathon
+  [x] sweep
+  [ ] sieve
+  [x] harvest
+  [x] census
+  [ ] label
