@@ -25,6 +25,7 @@ def stage_alive(name: str) -> bool:
     pat = {"verify":"verify_additive.py", "marathon":"run_marathon.py",
            "sweep":"scoreboard.py", "sieve":"forge_p2_sieve.py",
            "harvest":"harvest.py", "census":"route_census.py",
+           "audit":"emit_audit.py|recount.py",
            "label":"label_doubt.py"}.get(name, name)
     try:
         return subprocess.run(["pgrep","-f",pat], capture_output=True).returncode == 0
@@ -129,6 +130,10 @@ def chk_label():
 PROV = {"verify": S/"verify_additive.ledger.jsonl.prov.json",
         "marathon": S/"marathon_100.log.prov.json",
         "sweep": S/"results/final_cert.jsonl.prov.json",
+        # đối chứng không đi qua measure.py (không phải phép đo thời gian, và
+        # cố tình chạy song song) nên không có dấu môi trường — bỏ trống để
+        # cổng không hạ nó xuống NGỜ vì thiếu thứ nó vốn không cần
+        "audit": None,
         "sieve": S/"sieve3.log.prov.json",
         "harvest": REPO/".scratch/ml/train_rows.jsonl.prov.json",
         "census": S/"route_census.log.prov.json",
@@ -136,6 +141,7 @@ PROV = {"verify": S/"verify_additive.ledger.jsonl.prov.json",
 
 
 def provenance(name: str):
+    if PROV.get(name) is None: return None
     """Dấu môi trường do phòng thí nghiệm ghi. Không có dấu = đo bằng đường
     vòng, không qua cửa lab -> cũng không đáng tin."""
     p = PROV.get(name)
@@ -147,9 +153,65 @@ def provenance(name: str):
         return None
 
 
+def chk_audit():
+    """ĐỐI CHỨNG PHÁT CHỨNG CHỈ — chân đỡ của ledger ghép.
+
+    Ledger `final_cert.jsonl` gộp 2284 bài đo trên build `d968874` với 191 bài
+    đo trên build cuối. Toàn bộ tính hợp lệ của phép gộp đó nằm ở MỘT mệnh đề:
+    hai build phát ra chứng chỉ y hệt nhau ngoài vùng delta. Trước 25/08 mệnh
+    đề ấy chỉ tồn tại dưới dạng lời khai trong prov, không có vật chứng.
+
+    Chặng này là vật chứng. Nó HỎNG là CHẶN NỘP: nếu hai build khác nhau thật
+    thì con số 2464 không phải con số của build đang đem nộp.
+    """
+    # Nguồn kết luận CUỐI CÙNG là ledger tính lại: nó không chỉ nói hai build
+    # có phát giống nhau không, nó nói mỗi dòng điểm có dấu judge thuộc về
+    # build đem nộp hay không. Đó mới là thứ cổng này cần gác.
+    rc = REPO/".scratch/release/recount_final_cert.jsonl.prov.json"
+    if rc.exists():
+        try:
+            d = json.loads(rc.read_text())
+            treo = d.get("còn_treo", 0)
+            n, chắc = d.get("dòng", 0), d.get("điểm_chắc", 0)
+            ng = d.get("nguồn_dấu", {})
+            if treo:
+                return "HỎNG", (f"{treo} dòng còn TREO — dấu judge không thuộc build "
+                                "đem nộp và chưa chấm lại; những dòng đó KHÔNG được tính")
+            return "ĐẠT", (f"{chắc}/{n} — mọi dòng có dấu thuộc build đem nộp "
+                           f"({ng.get('chấm lại (build cuối)',0)} chấm lại, "
+                           f"{ng.get('baseline, đối chứng GIỐNG',0)} đối chứng GIỐNG, "
+                           f"{ng.get('delta (build cuối)',0)} delta)")
+        except Exception as exc:
+            return "HỎNG", f"đọc prov tính lại lỗi: {exc!r}"
+    pr = None
+    f = REPO/".scratch/release/emit_audit.ledger.jsonl.prov.json"
+    try:
+        pr = json.loads(f.read_text())
+    except Exception:
+        rows = jsonl(REPO/".scratch/release/emit_audit.ledger.jsonl")
+        if not rows: return "CHƯA CHẠY", "chưa chạy đối chứng nào"
+        n = len(rows)
+        khác = sum(1 for r in rows if r.get("kết_luận") not in ("GIỐNG",))
+        return "ĐANG CHẠY", f"pha 1: {n}/2285, {khác} ứng viên khác biệt"
+    p2 = pr.get("đếm_pha2") or {}
+    khác = p2.get("MẤT", 0) + p2.get("ĐỔI", 0) + p2.get("THÊM", 0)
+    trần = p2.get("TRẦN", 0) + p2.get("LỖI", 0)
+    n = pr.get("bài", 0)
+    if khác:
+        return "HỎNG", (f"{khác} bài phát chứng chỉ KHÁC nhau giữa build cuối và "
+                        f"{pr.get('base_build')} (xác nhận tuần tự) — ledger ghép "
+                        "KHÔNG hợp lệ cho những bài đó, phải chấm lại chúng")
+    if trần:
+        return "NGỜ", (f"{n} bài: 0 khác biệt, nhưng {trần} bài chạm trần "
+                       f"{pr.get('trần_giây_mỗi_build')}s nên không kết luận được")
+    return "ĐẠT", (f"{n}/{n} bài phát chứng chỉ Y HỆT build {pr.get('base_build')} "
+                   "— ledger ghép hợp lệ")
+
+
 CHECKS = [("verify", chk_verify, "phép thử hồi quy — CHẶN NỘP nếu hỏng"),
           ("marathon", chk_marathon, "đường đua thứ hai"),
           ("sweep", chk_sweep, "điểm chứng nhận — CHẶN NỘP nếu hỏng"),
+          ("audit", chk_audit, "đối chứng hai build — CHẶN NỘP nếu hỏng"),
           ("sieve", chk_sieve, "chế đề khó cho Forge"),
           ("harvest", chk_harvest, "dữ liệu huấn luyện ML"),
           ("census", chk_census, "phân bố route"),
