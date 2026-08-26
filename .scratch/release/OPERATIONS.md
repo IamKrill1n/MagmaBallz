@@ -159,6 +159,156 @@ vá, bộ nhớ dao động răng cưa 350 MB – 1 GB và solver chạy hết n
 một thất bại thuật toán. Trước khi kết luận "động cơ không đủ mạnh", phải đo
 xem tiến trình có SỐNG hết ngân sách không.
 
+## 3j. CHIỀU 25/08 — CHÂN ĐỠ CỦA CON SỐ 2464, VÀ MỘT LOẠT ĐƯỜNG DẪN MỤC RỖNG
+
+**Phát hiện chính: con số 2464/2469 KHÔNG đo trên build đem nộp.** Truy từng
+nguồn của ledger ghép:
+
+| Nguồn | Bài | Build | Solver = HEAD? |
+|---|---|---|---|
+| baseline432-partial-2284 | 2284 | `d968874` | KHÔNG — khác 1086 thêm / 124 bớt |
+| delta_night + 2 + 3 | 191 | `9e65773` | có |
+
+Tức **92,5% số bài đo trên một solver khác**, thiếu cả bốn commit `32fe21e`
+(kho bảng ETP), `7ae8716` (oracle), `28682da` (gate lane vô hạn), `4dc385c`
+(registry 12 chiều). Toàn bộ tính hợp lệ của phép gộp nằm ở một mệnh đề duy
+nhất — "build cuối phát chứng chỉ y hệt baseline ngoài delta" — mà mệnh đề đó
+(a) chỉ tồn tại dưới dạng LỜI KHAI trong prov, không tìm thấy vật chứng thô,
+và (b) theo chính mô tả của nó thì chỉ phủ phía FALSE, bỏ trống ~1000 bài TRUE.
+
+**Đã dựng vật chứng:** `.scratch/release/emit_audit.py`. Nạp hai build, chạy
+`solve_problem` trên đúng 2284 bài baseline, so `(verdict, code)` từng byte.
+Không gọi Lean/judge/docker nên rẻ hơn sweep nhiều bậc.
+
+Hai điều đã học khi dựng nó:
+
+- **Trần thời gian phải được KHAI, không được giấu.** Bài nào chạm trần là bài
+  KHÔNG KẾT LUẬN ĐƯỢC, không phải bài giống nhau. Một lượt đối chứng có trần mà
+  im lặng về số bài chạm trần đọc y hệt như "đã phủ hết".
+- **Phép so này vẫn nhạy với tải, qua một cửa hẹp:** vài tầng của solver cắt
+  theo đồng hồ (`cp_saturation` 20 s, bao đóng, ladder, liệt kê cầu), nên dưới
+  tải một tầng có thể hết giờ ở lượt này mà không hết ở lượt khác — hai lượt
+  của CÙNG một build cũng lệch được. Xử lý bằng hai pha: pha 1 song song để
+  lọc ỨNG VIÊN, pha 2 tuần tự để XÁC NHẬN. Kết luận chỉ đọc theo pha 2.
+  Tuần tự: ~3 giờ. Hai pha, 5 tiến trình: ~40 phút.
+
+Đối chứng nay là **cổng chặn nộp bài thứ ba** trong `check_stage.py` (cạnh
+verify và sweep): nó HỎNG nghĩa là con số 2464 không phải con số của build
+đang đem nộp.
+
+**Đường dẫn mục rỗng — bốn chỗ, cùng một gốc.** Scratchpad phiên `5aa77320`
+bị dọn, đợt cứu 25/08 không chép hết:
+
+1. `$S/route_census.py` — MẤT. Chặng 6 của dây chuyền gọi một file không tồn
+   tại; đã viết lại tại `.scratch/release/route_census.py` và trỏ lại.
+2. `$S/label_doubt.py` — MẤT, chưa viết lại. Chặng 7 trước đây im lặng chạy
+   lại file rỗng mỗi 10 phút, mãi mãi — đúng họ lỗi số 5 ("chạy mà không làm
+   gì, trông như đang làm"). Nay nó KÊU TO và bỏ qua.
+3. `harvest.py` glob `$S/corpora/*.jsonl` — thư mục không còn, glob trả rỗng,
+   nên harvest lặng lẽ bỏ qua TOÀN BỘ corpora delta. Đã trỏ sang bản cứu.
+4. Plist ghim `JUDGE_LEAN_PATH` theo toolchain 4.30. Đã ghim lại theo
+   `lean_path.txt` (4.32.2). Đính chính sổ: `.env.judge` KHÔNG hề đặt biến
+   này — thứ thật sự đè nó là `measure.py`, luôn đọc từ `lean_path.txt`. Kết
+   luận cũ ("vô hại") đúng, nhưng đúng vì lý do khác với lý do đã ghi.
+
+**Trạng thái hạ tầng lúc 14:00 ngày 25/08:** Docker đã bật lại (ảnh
+`ee-solver` dựng 5 ngày trước — việc dựng lại theo build cuối vẫn còn nợ).
+LaunchAgent `com.magmaballz.chain` KHÔNG còn nạp; dây chuyền không tự tiếp
+chặng nào cho tới khi nạp lại.
+
+**Số marathon 99/99 vẫn KHÔNG dùng được** (3/17 mẫu vượt tải 8,5; prov tự đóng
+dấu KHÔNG ĐÁNG TIN). Phải đo lại trên máy rảnh.
+
+
+### 3j-bis. KẾT QUẢ TÍNH LẠI (16:14 ngày 25/08) — 2464/2469, LẦN NÀY CÓ VẬT CHỨNG
+
+`recount.py` dựng lại ledger sao cho **mỗi dòng ghi rõ dấu judge của nó từ đâu**:
+
+| Nguồn dấu | Dòng |
+|---|---|
+| baseline, đối chứng chứng minh được là phát chứng chỉ Y HỆT | 2113 |
+| chấm lại trên build cuối | 165 |
+| delta (vốn đã đo trên build cuối) | 191 |
+| **còn treo (không được tính)** | **0** |
+
+**2464/2469. Danh sách 5 bài trượt trùng khít ledger cũ, không bài nào đổi kết
+luận.** Con số không đổi — cái đổi là nó chứng minh được.
+
+Trong 171 bài không chứng minh được là giống nhau: 156 bài chấm bằng ĐƯỜNG CERT
+(sinh lại chứng chỉ rồi đưa thẳng cho judge — 5 s/bài thay vì 600 s, hợp lệ vì
+câu hỏi mở là "chứng chỉ MỚI có biên dịch không", còn "có giải nổi trong ngân
+sách không" thì baseline đã trả lời), **156/156 accepted**. 15 bài còn lại chạy
+trọn pipeline trong docker: 11 accepted, 4 trượt đúng 4 bài đã biết
+(`order5_0014/0016`, `hard3_0271/0314`).
+
+Hai cạm bẫy đã né, cả hai đều ghi sẵn trong sổ và cả hai đều sẽ câm nếu quên:
+`judged()` gọi thẳng `verify_answer` nên phải tự bơm `DEFAULT_PROOF_POLICY`
+(§3c), và hạn Lean phải đặt 300 s chứ không để mặc định 120 s — mặc định
+KHẮT KHE HƠN giải thật và sẽ báo trượt oan.
+
+### 3j-ter. ⛔ GÓI NỘP TRƯỚC 25/08 SẼ BỊ TỪ CHỐI SẠCH — 0 ĐIỂM
+
+Phát hiện quan trọng nhất trong ngày, và nó không liên quan gì tới năng lực giải.
+
+`pipeline/proxy.py:575` và `pipeline/marathon_runner.py:104` từ chối thư mục nộp
+có **BẤT KỲ** entry nào ngoài `solver.py`. Không ngoại lệ. Mà
+`make_submission.sh` đặt ba file vào đó: `solver.py`, `SUBMISSION_NOTE.md`,
+`BUILD_COMMIT.txt`.
+
+Nó bị chặn ở mức **chưa chạy solver**: 0,0 giây, `judge_calls=0`, không đáp án,
+**mã thoát vẫn 0**. Nhìn từ ngoài không phân biệt được với "giải không ra" —
+đúng họ lỗi số 5, và đúng bài học của §3d ở dạng khác: một ràng buộc hạ tầng
+biểu hiện y hệt một thất bại thuật toán.
+
+Phép tự kiểm của chính script cũng không bắt được: nó hỏi `ls | grep -qx
+solver.py` tức "CÓ solver.py không", không hỏi "có gì THỪA không". Nên nó in OK
+cho đúng cái gói sẽ bị loại.
+
+**Đã sửa:** note + commit chuyển sang `submission_meta/` bên cạnh; thư mục nộp
+chỉ còn `solver.py`; phép kiểm đổi thành hỏi file thừa; và gói đã được chạy qua
+CHÍNH hàm kiểm của ban tổ chức (`_validate_submission_layout`) — HỢP LỆ.
+
+**Bài học tổng quát, đắt hơn cả:** phép tự kiểm hỏi sai câu thì im lặng đúng lúc
+cần kêu nhất. Mọi cổng kiểm phải hỏi "có gì sai không", không phải "có thứ tôi
+mong đợi không".
+
+
+
+### 3j-quater. SOLVER KHÔNG TẤT ĐỊNH — 0,56% SỐ BÀI, ĐO ĐƯỢC
+
+Đo 25/08 tối: 356 bài, mỗi bài chạy HAI LẦN trên CÙNG một bản, cùng tiến trình,
+máy rảnh. **2/356 = 0,56% phát ra chứng chỉ KHÁC NHAU giữa hai lần**
+(`evaluation_hard_0106`, `evaluation_order5_0190`). Ngoại suy toàn corpus: ~14
+bài. Khớp độc lập với lượt đối chứng trước/sau bản vá D, vốn tìm được 11 bài
+"khác nhau" mà 3/11 chứng minh được là bất ổn trên chính một bản.
+
+Không cần máy chậm hơn, không cần tải nặng — nhiễu lập lịch CPU vài mili giây
+là đủ. Cơ chế: `derive_gap_lemmas` bị cắt bởi `gap_time` (2,5 s). Một bài giải
+trong 4 giây có lượt sinh bổ đề chặn bởi lát đó; lệch vài ms là đổi số bổ đề
+sinh ra, đổi pool, đổi chứng minh.
+
+**Hệ quả cho mọi phép đo từ nay:**
+
+1. `emit_audit.py` có **SÀN NHIỄU ~14 bài**. Kết luận "ĐỔI" KHÔNG chứng minh
+   hai build khác nhau. Muốn kết luận thì phải chạy lại bài đó nhiều lần trên
+   TỪNG bản, hoặc chấm lại — chấm lại miễn nhiễm với chuyện này.
+2. Mệnh đề "build X và build Y phát chứng chỉ y hệt" KHÔNG kiểm được ở mức
+   dưới 14 bài. Mọi lý lẽ tái dùng dấu judge đều bị chặn bởi sàn đó.
+3. Điểm đo được có sai số cố hữu: một bài bất ổn có thể rơi vào biến thể mà
+   judge bác. Chưa quan sát thấy — mọi biến thể đã chấm đều accepted — nhưng
+   đó là chưa quan sát thấy, không phải đã loại trừ.
+
+**Đây mới là lý do thật để làm D.8 (cắt theo CÔNG thay vì theo GIÂY).** Cách
+trình bày cũ ("phòng khi máy chấm chậm hơn") là đúng nhưng phụ. Lý do chính:
+cả dây chuyền bằng chứng giả định solver tất định, và nó không tất định.
+
+**Nhưng D.8 KHÔNG phải việc trước đóng băng.** Nó đổi số bổ đề được sinh ở
+gần như mọi bài, tức là vi phạm thẳng nguyên tắc số 2 (cộng-thêm, trừ khi
+chứng minh được tương đương từng bổ đề). Chi phí kiểm lại: đối chứng 2285 bài
++ chấm lại phần đổi ≈ 3 giờ, và kết quả sẽ lại vướng đúng sàn nhiễu 14 bài
+này. Để vào cửa sổ 26-31/08 nếu được nộp đè.
+
+
 ## 4. Nguyên tắc vận hành — vi phạm là trả giá bằng số liệu sai
 
 1. **Không đo và không đánh cùng lúc.** Tải máy đã từng làm lệch một sweep +4
