@@ -8,8 +8,14 @@ OUT=$REPO/.scratch/release/submission
 cd $REPO
 rm -rf "$OUT"; mkdir -p "$OUT"
 git show $REF:EQT02-M00006.py > "$OUT/solver.py"
-git show $REF:SUBMISSION_NOTE.md > "$OUT/SUBMISSION_NOTE.md"
-echo "$(git rev-parse $REF)" > "$OUT/BUILD_COMMIT.txt"
+# Ghi chú công bố và commit gốc KHÔNG được nằm cạnh solver.py.
+# pipeline/proxy.py:575 và pipeline/marathon_runner.py:104 từ chối thư mục nộp
+# có BẤT KỲ entry nào ngoài solver.py, và từ chối ở mức "chưa chạy solver" —
+# tức là 0 điểm trong khi mã thoát vẫn 0. Đặt chúng ra thư mục anh em.
+META="$(dirname "$OUT")/submission_meta"
+mkdir -p "$META"
+git show $REF:SUBMISSION_NOTE.md > "$META/SUBMISSION_NOTE.md"
+echo "$(git rev-parse $REF)" > "$META/BUILD_COMMIT.txt"
 
 fail=0
 say() { printf "  %-46s %s\n" "$1" "$2"; }
@@ -33,7 +39,16 @@ print(f"  {'import ngoài thư viện chuẩn':<46} {extra if extra else 'KHÔNG
 sys.exit(1 if extra else 0)
 PY
 [ $? -eq 0 ] || fail=1
-ls "$OUT" | grep -qx solver.py && say "một file solver.py duy nhất" "OK"
-say "commit gốc" "$(cat $OUT/BUILD_COMMIT.txt | cut -c1-12)"
+# Phép kiểm cũ chỉ hỏi "có solver.py không", nên nó báo OK cho một gói có file
+# thừa — đúng gói mà ban tổ chức sẽ từ chối. Nay hỏi "có gì NGOÀI solver.py không".
+EXTRA=$(ls -A "$OUT" | grep -vx solver.py || true)
+if [ -n "$EXTRA" ]; then
+  say "chỉ mỗi solver.py trong thư mục nộp" "HỎNG — thừa: $(echo $EXTRA | tr '\n' ' ')"
+  fail=1
+else
+  say "chỉ mỗi solver.py trong thư mục nộp" "OK"
+fi
+say "commit gốc" "$(cat $META/BUILD_COMMIT.txt | cut -c1-12)"
+say "ghi chú công bố" "$META/SUBMISSION_NOTE.md"
 echo
 [ $fail -eq 0 ] && echo "GÓI NỘP SẴN SÀNG: $OUT" || { echo "GÓI NỘP CÓ LỖI — KHÔNG NỘP"; exit 1; }
