@@ -1,0 +1,18 @@
+BƯỚC 3 — 0 bài đường CERT (Lean 300s), 15 bài đường ĐẦY ĐỦ (600s, docker) | không LLM
+  [đủ 1/15] OK evaluation_hard_0196       true   103.6s accepted
+  [đủ 2/15] OK evaluation_order5_0006     true    31.1s accepted
+  [đủ 3/15] OK evaluation_order5_0010     true    28.3s accepted
+  [đủ 4/15] -- evaluation_order5_0014     None   600.4s 
+  [đủ 5/15] -- evaluation_order5_0016     None   600.4s 
+  [đủ 6/15] OK hard2_0178                 true    89.8s accepted
+  [đủ 7/15] OK hard3_0106                 true   172.0s accepted
+  [đủ 8/15] OK hard3_0131                 true    70.7s accepted
+  [đủ 9/15] OK hard3_0214                 true   230.1s accepted
+  [đủ 10/15] OK hard3_0266                 true    71.8s accepted
+  [đủ 11/15] -- hard3_0271                 None   600.4s 
+  [đủ 12/15] OK hard3_0292                 true    90.0s accepted
+  [đủ 13/15] -- hard3_0314                 None   600.4s 
+  [đủ 14/15] OK normal_0062                true    28.2s accepted
+  [đủ 15/15] OK normal_0492                true    28.9s accepted
+
+BƯỚC 3 XONG sau 56 phút: 11 accepted

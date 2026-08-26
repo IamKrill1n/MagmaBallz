@@ -1,0 +1,13 @@
+{
+ "khi": "2026-08-25 16:14:28",
+ "tên": "recount_final_cert",
+ "dòng": 2469,
+ "điểm_chắc": 2464,
+ "còn_treo": 0,
+ "nguồn_dấu": {
+  "baseline, đối chứng GIỐNG": 2113,
+  "chấm lại (build cuối)": 165,
+  "delta (build cuối)": 191
+ },
+ "ghi_chú": "Mỗi dòng ghi rõ dấu judge của nó đến từ đâu. Dòng TREO là dòng CHƯA được tính: đối chứng không chứng minh được build cuối phát ra cùng chứng chỉ, và chưa chấm lại."
+}
