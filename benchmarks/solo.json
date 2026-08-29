@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "mode": "solo",
+  "submission": "examples/solo/demos/generalized",
+  "base_pipeline_config": "pipeline/config.json",
+  "problems": {
+    "root": "examples/problems",
+    "include_extensions": [".json", ".jsonl"],
+    "exclude_globs": ["marathon/**"],
+    "duplicate_policy": "run_per_file"
+  },
+  "timeouts_seconds": {
+    "normal": 120,
+    "hard_or_order5": 300,
+    "hard_markers": ["hard", "order5"]
+  },
+  "execution": {
+    "workers": 8,
+    "strip_answer_before_solver": true,
+    "resume_completed": true
+  },
+  "output_directory": "pipeline/results/solo_local"
+}

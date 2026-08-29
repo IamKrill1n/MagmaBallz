@@ -78,6 +78,20 @@ python3 scripts/run_marathon.py \
   --manifest tests/marathon_fixtures/manifests/normal_5.jsonl
 ```
 
+### Run the Local SOLO Benchmark
+
+The locked local benchmark profile is `benchmarks/solo.json`; details and
+results live in `docs/solo_local_benchmark.md`.
+
+```bash
+python3 -m pipeline.solo_benchmark
+```
+
+Do not substitute `pipeline/config.json`'s official 3600-second budget. The
+local profile runs every JSON/JSONL file under `examples/problems` except
+`examples/problems/marathon`: normal cases get 120 seconds; hard and order-5
+cases get 300 seconds.
+
 ## Coding Style & Naming Conventions
 
 ### Lean
