@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "mode": "solo",
+  "name": "solo-hard-100-v1",
+  "submission": "my_submission/solver.py",
+  "base_pipeline_config": "pipeline/config.json",
+  "problems": {
+    "selections": [
+      {
+        "path": "examples/problems/hard1.jsonl",
+        "ids": [
+          "hard1_0011", "hard1_0013", "hard1_0018", "hard1_0019", "hard1_0020",
+          "hard1_0022", "hard1_0023", "hard1_0024", "hard1_0025", "hard1_0026",
+          "hard1_0027", "hard1_0028", "hard1_0029", "hard1_0031", "hard1_0032",
+          "hard1_0034", "hard1_0035", "hard1_0036", "hard1_0038", "hard1_0039",
+          "hard1_0040", "hard1_0041", "hard1_0042", "hard1_0043", "hard1_0044"
+        ]
+      },
+      {
+        "path": "examples/problems/hard2.jsonl",
+        "ids": [
+          "hard2_0013", "hard2_0014", "hard2_0015", "hard2_0017", "hard2_0018",
+          "hard2_0019", "hard2_0020", "hard2_0022", "hard2_0023", "hard2_0025",
+          "hard2_0026", "hard2_0027", "hard2_0029", "hard2_0030", "hard2_0032",
+          "hard2_0033", "hard2_0034", "hard2_0035", "hard2_0036", "hard2_0037",
+          "hard2_0039", "hard2_0040", "hard2_0041", "hard2_0042", "hard2_0043"
+        ]
+      },
+      {
+        "path": "examples/problems/hard3.jsonl",
+        "ids": [
+          "hard3_0012", "hard3_0013", "hard3_0014", "hard3_0015", "hard3_0016",
+          "hard3_0017", "hard3_0018", "hard3_0019", "hard3_0020", "hard3_0023",
+          "hard3_0024", "hard3_0026", "hard3_0027", "hard3_0029", "hard3_0030",
+          "hard3_0031", "hard3_0032", "hard3_0033", "hard3_0034", "hard3_0036",
+          "hard3_0038", "hard3_0039", "hard3_0041", "hard3_0042", "hard3_0043"
+        ]
+      },
+      {
+        "path": "examples/problems/evaluation_order5.jsonl",
+        "ids": [
+          "evaluation_order5_0021", "evaluation_order5_0022", "evaluation_order5_0023",
+          "evaluation_order5_0025", "evaluation_order5_0026", "evaluation_order5_0027",
+          "evaluation_order5_0028", "evaluation_order5_0031", "evaluation_order5_0032",
+          "evaluation_order5_0033", "evaluation_order5_0034", "evaluation_order5_0035",
+          "evaluation_order5_0036", "evaluation_order5_0037", "evaluation_order5_0038",
+          "evaluation_order5_0039", "evaluation_order5_0040", "evaluation_order5_0041",
+          "evaluation_order5_0042", "evaluation_order5_0043", "evaluation_order5_0044",
+          "evaluation_order5_0045", "evaluation_order5_0046", "evaluation_order5_0048",
+          "evaluation_order5_0050"
+        ]
+      }
+    ],
+    "duplicate_policy": "exact_id_selection"
+  },
+  "timeouts_seconds": {
+    "normal": 300,
+    "hard_or_order5": 300,
+    "hard_markers": ["hard", "order5"]
+  },
+  "execution": {
+    "workers": 8,
+    "strip_answer_before_solver": true,
+    "resume_completed": true
+  },
+  "output_directory": "pipeline/results/solo_hard_100"
+}

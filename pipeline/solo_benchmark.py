@@ -15,8 +15,10 @@ import copy
 import hashlib
 import json
 import platform
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -56,6 +58,15 @@ def load_profile(profile_path: Path) -> dict[str, Any]:
 
 def discover_problem_files(profile: dict[str, Any]) -> list[Path]:
     problem_config = profile["problems"]
+    selections = problem_config.get("selections")
+    if selections is not None:
+        files = [(REPO_ROOT / item["path"]).resolve() for item in selections]
+        if len(files) != len(set(files)):
+            raise ValueError("benchmark selections contain a duplicate source path")
+        missing = [path for path in files if not path.is_file()]
+        if missing:
+            raise ValueError(f"benchmark source does not exist: {missing[0]}")
+        return files
     root = REPO_ROOT / problem_config["root"]
     extensions = set(problem_config["include_extensions"])
     excludes = tuple(problem_config["exclude_globs"])
@@ -68,6 +79,37 @@ def discover_problem_files(profile: dict[str, Any]) -> list[Path]:
             continue
         files.append(path)
     return sorted(files, key=lambda path: path.relative_to(root).as_posix())
+
+
+def selected_problem_entries(
+    source_path: Path, profile: dict[str, Any]
+) -> list[tuple[int, dict[str, Any]]]:
+    """Load all problems or the exact ordered IDs selected by the profile."""
+    entries = list(enumerate(load_problems(source_path), 1))
+    selections = profile["problems"].get("selections")
+    if selections is None:
+        return entries
+
+    source_resolved = source_path.resolve()
+    selection = next(
+        (
+            item
+            for item in selections
+            if (REPO_ROOT / item["path"]).resolve() == source_resolved
+        ),
+        None,
+    )
+    if selection is None:
+        raise ValueError(f"no benchmark selection for {source_path}")
+
+    requested = [str(problem_id) for problem_id in selection["ids"]]
+    if len(requested) != len(set(requested)):
+        raise ValueError(f"{source_path}: duplicate selected problem id")
+    indexed = {str(problem["id"]): (index, problem) for index, problem in entries}
+    missing = [problem_id for problem_id in requested if problem_id not in indexed]
+    if missing:
+        raise ValueError(f"{source_path}: selected id not found: {missing[0]!r}")
+    return [indexed[problem_id] for problem_id in requested]
 
 
 def timeout_for(
@@ -101,10 +143,11 @@ def _benchmark_fingerprint(
     base_config_path: Path,
     problem_files: list[Path],
 ) -> str:
-    problem_root = REPO_ROOT / profile["problems"]["root"]
+    problem_root = REPO_ROOT / profile["problems"].get("root", "")
+    solver_path = submission if submission.is_file() else submission / "solver.py"
     material = {
         "profile_sha256": _sha256(profile_path),
-        "solver_sha256": _sha256(submission / "solver.py"),
+        "solver_sha256": _sha256(solver_path),
         "pipeline_config_sha256": _sha256(base_config_path),
         "problem_files": [
             {
@@ -210,11 +253,14 @@ def _summarize(
                 sum(float(row.get("elapsed_seconds", 0.0)) for row in rows), 3
             ),
         }
+    correct = sum(row.get("label_match") is True for row in all_rows)
     return {
         "updated_at_utc": datetime.now(timezone.utc).isoformat(),
         "scheduled": len(jobs),
         "completed": len(all_rows),
         "solved": sum(bool(row.get("solved")) for row in all_rows),
+        "correct": correct,
+        "accuracy": round(correct / len(all_rows), 6) if all_rows else 0.0,
         "label_mismatches": sum(row.get("label_match") is False for row in all_rows),
         "judge_calls": sum(int(row.get("judge_calls", 0)) for row in all_rows),
         "llm_calls": sum(int(row.get("llm_calls", 0)) for row in all_rows),
@@ -228,16 +274,39 @@ def _summarize(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the canonical local SOLO benchmark")
     parser.add_argument("--profile", type=Path, default=DEFAULT_PROFILE)
+    parser.add_argument(
+        "--submission",
+        type=Path,
+        help="override the profile submission directory for a solver variant",
+    )
     parser.add_argument("--workers", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
     profile_path = args.profile.resolve()
     profile = load_profile(profile_path)
-    submission = (REPO_ROOT / profile["submission"]).resolve()
+    submission_path = (
+        args.submission.resolve()
+        if args.submission is not None
+        else (REPO_ROOT / profile["submission"]).resolve()
+    )
+    solver_path = (
+        submission_path
+        if submission_path.is_file()
+        else submission_path / "solver.py"
+    )
+    if not solver_path.is_file():
+        raise ValueError(f"solver file does not exist: {solver_path}")
+    staging: tempfile.TemporaryDirectory[str] | None = None
+    if submission_path.is_file():
+        staging = tempfile.TemporaryDirectory(prefix="magmaballz-solo-")
+        submission = Path(staging.name)
+        shutil.copyfile(solver_path, submission / "solver.py")
+    else:
+        submission = submission_path
     base_config_path = (REPO_ROOT / profile["base_pipeline_config"]).resolve()
     base_config = load_config(base_config_path)
-    problem_root = (REPO_ROOT / profile["problems"]["root"]).resolve()
+    problem_root = (REPO_ROOT / profile["problems"].get("root", "")).resolve()
     problem_files = discover_problem_files(profile)
     if not problem_files:
         raise ValueError("benchmark profile selected no problem files")
@@ -247,7 +316,7 @@ def main() -> int:
     for source_path in problem_files:
         relative = source_path.relative_to(problem_root)
         seen_per_file[relative] = set()
-        for index, problem in enumerate(load_problems(source_path), 1):
+        for index, problem in selected_problem_entries(source_path, profile):
             problem_id = str(problem["id"])
             if problem_id in seen_per_file[relative]:
                 raise ValueError(f"{relative}: duplicate problem id {problem_id!r}")
@@ -279,18 +348,23 @@ def main() -> int:
     if workers < 1:
         raise ValueError("workers must be positive")
     fingerprint = _benchmark_fingerprint(
-        profile_path, profile, submission, base_config_path, problem_files
+        profile_path, profile, submission_path, base_config_path, problem_files
     )
     output_root = REPO_ROOT / profile["output_directory"]
-    run_directory = output_root / f"{submission.name}-{fingerprint[:12]}"
+    submission_name = (
+        submission_path.parent.name
+        if submission_path.is_file() and submission_path.name == "solver.py"
+        else submission_path.stem
+    )
+    run_directory = output_root / f"{submission_name}-{fingerprint[:12]}"
     run_directory.mkdir(parents=True, exist_ok=True)
     manifest = {
         "schema_version": 1,
         "benchmark_fingerprint": fingerprint,
         "profile": profile,
         "profile_path": profile_path.relative_to(REPO_ROOT).as_posix(),
-        "submission": submission.relative_to(REPO_ROOT).as_posix(),
-        "solver_sha256": _sha256(submission / "solver.py"),
+        "submission": submission_path.relative_to(REPO_ROOT).as_posix(),
+        "solver_sha256": _sha256(solver_path),
         "base_pipeline_config_sha256": _sha256(base_config_path),
         "git_commit": _git_commit(),
         "python": sys.version,
@@ -357,10 +431,13 @@ def main() -> int:
     summary = _summarize(jobs, completed)
     _atomic_write_json(run_directory / "summary.json", summary)
     print(
-        f"Complete: {summary['solved']}/{summary['completed']} solved; "
+        f"Complete: {summary['correct']}/{summary['completed']} correct "
+        f"({summary['accuracy']:.2%}); {summary['solved']} solved; "
         f"judge={summary['judge_calls']}; llm={summary['llm_calls']}; "
         f"aggregate case time={summary['elapsed_seconds']:.1f}s"
     )
+    if staging is not None:
+        staging.cleanup()
     return 0
 
 
