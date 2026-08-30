@@ -1,0 +1,100 @@
+{"id":"evaluation_extra_hard_0033","index":33,"difficulty":"extra_hard","eq1_id":1487,"eq2_id":1270,"equation1":"x = (y * x) * (x * (z * w))","equation2":"x = x * (((y * z) * w) * x)"}
+{"id":"evaluation_order5_0004","index":4,"difficulty":"order5_normal","eq1_id":13760,"eq2_id":37949,"equation1":"x = y * ((x * ((z * y) * x)) * y)","equation2":"x = ((y * (z * (w * z))) * w) * z"}
+{"id":"evaluation_hard_0173","index":173,"difficulty":"hard","eq1_id":1561,"eq2_id":1238,"equation1":"x = (y * z) * (x * (z * y))","equation2":"x = x * (((y * x) * x) * x)"}
+{"id":"evaluation_hard_0078","index":78,"difficulty":"hard","eq1_id":134,"eq2_id":3968,"equation1":"x = y * ((z * x) * x)","equation2":"x * y = (y * (y * z)) * y"}
+{"id":"evaluation_normal_0027","index":27,"difficulty":"normal","eq1_id":1,"eq2_id":1722,"equation1":"x = x","equation2":"x = (y * y) * ((x * y) * y)"}
+{"id":"evaluation_order5_0192","index":192,"difficulty":"order5_normal","eq1_id":30737,"eq2_id":39906,"equation1":"x = (y * (z * ((y * y) * z))) * z","equation2":"x = (((x * (y * z)) * x) * y) * y"}
+{"id":"evaluation_hard_0083","index":83,"difficulty":"hard","eq1_id":168,"eq2_id":644,"equation1":"x = (y * x) * (x * z)","equation2":"x = x * (y * ((y * y) * z))"}
+{"id":"evaluation_order5_0136","index":136,"difficulty":"order5_normal","eq1_id":8993,"eq2_id":29328,"equation1":"x = y * (z * (((w * z) * x) * z))","equation2":"x = (x * (y * (x * (z * y)))) * y"}
+{"id":"evaluation_hard_0157","index":157,"difficulty":"hard","eq1_id":1276,"eq2_id":4431,"equation1":"x = y * (((x * x) * x) * y)","equation2":"x * (x * y) = (z * w) * u"}
+{"id":"evaluation_hard_0194","index":194,"difficulty":"hard","eq1_id":1376,"eq2_id":235,"equation1":"x = y * (((z * y) * z) * z)","equation2":"x = (y * (y * z)) * y"}
+{"id":"evaluation_extra_hard_0173","index":173,"difficulty":"extra_hard","eq1_id":168,"eq2_id":3521,"equation1":"x = (y * x) * (x * z)","equation2":"x * y = x * ((y * y) * x)"}
+{"id":"evaluation_hard_0064","index":64,"difficulty":"hard","eq1_id":328,"eq2_id":4604,"equation1":"x * y = x * (z * x)","equation2":"(x * x) * y = (x * z) * w"}
+{"id":"evaluation_order5_0155","index":155,"difficulty":"order5_normal","eq1_id":10118,"eq2_id":36785,"equation1":"x = x * ((y * z) * ((z * x) * y))","equation2":"x = (((y * z) * x) * (x * w)) * y"}
+{"id":"evaluation_extra_hard_0094","index":94,"difficulty":"extra_hard","eq1_id":336,"eq2_id":3680,"equation1":"x * y = y * (y * y)","equation2":"x * x = (y * x) * (z * x)"}
+{"id":"evaluation_order5_0073","index":73,"difficulty":"order5_normal","eq1_id":15463,"eq2_id":8916,"equation1":"x = y * (((x * (y * x)) * y) * y)","equation2":"x = y * (z * (((z * w) * x) * w))"}
+{"id":"evaluation_hard_0166","index":166,"difficulty":"hard","eq1_id":781,"eq2_id":120,"equation1":"x = y * (z * ((z * y) * w))","equation2":"x = y * ((x * z) * x)"}
+{"id":"evaluation_order5_0009","index":9,"difficulty":"order5_normal","eq1_id":35766,"eq2_id":30805,"equation1":"x = ((y * (y * x)) * (z * x)) * z","equation2":"x = (y * (z * ((z * y) * x))) * y"}
+{"id":"evaluation_order5_0194","index":194,"difficulty":"order5_normal","eq1_id":31405,"eq2_id":6799,"equation1":"x = (y * ((y * y) * (x * z))) * w","equation2":"x = y * (x * ((z * w) * (u * z)))"}
+{"id":"evaluation_extra_hard_0047","index":47,"difficulty":"extra_hard","eq1_id":1487,"eq2_id":1713,"equation1":"x = (y * x) * (x * (z * w))","equation2":"x = (y * x) * ((z * w) * x)"}
+{"id":"evaluation_hard_0060","index":60,"difficulty":"hard","eq1_id":316,"eq2_id":4351,"equation1":"x * x = y * (y * y)","equation2":"x * (y * y) = z * (y * y)"}
+{"id":"evaluation_extra_hard_0186","index":186,"difficulty":"extra_hard","eq1_id":168,"eq2_id":3989,"equation1":"x = (y * x) * (x * z)","equation2":"x * y = (z * (x * x)) * y"}
+{"id":"evaluation_order5_0148","index":148,"difficulty":"order5_normal","eq1_id":32298,"eq2_id":27071,"equation1":"x = (y * ((y * (y * z)) * y)) * y","equation2":"x = ((y * y) * (z * y)) * (y * z)"}
+{"id":"evaluation_extra_hard_0065","index":65,"difficulty":"extra_hard","eq1_id":1487,"eq2_id":3024,"equation1":"x = (y * x) * (x * (z * w))","equation2":"x = ((y * (z * w)) * x) * x"}
+{"id":"evaluation_extra_hard_0036","index":36,"difficulty":"extra_hard","eq1_id":387,"eq2_id":4677,"equation1":"x * y = (y * y) * x","equation2":"(x * y) * z = (y * x) * z"}
+{"id":"evaluation_hard_0007","index":7,"difficulty":"hard","eq1_id":38,"eq2_id":4076,"equation1":"x * x = x * y","equation2":"x * x = ((x * y) * z) * x"}
+{"id":"evaluation_hard_0038","index":38,"difficulty":"hard","eq1_id":33,"eq2_id":18,"equation1":"x = (y * y) * z","equation2":"x = y * (y * z)"}
+{"id":"evaluation_order5_0051","index":51,"difficulty":"order5_normal","eq1_id":7917,"eq2_id":19466,"equation1":"x = y * (z * ((y * (x * z)) * y))","equation2":"x = (y * z) * ((w * x) * (x * w))"}
+{"id":"evaluation_normal_0074","index":74,"difficulty":"normal","eq1_id":485,"eq2_id":4401,"equation1":"x = y * (x * (z * (x * z)))","equation2":"x * (x * y) = (x * z) * x"}
+{"id":"evaluation_hard_0053","index":53,"difficulty":"hard","eq1_id":4168,"eq2_id":3451,"equation1":"x * y = ((y * y) * y) * y","equation2":"x * y = z * (w * (u * y))"}
+{"id":"evaluation_normal_0152","index":152,"difficulty":"normal","eq1_id":1213,"eq2_id":4092,"equation1":"x = y * ((z * (w * w)) * y)","equation2":"x * x = ((y * y) * x) * z"}
+{"id":"evaluation_extra_hard_0127","index":127,"difficulty":"extra_hard","eq1_id":168,"eq2_id":58,"equation1":"x = (y * x) * (x * z)","equation2":"x = x * (y * (z * x))"}
+{"id":"evaluation_hard_0044","index":44,"difficulty":"hard","eq1_id":64,"eq2_id":224,"equation1":"x = y * (x * (x * z))","equation2":"x = (y * (x * z)) * x"}
+{"id":"evaluation_order5_0063","index":63,"difficulty":"order5_normal","eq1_id":37539,"eq2_id":6851,"equation1":"x = ((y * (y * (y * x))) * y) * y","equation2":"x = y * (y * ((y * y) * (x * y)))"}
+{"id":"evaluation_extra_hard_0078","index":78,"difficulty":"extra_hard","eq1_id":336,"eq2_id":3552,"equation1":"x * y = y * (y * y)","equation2":"x * y = y * ((x * z) * y)"}
+{"id":"evaluation_extra_hard_0196","index":196,"difficulty":"extra_hard","eq1_id":168,"eq2_id":4606,"equation1":"x = (y * x) * (x * z)","equation2":"(x * x) * y = (y * x) * y"}
+{"id":"evaluation_order5_0160","index":160,"difficulty":"order5_normal","eq1_id":8408,"eq2_id":29872,"equation1":"x = y * (x * (((x * x) * x) * z))","equation2":"x = (y * (z * (y * (z * y)))) * y"}
+{"id":"evaluation_extra_hard_0097","index":97,"difficulty":"extra_hard","eq1_id":2126,"eq2_id":641,"equation1":"x = ((y * y) * x) * (x * z)","equation2":"x = x * (y * ((y * x) * z))"}
+{"id":"evaluation_extra_hard_0020","index":20,"difficulty":"extra_hard","eq1_id":340,"eq2_id":3287,"equation1":"x * y = y * (z * z)","equation2":"x * x = y * (y * (z * w))"}
+{"id":"evaluation_hard_0125","index":125,"difficulty":"hard","eq1_id":168,"eq2_id":2589,"equation1":"x = (y * x) * (x * z)","equation2":"x = (y * ((z * y) * y)) * y"}
+{"id":"evaluation_normal_0010","index":10,"difficulty":"normal","eq1_id":431,"eq2_id":461,"equation1":"x = x * (y * (x * (y * z)))","equation2":"x = x * (y * (z * (w * w)))"}
+{"id":"evaluation_extra_hard_0113","index":113,"difficulty":"extra_hard","eq1_id":2126,"eq2_id":4380,"equation1":"x = ((y * y) * x) * (x * z)","equation2":"x * (x * x) = (x * x) * x"}
+{"id":"evaluation_hard_0084","index":84,"difficulty":"hard","eq1_id":276,"eq2_id":4542,"equation1":"x = ((y * x) * z) * x","equation2":"x * (y * z) = (z * x) * z"}
+{"id":"evaluation_hard_0143","index":143,"difficulty":"hard","eq1_id":676,"eq2_id":3449,"equation1":"x = y * (x * ((y * x) * x))","equation2":"x * y = z * (w * (w * u))"}
+{"id":"evaluation_order5_0034","index":34,"difficulty":"order5_normal","eq1_id":39713,"eq2_id":20153,"equation1":"x = (((y * z) * (w * w)) * x) * y","equation2":"x = (y * z) * ((x * (z * z)) * z)"}
+{"id":"evaluation_order5_0189","index":189,"difficulty":"order5_normal","eq1_id":19691,"eq2_id":33725,"equation1":"x = (x * y) * ((x * (z * w)) * w)","equation2":"x = ((x * y) * (y * (x * x))) * x"}
+{"id":"evaluation_hard_0036","index":36,"difficulty":"hard","eq1_id":15,"eq2_id":4442,"equation1":"x = y * (x * z)","equation2":"x * (y * x) = (y * x) * x"}
+{"id":"evaluation_order5_0075","index":75,"difficulty":"order5_normal","eq1_id":15839,"eq2_id":17584,"equation1":"x = y * (((z * (y * z)) * y) * x)","equation2":"x = (y * z) * (y * (y * (w * x)))"}
+{"id":"evaluation_hard_0162","index":162,"difficulty":"hard","eq1_id":743,"eq2_id":2903,"equation1":"x = y * (z * ((x * x) * w))","equation2":"x = ((y * (x * x)) * y) * y"}
+{"id":"evaluation_order5_0147","index":147,"difficulty":"order5_normal","eq1_id":9106,"eq2_id":30735,"equation1":"x = x * ((x * y) * (y * (x * y)))","equation2":"x = (y * (z * ((y * y) * z))) * x"}
+{"id":"evaluation_hard_0172","index":172,"difficulty":"hard","eq1_id":913,"eq2_id":134,"equation1":"x = y * ((y * x) * (z * y))","equation2":"x = y * ((z * x) * x)"}
+{"id":"evaluation_hard_0079","index":79,"difficulty":"hard","eq1_id":168,"eq2_id":577,"equation1":"x = (y * x) * (x * z)","equation2":"x = y * (z * (z * (y * z)))"}
+{"id":"evaluation_extra_hard_0120","index":120,"difficulty":"extra_hard","eq1_id":322,"eq2_id":4632,"equation1":"x * y = x * (x * x)","equation2":"(x * y) * x = (x * z) * y"}
+{"id":"evaluation_order5_0001","index":1,"difficulty":"order5_normal","eq1_id":19883,"eq2_id":7469,"equation1":"x = (y * x) * ((z * (x * x)) * z)","equation2":"x = x * (y * ((z * (y * x)) * x))"}
+{"id":"evaluation_hard_0090","index":90,"difficulty":"hard","eq1_id":431,"eq2_id":1069,"equation1":"x = x * (y * (x * (y * z)))","equation2":"x = x * ((y * (z * w)) * z)"}
+{"id":"evaluation_extra_hard_0195","index":195,"difficulty":"extra_hard","eq1_id":168,"eq2_id":4587,"equation1":"x = (y * x) * (x * z)","equation2":"(x * x) * x = (y * x) * x"}
+{"id":"evaluation_hard_0040","index":40,"difficulty":"hard","eq1_id":39,"eq2_id":3989,"equation1":"x * x = y * x","equation2":"x * y = (z * (x * x)) * y"}
+{"id":"evaluation_hard_0081","index":81,"difficulty":"hard","eq1_id":168,"eq2_id":629,"equation1":"x = (y * x) * (x * z)","equation2":"x = x * (y * ((x * x) * x))"}
+{"id":"evaluation_extra_hard_0104","index":104,"difficulty":"extra_hard","eq1_id":39,"eq2_id":4187,"equation1":"x * x = y * x","equation2":"x * y = ((y * z) * w) * y"}
+{"id":"evaluation_extra_hard_0043","index":43,"difficulty":"extra_hard","eq1_id":1487,"eq2_id":1676,"equation1":"x = (y * x) * (x * (z * w))","equation2":"x = (x * y) * ((z * w) * x)"}
+{"id":"evaluation_order5_0104","index":104,"difficulty":"order5_normal","eq1_id":9068,"eq2_id":29806,"equation1":"x = y * (z * (((w * u) * u) * y))","equation2":"x = (y * (z * (x * (z * w)))) * u"}
+{"id":"evaluation_normal_0171","index":171,"difficulty":"normal","eq1_id":4366,"eq2_id":4004,"equation1":"x * (y * z) = y * (w * x)","equation2":"x * y = (z * (x * w)) * u"}
+{"id":"evaluation_order5_0008","index":8,"difficulty":"order5_normal","eq1_id":32523,"eq2_id":29366,"equation1":"x = (y * ((z * (y * w)) * y)) * w","equation2":"x = (x * (y * (y * (z * y)))) * z"}
+{"id":"evaluation_hard_0169","index":169,"difficulty":"hard","eq1_id":1519,"eq2_id":4478,"equation1":"x = (y * y) * (x * (y * y))","equation2":"x * (y * y) = (x * z) * w"}
+{"id":"evaluation_extra_hard_0132","index":132,"difficulty":"extra_hard","eq1_id":336,"eq2_id":3388,"equation1":"x * y = y * (y * y)","equation2":"x * y = z * (x * (z * y))"}
+{"id":"evaluation_normal_0015","index":15,"difficulty":"normal","eq1_id":1983,"eq2_id":1340,"equation1":"x = (y * (z * y)) * (z * x)","equation2":"x = y * (((y * z) * z) * x)"}
+{"id":"evaluation_order5_0132","index":132,"difficulty":"order5_normal","eq1_id":33275,"eq2_id":34497,"equation1":"x = (y * (((z * x) * x) * z)) * w","equation2":"x = ((y * z) * (w * (u * w))) * w"}
+{"id":"evaluation_order5_0121","index":121,"difficulty":"order5_normal","eq1_id":8406,"eq2_id":38624,"equation1":"x = y * (x * (((x * x) * x) * x))","equation2":"x = ((y * ((z * y) * y)) * y) * x"}
+{"id":"evaluation_order5_0200","index":200,"difficulty":"order5_normal","eq1_id":31837,"eq2_id":4972,"equation1":"x = (y * ((z * w) * (w * w))) * w","equation2":"x = y * (x * (z * (x * (x * x))))"}
+{"id":"evaluation_normal_0119","index":119,"difficulty":"normal","eq1_id":692,"eq2_id":2117,"equation1":"x = y * (x * ((z * y) * z))","equation2":"x = ((y * x) * z) * (z * z)"}
+{"id":"evaluation_order5_0020","index":20,"difficulty":"order5_normal","eq1_id":40191,"eq2_id":33243,"equation1":"x = (((y * (y * y)) * z) * y) * y","equation2":"x = (y * (((y * z) * w) * y)) * x"}
+{"id":"evaluation_hard_0151","index":151,"difficulty":"hard","eq1_id":962,"eq2_id":3423,"equation1":"x = y * ((z * y) * (x * z))","equation2":"x * y = z * (z * (z * z))"}
+{"id":"evaluation_extra_hard_0004","index":4,"difficulty":"extra_hard","eq1_id":336,"eq2_id":3334,"equation1":"x * y = y * (y * y)","equation2":"x * y = x * (z * (z * y))"}
+{"id":"evaluation_order5_0095","index":95,"difficulty":"order5_normal","eq1_id":32542,"eq2_id":40911,"equation1":"x = (y * ((z * (z * x)) * x)) * y","equation2":"x = ((((y * x) * y) * y) * z) * w"}
+{"id":"evaluation_normal_0140","index":140,"difficulty":"normal","eq1_id":673,"eq2_id":3776,"equation1":"x = y * (x * ((x * z) * y))","equation2":"x * y = (y * z) * (z * x)"}
+{"id":"evaluation_normal_0059","index":59,"difficulty":"normal","eq1_id":3,"eq2_id":932,"equation1":"x = x * x","equation2":"x = y * ((y * z) * (y * z))"}
+{"id":"evaluation_order5_0038","index":38,"difficulty":"order5_normal","eq1_id":12029,"eq2_id":23162,"equation1":"x = y * (((x * z) * z) * (y * w))","equation2":"x = ((x * x) * y) * (z * (w * w))"}
+{"id":"evaluation_order5_0055","index":55,"difficulty":"order5_normal","eq1_id":24124,"eq2_id":16112,"equation1":"x = ((x * y) * z) * ((x * z) * y)","equation2":"x = x * ((((x * y) * x) * x) * y)"}
+{"id":"evaluation_extra_hard_0034","index":34,"difficulty":"extra_hard","eq1_id":387,"eq2_id":4544,"equation1":"x * y = (y * y) * x","equation2":"x * (y * z) = (z * y) * x"}
+{"id":"evaluation_hard_0129","index":129,"difficulty":"hard","eq1_id":168,"eq2_id":2726,"equation1":"x = (y * x) * (x * z)","equation2":"x = ((y * x) * (z * z)) * z"}
+{"id":"evaluation_order5_0172","index":172,"difficulty":"order5_normal","eq1_id":16886,"eq2_id":22457,"equation1":"x = y * ((((z * w) * z) * x) * z)","equation2":"x = (y * (x * x)) * ((y * z) * w)"}
+{"id":"evaluation_order5_0037","index":37,"difficulty":"order5_normal","eq1_id":24502,"eq2_id":7985,"equation1":"x = ((y * z) * x) * ((x * z) * x)","equation2":"x = y * (z * ((z * (x * x)) * x))"}
+{"id":"evaluation_normal_0176","index":176,"difficulty":"normal","eq1_id":2305,"eq2_id":2533,"equation1":"x = (y * (x * (y * y))) * z","equation2":"x = (y * ((y * x) * y)) * x"}
+{"id":"evaluation_hard_0133","index":133,"difficulty":"hard","eq1_id":168,"eq2_id":2765,"equation1":"x = (y * x) * (x * z)","equation2":"x = ((y * y) * (z * w)) * x"}
+{"id":"evaluation_order5_0142","index":142,"difficulty":"order5_normal","eq1_id":28754,"eq2_id":6616,"equation1":"x = (((y * y) * x) * z) * (y * z)","equation2":"x = x * (y * ((z * z) * (y * w)))"}
+{"id":"evaluation_order5_0027","index":27,"difficulty":"order5_normal","eq1_id":28227,"eq2_id":5579,"equation1":"x = ((y * (z * z)) * w) * (u * x)","equation2":"x = x * (x * (x * ((y * x) * z)))"}
+{"id":"evaluation_hard_0018","index":18,"difficulty":"hard","eq1_id":64,"eq2_id":120,"equation1":"x = y * (x * (x * z))","equation2":"x = y * ((x * z) * x)"}
+{"id":"evaluation_order5_0043","index":43,"difficulty":"order5_normal","eq1_id":37348,"eq2_id":39106,"equation1":"x = ((y * (x * (x * x))) * x) * y","equation2":"x = (((y * x) * (x * x)) * y) * z"}
+{"id":"evaluation_extra_hard_0143","index":143,"difficulty":"extra_hard","eq1_id":120,"eq2_id":8,"equation1":"x = y * ((x * z) * x)","equation2":"x = x * (x * x)"}
+{"id":"evaluation_extra_hard_0013","index":13,"difficulty":"extra_hard","eq1_id":1487,"eq2_id":855,"equation1":"x = (y * x) * (x * (z * w))","equation2":"x = x * ((y * z) * (x * w))"}
+{"id":"evaluation_order5_0074","index":74,"difficulty":"order5_normal","eq1_id":35948,"eq2_id":31587,"equation1":"x = ((y * (z * x)) * (w * x)) * z","equation2":"x = (y * ((z * y) * (x * x))) * x"}
+{"id":"evaluation_hard_0045","index":45,"difficulty":"hard","eq1_id":4168,"eq2_id":3367,"equation1":"x * y = ((y * y) * y) * y","equation2":"x * y = y * (z * (y * y))"}
+{"id":"evaluation_extra_hard_0008","index":8,"difficulty":"extra_hard","eq1_id":332,"eq2_id":4358,"equation1":"x * y = y * (x * x)","equation2":"x * (y * z) = x * (z * y)"}
+{"id":"evaluation_order5_0149","index":149,"difficulty":"order5_normal","eq1_id":26662,"eq2_id":39348,"equation1":"x = ((x * x) * (y * z)) * (y * w)","equation2":"x = (((y * y) * (z * y)) * y) * y"}
+{"id":"evaluation_hard_0076","index":76,"difficulty":"hard","eq1_id":134,"eq2_id":1275,"equation1":"x = y * ((z * x) * x)","equation2":"x = y * (((x * x) * x) * x)"}
+{"id":"evaluation_hard_0139","index":139,"difficulty":"hard","eq1_id":130,"eq2_id":4120,"equation1":"x = y * ((y * z) * x)","equation2":"x * y = ((x * x) * y) * x"}
+{"id":"evaluation_order5_0084","index":84,"difficulty":"order5_normal","eq1_id":39993,"eq2_id":31590,"equation1":"x = (((y * (x * x)) * y) * y) * z","equation2":"x = (y * ((z * y) * (x * x))) * w"}
+{"id":"evaluation_extra_hard_0061","index":61,"difficulty":"extra_hard","eq1_id":1487,"eq2_id":2894,"equation1":"x = (y * x) * (x * (z * w))","equation2":"x = ((x * (y * z)) * w) * x"}
+{"id":"evaluation_order5_0178","index":178,"difficulty":"order5_normal","eq1_id":28865,"eq2_id":36203,"equation1":"x = (((y * y) * z) * w) * (z * z)","equation2":"x = ((y * (z * w)) * (z * u)) * v"}
+{"id":"evaluation_order5_0065","index":65,"difficulty":"order5_normal","eq1_id":6681,"eq2_id":23774,"equation1":"x = y * (x * ((x * z) * (z * y)))","equation2":"x = ((y * z) * z) * (x * (x * w))"}
+{"id":"evaluation_extra_hard_0140","index":140,"difficulty":"extra_hard","eq1_id":82,"eq2_id":55,"equation1":"x = y * (z * (x * x))","equation2":"x = x * (y * (y * x))"}

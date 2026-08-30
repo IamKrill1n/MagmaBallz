@@ -64,5 +64,41 @@ class MarathonBenchmarkTest(unittest.TestCase):
         self.assertTrue(all(candidate.source.name == "solver.py" or candidate.source.suffix == ".py" for candidate in candidates))
 
 
+class Hard100MarathonBenchmarkTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.profile = load_profile(REPO_ROOT / "benchmarks" / "marathon_hard100.json")
+        self.problems = load_manifest(REPO_ROOT / self.profile["manifest"])
+
+    def test_manifest_is_hard_focused_balanced_and_label_free(self) -> None:
+        counts = validate_balance(self.problems, self.profile)
+        self.assertEqual(len(self.problems), 100)
+        self.assertEqual(counts["normal"], 10)
+        self.assertEqual(counts["hard"] + counts["extra_hard"], 55)
+        self.assertEqual(counts["order5_normal"], 35)
+        self.assertTrue(all("answer" not in problem for problem in self.problems))
+
+    def test_manifest_provenance_has_alternating_source_labels(self) -> None:
+        source_by_id = {}
+        for source in self.profile["selection"]["sources"]:
+            for raw in (REPO_ROOT / source["path"]).read_text(encoding="utf-8").splitlines():
+                if raw.strip():
+                    row = json.loads(raw)
+                    source_by_id[row["id"]] = row
+
+        source_rows = [source_by_id[problem["id"]] for problem in self.problems]
+        self.assertEqual(
+            [row["answer"] for row in source_rows],
+            [label for _ in range(50) for label in (False, True)],
+        )
+        for source in self.profile["selection"]["sources"]:
+            selected = [
+                row
+                for row in source_rows
+                if row["difficulty"] == source["difficulty"]
+            ]
+            self.assertEqual(sum(row["answer"] is False for row in selected), source["false"])
+            self.assertEqual(sum(row["answer"] is True for row in selected), source["true"])
+
+
 if __name__ == "__main__":
     unittest.main()
