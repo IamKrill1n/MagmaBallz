@@ -16,6 +16,10 @@ per-problem budgets), which is preserved unchanged.
 
 ## Reference Configuration
 
+For the smaller balanced, offline development benchmark, see
+[`docs/marathon_local_benchmark.md`](marathon_local_benchmark.md). It is a
+regression profile and does not replace the reference configuration below.
+
 The two global budgets are derived from a per-problem reference,
 multiplied by the manifest length `N` and the tunable knob
 **`compression_ratio`**:

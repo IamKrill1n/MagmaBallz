@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "mode": "marathon",
+  "name": "balanced-offline-v1",
+  "manifest": "benchmarks/marathon_balanced_v1.jsonl",
+  "selection": {
+    "source_files": [
+      "examples/problems/evaluation_normal.jsonl",
+      "examples/problems/evaluation_hard.jsonl",
+      "examples/problems/evaluation_extra_hard.jsonl",
+      "examples/problems/evaluation_order5.jsonl"
+    ],
+    "one_based_indices_per_source": [1, 2, 67, 68, 133, 134],
+    "interleave": "round_robin",
+    "strip_answer": true
+  },
+  "expected_difficulty_counts": {
+    "normal": 6,
+    "hard": 6,
+    "extra_hard": 6,
+    "order5_normal": 6
+  },
+  "budget_seconds": 180,
+  "budget_tokens": 0,
+  "demo_root": "examples/marathon/demos",
+  "output_directory": "pipeline/results/marathon_local"
+}
