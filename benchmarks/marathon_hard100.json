@@ -1,44 +1,30 @@
 {
   "schema_version": 1,
   "mode": "marathon",
-  "name": "hard-order5-offline-100-v1",
-  "manifest": "benchmarks/marathon_hard_order5_100_v1.jsonl",
+  "name": "hard-order5-offline-100-v2",
+  "manifest": "benchmarks/marathon_hard_order5_100_v2.jsonl",
   "selection": {
-    "seed": 20260830,
+    "seed": 20260901,
     "order": "alternate_false_true_after_seeded_sampling",
     "strip_answer": true,
     "sources": [
       {
-        "difficulty": "normal",
-        "path": "examples/problems/evaluation_normal.jsonl",
-        "false": 5,
-        "true": 5
-      },
-      {
-        "difficulty": "hard",
-        "path": "examples/problems/evaluation_hard.jsonl",
-        "false": 15,
-        "true": 15
-      },
-      {
         "difficulty": "extra_hard",
         "path": "examples/problems/evaluation_extra_hard.jsonl",
-        "false": 13,
-        "true": 12
+        "false": 10,
+        "true": 10
       },
       {
         "difficulty": "order5_normal",
         "path": "examples/problems/evaluation_order5.jsonl",
-        "false": 17,
-        "true": 18
+        "false": 40,
+        "true": 40
       }
     ]
   },
   "expected_difficulty_counts": {
-    "normal": 10,
-    "hard": 30,
-    "extra_hard": 25,
-    "order5_normal": 35
+    "extra_hard": 20,
+    "order5_normal": 80
   },
   "budget_seconds": 300,
   "budget_tokens": 0,

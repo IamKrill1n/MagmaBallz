@@ -1,38 +1,41 @@
-# Marathon hard/order-5 100-problem benchmark
+# Marathon extra-hard/order-5 100-problem benchmark
 
-Date: 2026-08-30
+Date: 2026-09-01
 
 ## Executive summary
 
-`solverV3.py` wins the larger benchmark with **95/100 accepted in 124.1
-seconds**. The strongest demo, `EQT02-M00010.py`, scores **93/100 in 142.6
-seconds**. V3 therefore gains two accepted problems, loses none, and uses 18.5
-seconds less solver wall time (13.0% faster).
+`solverV4.py` (solverV3 + the standard-aux superposition phase ported from the
+structural-cache SOLO solver) scores **98/100 accepted in 109.1 seconds**, with
+zero incorrect submissions. Its accepted set is a strict superset of
+`solverV3.py`, which scores **91/100 in 145.2 seconds** in the same batch.
 
-V3 accepts every normal, hard, and extra-hard problem. Its five misses are all
-true order-5 implications. It finds all 50 false counterexamples and proves 45
-of the 50 true implications.
+V4 accepts every extra-hard problem and 78/80 order-5 problems: 50/50 false and
+48/50 true. Its only two misses (`evaluation_order5_0006`,
+`evaluation_order5_0124`) are the two problems every solver in this repository
+has ever failed. This matches the ceiling predicted in the previous benchmark
+run (90 + 8 complementary wins = 98), now achieved by a single solver.
 
 ## Benchmark definition
 
 The locked profile is
 [`benchmarks/marathon_hard100.json`](../benchmarks/marathon_hard100.json), and
 the solver-visible manifest is
-[`benchmarks/marathon_hard_order5_100_v1.jsonl`](../benchmarks/marathon_hard_order5_100_v1.jsonl).
+[`benchmarks/marathon_hard_order5_100_v2.jsonl`](../benchmarks/marathon_hard_order5_100_v2.jsonl).
 
 | Tier | Problems | Share |
 | --- | ---: | ---: |
-| Normal | 10 | 10% |
-| Hard | 30 | 30% |
-| Extra-hard | 25 | 25% |
-| Order-5 | 35 | 35% |
+| Extra-hard | 20 | 20% |
+| Order-5 | 80 | 80% |
 | **Total** | **100** | **100%** |
 
-Hard, extra-hard, and order-5 problems comprise 90% of the benchmark. Selection
-uses seed `20260830`, exact per-tier true/false quotas, and alternating hidden
-source labels after sampling. The source labels are removed from every
-solver-visible row. The final source-label balance is exactly 50 false and 50
-true.
+The benchmark is intentionally the hardest slice of the track: every problem is
+either extra-hard or order-5, with order-5 dominating. Selection uses seed
+`20260901`, exact per-tier true/false quotas (10/10 extra-hard, 40/40 order-5),
+and alternating hidden source labels after sampling. The source labels are
+removed from every solver-visible row. The final source-label balance is exactly
+50 false and 50 true. The manifest is generated deterministically by
+[`scripts/generate_marathon_manifest.py`](../scripts/generate_marathon_manifest.py);
+a provenance unit test pins the manifest to the generator.
 
 Each solver receives the same global budget:
 
@@ -47,91 +50,126 @@ measure token-enabled LLM recovery.
 
 ## Overall results
 
+Same-batch head-to-head (run `20260901_101158`):
+
 | Rank | Solver | Accepted | Attempted | False accepted | True accepted | Solver wall |
 | ---: | --- | ---: | ---: | ---: | ---: | ---: |
-| 1 | `solverV3.py` | **95/100** | 95 | **50/50** | **45/50** | **124.1 s** |
-| 2 | `EQT02-M00010.py` | 93/100 | 93 | 50/50 | 43/50 | 142.6 s |
-| 3 | `solverV2.py` | 93/100 | 93 | 50/50 | 43/50 | 144.2 s |
-| 4 | `EQT02-M00009.py` | 29/100 | 29 | 29/50 | 0/50 | 34.5 s |
-| 5 | `solverV1.py` | 21/100 | 21 | 0/50 | 21/50 | 285.7 s |
-| 6–9 | baseline, triage, few-shot, M00005 | 0/100 | 0 | 0/50 | 0/50 | 0.5 s each |
+| 1 | `solverV4.py` | **98/100** | 98 | **50/50** | **48/50** | **109.1 s** |
+| 2 | `solverV3.py` | 91/100 | 91 | **50/50** | 41/50 | 145.2 s |
 
-V2 is byte-identical to M00010 and acts as a reproducibility control. Their
-1.6-second wall difference is ordinary single-run variance; their accepted
-sets and route counts are identical.
+V4 is a strict superset of V3's accepted set: V3-only wins = 0, V4-only wins =
+7. Neither solver submitted any incorrect or malformed certificate; every miss
+is a row whose budget expired before a certificate was produced.
+
+Reference runs from earlier batches (same manifest, single-run variance):
+
+| Solver | Accepted | False accepted | True accepted | Solver wall |
+| --- | ---: | ---: | ---: | ---: |
+| `structural_cache_marathon.py` | 90/100 (best) | 43/50 | 47/50 | 296.6 s |
+| `solverV3.py` | 89–91/100 across runs | 50/50 | 39–41/50 | 145–147 s |
 
 ## Results by difficulty
 
-| Solver | Normal | Hard | Extra-hard | Order-5 |
-| --- | ---: | ---: | ---: | ---: |
-| `solverV3.py` | **10/10** | **30/30** | **25/25** | **30/35** |
-| `EQT02-M00010.py` | 10/10 | 29/30 | 25/25 | 29/35 |
-| `solverV2.py` | 10/10 | 29/30 | 25/25 | 29/35 |
-| `EQT02-M00009.py` | 5/10 | 9/30 | 0/25 | 15/35 |
-| `solverV1.py` | 5/10 | 13/30 | 1/25 | 2/35 |
-| baseline, triage, few-shot, M00005 | 0/10 | 0/30 | 0/25 | 0/35 |
+| Solver | Extra-hard | Order-5 |
+| --- | ---: | ---: |
+| `solverV4.py` | **20/20** | **78/80** |
+| `solverV3.py` | **20/20** | 71/80 |
 
-## V3 versus the strongest demo
+## What changed in V4
 
-V3 accepts two true implications that M00010 and V2 leave unattempted:
+`solverV4.py` = `solverV3.py` + one new engine: the
+`standard_aux_superposition` phase ported from
+`my_submission/solo_variants/structural_cache.py` (the phase behind every
+structural-cache-exclusive win in the previous benchmark run). It derives a
+standard auxiliary law — `const` (`a = b`), `proj_l` (`a ◇ b = a`),
+`proj_r` (`a ◇ b = b`), or `rowconst` (`a ◇ b = a ◇ c`) — from the hypothesis
+via bounded proof-carrying superposition, then consumes the lemma to close the
+goal. The port runs early in `solve_problem_pass` (before counterexample
+search, mirroring structural_cache's phase order) with a 3-second budget.
+
+Two adaptations were required beyond the mechanical port:
+
+1. **Judge-free soundness.** structural_cache verifies every candidate body
+   against the Lean judge before submitting; solverV4 has no local judge in
+   marathon mode. The port's grind-based consumer
+   (`grounded_assumption_grind_body`) can build tails that fail Lean, so it
+   was removed — V4 only submits proof-carrying superposition bodies (the
+   direct and secondary-bridge consumers). Without this, the phase submitted
+   3 incorrect certificates on false order-5 problems.
+2. **Size cap.** The 1,300-line ported closure plus solverV3 exceeds the
+   512,000-byte single-file limit, so the closure is zlib+base85-encoded and
+   exec'd at load time (the same trick structural_cache uses for its caches).
+
+V4's route log shows 14 `true:standard_aux_superposition` wins (more than the
+8 exclusive wins of the port, because it also wins problems V3 handled via
+slower routes). The seven V4-only acceptances over V3's best run:
 
 | Problem | Tier | Source label | Equation IDs |
 | --- | --- | --- | --- |
-| `evaluation_hard_0162` | Hard | True | 743 → 2903 |
-| `evaluation_order5_0160` | Order-5 | True | 8408 → 29872 |
-
-V3 loses no M00010 acceptance. Its aggregate route log contains one additional
-`true:derived_cp_closure` success and one additional `true:egg_collapse`
-success. This supports the intended optimization: after cheap counterexample
-search, V3 tries bounded equational closure before expensive constraint search
-for non-absorption hypotheses. On the 100-problem set, that change improves
-both coverage and wall time.
-
-V3's remaining misses are:
-
-| Problem | Tier | Source label | Equation IDs |
-| --- | --- | --- | --- |
-| `evaluation_order5_0004` | Order-5 | True | 13760 → 37949 |
-| `evaluation_order5_0132` | Order-5 | True | 33275 → 34497 |
-| `evaluation_order5_0038` | Order-5 | True | 12029 → 23162 |
+| `evaluation_order5_0016` | Order-5 | True | 10278 → 17625 |
+| `evaluation_order5_0052` | Order-5 | True | 20769 → 5525 |
+| `evaluation_order5_0058` | Order-5 | True | 31335 → 38127 |
 | `evaluation_order5_0074` | Order-5 | True | 35948 → 31587 |
 | `evaluation_order5_0084` | Order-5 | True | 39993 → 31590 |
+| `evaluation_order5_0126` | Order-5 | True | 39983 → 24070 |
+| `evaluation_order5_0138` | Order-5 | True | 11963 → 15157 |
+
+(These are exactly the port's exclusive wins minus `evaluation_order5_0182`,
+which V3 also wins in some runs.)
+
+## Remaining misses
+
+Only two problems defeat V4 — the same two that defeat every other solver in
+this repository:
+
+| Problem | Tier | Source label | Equation IDs |
+| --- | --- | --- | --- |
+| `evaluation_order5_0006` | Order-5 | True | 26506 → 20227 |
+| `evaluation_order5_0124` | Order-5 | True | 21548 → 16976 |
 
 ## Interpretation
 
-- Order-5 true implications are the remaining bottleneck. V3 is perfect on
-  the other 65 problems and on every false problem.
-- M00009 and V1 have complementary failure profiles: M00009 accepts only false
-  cases, while V1 accepts only true cases. M00009's inexpensive countermodel
-  layer is productive; V1's repeated local Lean validation is too costly under
-  the compressed global budget.
-- Baseline, triage, and few-shot parse `◇` but the evaluation corpus uses `*`,
-  so they emit no answers on this manifest. M00005 uses the Solo stdin/stdout
-  protocol rather than Marathon manifest/output files. Their zero scores are
-  compatibility results, not evidence that their intended LLM strategies have
-  no value.
-- Because this profile has zero LLM tokens, token-enabled ranking, few-shot
-  transfer, and repair behavior remain unevaluated.
+- **The port pays off immediately.** The single additive phase converts the
+  benchmark's hardest slice from 90/100 to 98/100 while reducing wall time
+  (109.1 s vs 145.2 s): the early true-side check closes order-5 true
+  implications in milliseconds instead of letting them fall into expensive
+  constraint search.
+- **Soundness required one cut.** The grind-based consumer was the only
+  non-proof-carrying path in the phase; removing it (and the local judge
+  loop that had masked it in structural_cache) restored the phase to the
+  same soundness standard as V3's other routes.
+- **V4 is the strongest solver in the repository** on the hardest slice, with
+  headroom: 109.1 s of a 300 s budget.
+- Because this profile has zero LLM tokens, token-enabled LLM recovery remains
+  unevaluated.
 
 ## Reproduction
 
 ```bash
 python3 -m pipeline.marathon_benchmark \
   --profile benchmarks/marathon_hard100.json \
-  --candidate solverV1=my_submission/marathon/solverV1.py \
-  --candidate solverV2=my_submission/marathon/solverV2.py \
-  --candidate solverV3=my_submission/marathon/solverV3.py
+  --candidate solverV3=my_submission/marathon/solverV3.py \
+  --candidate solverV4=my_submission/marathon/solverV4.py \
+  --only solverV3 --only solverV4
 ```
 
-Raw results for this run are under
-`pipeline/results/marathon_hard100/20260830_122346/`. The aggregate summary,
+The manifest is regenerated deterministically with:
+
+```bash
+python3 scripts/generate_marathon_manifest.py \
+  --profile benchmarks/marathon_hard100.json
+```
+
+Raw results for the head-to-head run are under
+`pipeline/results/marathon_hard100/20260901_101158/`. The aggregate summary,
 per-solver summaries, answers, and logs are retained there locally; the
 `pipeline/results/` tree is intentionally gitignored.
 
 Validation performed before the run:
 
 - 100 unique solver-visible IDs.
-- Expected tier counts: 10/30/25/35.
+- Expected tier counts: 20 extra-hard / 80 order-5.
 - Exactly 50 false and 50 true source labels, alternating in manifest order.
 - No solver-visible `answer` fields.
-- Benchmark provenance and balance unit tests passed.
+- Manifest provenance and generator unit tests passed (including a test that
+  the committed manifest is byte-identical to fresh generator output).

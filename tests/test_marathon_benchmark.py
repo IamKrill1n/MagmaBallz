@@ -72,9 +72,10 @@ class Hard100MarathonBenchmarkTest(unittest.TestCase):
     def test_manifest_is_hard_focused_balanced_and_label_free(self) -> None:
         counts = validate_balance(self.problems, self.profile)
         self.assertEqual(len(self.problems), 100)
-        self.assertEqual(counts["normal"], 10)
-        self.assertEqual(counts["hard"] + counts["extra_hard"], 55)
-        self.assertEqual(counts["order5_normal"], 35)
+        self.assertEqual(counts["extra_hard"], 20)
+        self.assertEqual(counts["order5_normal"], 80)
+        self.assertNotIn("normal", counts)
+        self.assertNotIn("hard", counts)
         self.assertTrue(all("answer" not in problem for problem in self.problems))
 
     def test_manifest_provenance_has_alternating_source_labels(self) -> None:
@@ -98,6 +99,19 @@ class Hard100MarathonBenchmarkTest(unittest.TestCase):
             ]
             self.assertEqual(sum(row["answer"] is False for row in selected), source["false"])
             self.assertEqual(sum(row["answer"] is True for row in selected), source["true"])
+
+    def test_manifest_matches_generator_output(self) -> None:
+        from scripts.generate_marathon_manifest import generate, validate_manifest
+
+        manifest_path, counts = generate(REPO_ROOT / "benchmarks" / "marathon_hard100.json")
+        self.assertEqual(manifest_path.name, self.profile["manifest"].split("/")[-1])
+        validate_manifest(manifest_path, self.profile)
+        generated = [
+            json.loads(line)
+            for line in manifest_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        self.assertEqual(self.problems, generated)
 
 
 if __name__ == "__main__":
